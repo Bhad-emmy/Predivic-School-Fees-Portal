@@ -13,19 +13,45 @@ import "./styles/App.css";
 function App() {
   const [page, setPage] = useState("dashboard");
 
+  // Shared application data
+  const [students, setStudents] = useState([]);
+  const [feeAccounts, setFeeAccounts] = useState([]);
+  const [payments, setPayments] = useState([]);
+
   const renderPage = () => {
     switch (page) {
       case "students":
-        return <Students />;
+        return (
+          <Students
+            students={students}
+            setStudents={setStudents}
+          />
+        );
 
       case "fees":
-        return <FeeAccounts />;
+        return (
+          <FeeAccounts
+            feeAccounts={feeAccounts}
+            setFeeAccounts={setFeeAccounts}
+          />
+        );
 
       case "payments":
-        return <Payments />;
+        return (
+          <Payments
+            students={students}
+            feeAccounts={feeAccounts}
+            payments={payments}
+            setPayments={setPayments}
+          />
+        );
 
       case "receipts":
-        return <Receipts />;
+        return (
+          <Receipts
+            payments={payments}
+          />
+        );
 
       case "reports":
         return <Reports />;
@@ -33,6 +59,7 @@ function App() {
       case "settings":
         return <Settings />;
 
+      case "dashboard":
       default:
         return <Dashboard />;
     }
@@ -41,26 +68,56 @@ function App() {
   return (
     <div className="app">
 
+      {/* SIDEBAR */}
       <aside className="sidebar">
 
         <h2>Predvic Schools</h2>
 
-        <button onClick={() => setPage("dashboard")}>Dashboard</button>
+        <button
+          onClick={() => setPage("dashboard")}
+        >
+          Dashboard
+        </button>
 
-        <button onClick={() => setPage("students")}>Students</button>
+        <button
+          onClick={() => setPage("students")}
+        >
+          Students
+        </button>
 
-        <button onClick={() => setPage("fees")}>Fee Accounts</button>
+        <button
+          onClick={() => setPage("fees")}
+        >
+          Fee Accounts
+        </button>
 
-        <button onClick={() => setPage("payments")}>Payments</button>
+        <button
+          onClick={() => setPage("payments")}
+        >
+          Payments
+        </button>
 
-        <button onClick={() => setPage("receipts")}>Receipts</button>
+        <button
+          onClick={() => setPage("receipts")}
+        >
+          Receipts
+        </button>
 
-        <button onClick={() => setPage("reports")}>Reports</button>
+        <button
+          onClick={() => setPage("reports")}
+        >
+          Reports
+        </button>
 
-        <button onClick={() => setPage("settings")}>Settings</button>
+        <button
+          onClick={() => setPage("settings")}
+        >
+          Settings
+        </button>
 
       </aside>
 
+      {/* MAIN CONTENT */}
       <main className="content">
         {renderPage()}
       </main>
