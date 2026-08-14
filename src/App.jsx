@@ -2,6 +2,8 @@ import { useState } from "react";
 
 import Dashboard from "./pages/Dashboard";
 import Students from "./pages/Students";
+import StudentAttendance from "./pages/StudentAttendance";
+import TeacherAttendance from "./pages/TeacherAttendance";
 import FeeAccounts from "./pages/FeeAccounts";
 import Payments from "./pages/Payments";
 import Receipts from "./pages/Receipts";
@@ -27,6 +29,16 @@ function App() {
             setStudents={setStudents}
           />
         );
+
+      case "student-attendance":
+        return (
+          <StudentAttendance
+            students={students}
+          />
+        );
+
+      case "teacher-attendance":
+        return <TeacherAttendance />;
 
       case "fees":
         return (
@@ -69,48 +81,79 @@ function App() {
     <div className="app">
 
       {/* SIDEBAR */}
+
       <aside className="sidebar">
 
         <h2>Predvic Schools</h2>
 
         <button
-          onClick={() => setPage("dashboard")}
+          onClick={() =>
+            setPage("dashboard")
+          }
         >
           Dashboard
         </button>
 
         <button
-          onClick={() => setPage("students")}
+          onClick={() =>
+            setPage("students")
+          }
         >
           Students
         </button>
 
         <button
-          onClick={() => setPage("fees")}
+          onClick={() =>
+            setPage("student-attendance")
+          }
+        >
+          Student Attendance
+        </button>
+
+        <button
+          onClick={() =>
+            setPage("teacher-attendance")
+          }
+        >
+          Teacher Attendance
+        </button>
+
+        <button
+          onClick={() =>
+            setPage("fees")
+          }
         >
           Fee Accounts
         </button>
 
         <button
-          onClick={() => setPage("payments")}
+          onClick={() =>
+            setPage("payments")
+          }
         >
           Payments
         </button>
 
         <button
-          onClick={() => setPage("receipts")}
+          onClick={() =>
+            setPage("receipts")
+          }
         >
           Receipts
         </button>
 
         <button
-          onClick={() => setPage("reports")}
+          onClick={() =>
+            setPage("reports")
+          }
         >
           Reports
         </button>
 
         <button
-          onClick={() => setPage("settings")}
+          onClick={() =>
+            setPage("settings")
+          }
         >
           Settings
         </button>
@@ -118,6 +161,7 @@ function App() {
       </aside>
 
       {/* MAIN CONTENT */}
+
       <main className="content">
         {renderPage()}
       </main>
