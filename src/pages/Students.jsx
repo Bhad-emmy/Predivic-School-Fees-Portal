@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 
+const API_URL = "http://localhost:5000";
+
 const CLASS_OPTIONS = [
   "Creche",
   "Nursery 1",
@@ -24,6 +26,8 @@ export default function Students() {
   const [saving, setSaving] = useState(false);
 
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
   const [showForm, setShowForm] = useState(false);
 
   const [search, setSearch] = useState("");
@@ -36,11 +40,12 @@ export default function Students() {
     parentPhone: "",
     className: "",
     status: "Active",
+    studentType: "new",
   });
 
-  // ========================================
+  // ==================================================
   // LOAD STUDENTS
-  // ========================================
+  // ==================================================
 
   const fetchStudents = async () => {
     try {
@@ -48,21 +53,24 @@ export default function Students() {
       setError("");
 
       const response = await fetch(
-        "http://localhost:5000/api/students"
+        `${API_URL}/api/students`
       );
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch students.");
-      }
 
       const data = await response.json();
 
+      if (!response.ok) {
+        throw new Error(
+          data.error || "Unable to load students."
+        );
+      }
+
       setStudents(data);
     } catch (err) {
-      console.error(err);
+      console.error("Load students error:", err);
 
       setError(
-        "Unable to load students. Make sure the backend is running."
+        err.message ||
+          "Unable to load students. Make sure the backend is running."
       );
     } finally {
       setLoading(false);
@@ -73,47 +81,49 @@ export default function Students() {
     fetchStudents();
   }, []);
 
-  // ========================================
+  // ==================================================
   // FORM CHANGE
-  // ========================================
+  // ==================================================
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
+  const handleChange = (event) => {
+    const { name, value } = event.target;
 
-    setForm((currentForm) => ({
-      ...currentForm,
+    setForm((current) => ({
+      ...current,
       [name]: value,
     }));
   };
 
-  // ========================================
+  // ==================================================
   // CREATE STUDENT
-  // ========================================
+  // ==================================================
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    setError("");
+    setSuccess("");
 
     if (!form.firstName.trim()) {
-      alert("Please enter the student's first name.");
+      setError("First name is required.");
       return;
     }
 
     if (!form.lastName.trim()) {
-      alert("Please enter the student's last name.");
+      setError("Last name is required.");
       return;
     }
 
     if (!form.className) {
-      alert("Please select the student's class.");
+      setError("Please select a class.");
       return;
     }
 
     try {
       setSaving(true);
-      setError("");
 
       const response = await fetch(
-        "http://localhost:5000/api/students",
+        `${API_URL}/api/students`,
         {
           method: "POST",
 
@@ -127,6 +137,7 @@ export default function Students() {
             parentPhone: form.parentPhone.trim(),
             className: form.className,
             status: form.status,
+            studentType: form.studentType,
           }),
         }
       );
@@ -135,59 +146,15 @@ export default function Students() {
 
       if (!response.ok) {
         throw new Error(
-          data.error || "Failed to create student."
+          data.error || "Unable to create student."
         );
       }
 
-      /*
-        Airtable generates:
-
-        - Student Number
-        - Student ID Auto
-
-        We receive the complete Airtable record
-        from the backend.
-      */
-
-      const newStudent = {
-        id: data.id,
-
-        studentId:
-          data.fields?.["Student ID Auto"] || "",
-
-        firstName:
-          data.fields?.["First Name"] || "",
-
-        lastName:
-          data.fields?.["Last Name"] || "",
-
-        fullName:
-          [
-            data.fields?.["First Name"],
-            data.fields?.["Last Name"],
-          ]
-            .filter(Boolean)
-            .join(" "),
-
-        className:
-          data.fields?.["Class"] || "",
-
-        studentNumber:
-          data.fields?.["Student Number"] || "",
-
-        parentPhone:
-          data.fields?.["Parent Phone"] || "",
-
-        status:
-          data.fields?.["Status"] || "Active",
-      };
-
-      setStudents((currentStudents) => [
-        ...currentStudents,
-        newStudent,
-      ]);
-
-      // Reset form
+      setSuccess(
+        `Student added successfully. Admission No: ${
+          data.studentNumber || "Generated"
+        }`
+      );
 
       setForm({
         firstName: "",
@@ -195,56 +162,46 @@ export default function Students() {
         parentPhone: "",
         className: "",
         status: "Active",
+        studentType: "new",
       });
 
       setShowForm(false);
 
-      alert("Student added successfully.");
-
-      // Reload from backend so Airtable-generated
-      // fields are definitely reflected.
-
       await fetchStudents();
     } catch (err) {
-      console.error(err);
+      console.error("Create student error:", err);
 
       setError(
-        err.message || "Failed to create student."
+        err.message || "Unable to create student."
       );
     } finally {
       setSaving(false);
     }
   };
 
-  // ========================================
+  // ==================================================
   // FILTER STUDENTS
-  // ========================================
+  // ==================================================
 
   const filteredStudents = students.filter(
     (student) => {
-      const searchText =
-        search.toLowerCase().trim();
+      const query = search.toLowerCase().trim();
 
-      const studentName =
+      const name =
         student.fullName ||
-        [
-          student.firstName,
-          student.lastName,
-        ]
-          .filter(Boolean)
-          .join(" ");
+        `${student.firstName || ""} ${
+          student.lastName || ""
+        }`.trim();
 
       const matchesSearch =
-        !searchText ||
-        studentName
-          .toLowerCase()
-          .includes(searchText) ||
+        !query ||
+        name.toLowerCase().includes(query) ||
         String(student.studentNumber || "")
           .toLowerCase()
-          .includes(searchText) ||
+          .includes(query) ||
         String(student.studentId || "")
           .toLowerCase()
-          .includes(searchText);
+          .includes(query);
 
       const matchesClass =
         !classFilter ||
@@ -262,9 +219,9 @@ export default function Students() {
     }
   );
 
-  // ========================================
+  // ==================================================
   // LOADING
-  // ========================================
+  // ==================================================
 
   if (loading) {
     return (
@@ -275,14 +232,14 @@ export default function Students() {
     );
   }
 
-  // ========================================
+  // ==================================================
   // PAGE
-  // ========================================
+  // ==================================================
 
   return (
     <div className="page">
 
-      {/* PAGE HEADER */}
+      {/* HEADER */}
 
       <div className="page-header">
 
@@ -290,13 +247,13 @@ export default function Students() {
 
         <button
           className="primary-btn"
-          onClick={() =>
-            setShowForm(!showForm)
-          }
+          onClick={() => {
+            setShowForm((current) => !current);
+            setError("");
+            setSuccess("");
+          }}
         >
-          {showForm
-            ? "Close"
-            : "+ Add Student"}
+          {showForm ? "Close" : "+ Add Student"}
         </button>
 
       </div>
@@ -317,6 +274,22 @@ export default function Students() {
         </div>
       )}
 
+      {/* SUCCESS */}
+
+      {success && (
+        <div
+          style={{
+            background: "#dcfce7",
+            color: "#166534",
+            padding: "12px 15px",
+            borderRadius: "8px",
+            marginBottom: "20px",
+          }}
+        >
+          {success}
+        </div>
+      )}
+
       {/* ADD STUDENT FORM */}
 
       {showForm && (
@@ -327,13 +300,7 @@ export default function Students() {
           }}
         >
 
-          <h2
-            style={{
-              marginBottom: "20px",
-            }}
-          >
-            Add Student
-          </h2>
+          <h2>Add Student</h2>
 
           <form onSubmit={handleSubmit}>
 
@@ -341,8 +308,9 @@ export default function Students() {
               style={{
                 display: "grid",
                 gridTemplateColumns:
-                  "repeat(2, 1fr)",
+                  "repeat(2, minmax(0, 1fr))",
                 gap: "15px",
+                marginTop: "20px",
               }}
             >
 
@@ -391,16 +359,31 @@ export default function Students() {
                   Select Class
                 </option>
 
-                {CLASS_OPTIONS.map(
-                  (className) => (
-                    <option
-                      key={className}
-                      value={className}
-                    >
-                      {className}
-                    </option>
-                  )
-                )}
+                {CLASS_OPTIONS.map((className) => (
+                  <option
+                    key={className}
+                    value={className}
+                  >
+                    {className}
+                  </option>
+                ))}
+              </select>
+
+              {/* STUDENT TYPE */}
+
+              <select
+                name="studentType"
+                value={form.studentType}
+                onChange={handleChange}
+                className="filter-select"
+              >
+                <option value="new">
+                  New Student
+                </option>
+
+                <option value="old">
+                  Returning Student
+                </option>
               </select>
 
               {/* STATUS */}
@@ -443,9 +426,11 @@ export default function Students() {
               <button
                 type="button"
                 className="primary-btn"
-                onClick={() =>
-                  setShowForm(false)
-                }
+                onClick={() => {
+                  setShowForm(false);
+                  setError("");
+                  setSuccess("");
+                }}
                 style={{
                   background: "#64748b",
                   marginLeft: "10px",
@@ -461,7 +446,7 @@ export default function Students() {
         </div>
       )}
 
-      {/* SEARCH AND FILTERS */}
+      {/* SEARCH + FILTERS */}
 
       <div className="table-controls">
 
@@ -469,16 +454,16 @@ export default function Students() {
           type="text"
           placeholder="🔍 Search student..."
           value={search}
-          onChange={(e) =>
-            setSearch(e.target.value)
+          onChange={(event) =>
+            setSearch(event.target.value)
           }
           className="search-input"
         />
 
         <select
           value={classFilter}
-          onChange={(e) =>
-            setClassFilter(e.target.value)
+          onChange={(event) =>
+            setClassFilter(event.target.value)
           }
           className="filter-select"
         >
@@ -486,22 +471,20 @@ export default function Students() {
             All Classes
           </option>
 
-          {CLASS_OPTIONS.map(
-            (className) => (
-              <option
-                key={className}
-                value={className}
-              >
-                {className}
-              </option>
-            )
-          )}
+          {CLASS_OPTIONS.map((className) => (
+            <option
+              key={className}
+              value={className}
+            >
+              {className}
+            </option>
+          ))}
         </select>
 
         <select
           value={statusFilter}
-          onChange={(e) =>
-            setStatusFilter(e.target.value)
+          onChange={(event) =>
+            setStatusFilter(event.target.value)
           }
           className="filter-select"
         >
@@ -520,7 +503,7 @@ export default function Students() {
 
       </div>
 
-      {/* STUDENTS TABLE */}
+      {/* STUDENT TABLE */}
 
       <div className="page-card">
 
@@ -529,35 +512,13 @@ export default function Students() {
           <thead>
 
             <tr>
-
-              <th>
-                Student ID
-              </th>
-
-              <th>
-                First Name
-              </th>
-
-              <th>
-                Last Name
-              </th>
-
-              <th>
-                Class
-              </th>
-
-              <th>
-                Student Number
-              </th>
-
-              <th>
-                Parent Phone
-              </th>
-
-              <th>
-                Status
-              </th>
-
+              <th>Student ID</th>
+              <th>First Name</th>
+              <th>Last Name</th>
+              <th>Class</th>
+              <th>Admission No.</th>
+              <th>Parent Phone</th>
+              <th>Status</th>
             </tr>
 
           </thead>
@@ -566,43 +527,41 @@ export default function Students() {
 
             {filteredStudents.length > 0 ? (
 
-              filteredStudents.map(
-                (student) => (
+              filteredStudents.map((student) => (
 
-                  <tr key={student.id}>
+                <tr key={student.id}>
 
-                    <td>
-                      {student.studentId || "—"}
-                    </td>
+                  <td>
+                    {student.studentId || "—"}
+                  </td>
 
-                    <td>
-                      {student.firstName || "—"}
-                    </td>
+                  <td>
+                    {student.firstName || "—"}
+                  </td>
 
-                    <td>
-                      {student.lastName || "—"}
-                    </td>
+                  <td>
+                    {student.lastName || "—"}
+                  </td>
 
-                    <td>
-                      {student.className || "—"}
-                    </td>
+                  <td>
+                    {student.className || "—"}
+                  </td>
 
-                    <td>
-                      {student.studentNumber || "—"}
-                    </td>
+                  <td>
+                    {student.studentNumber || "—"}
+                  </td>
 
-                    <td>
-                      {student.parentPhone || "—"}
-                    </td>
+                  <td>
+                    {student.parentPhone || "—"}
+                  </td>
 
-                    <td>
-                      {student.status || "Active"}
-                    </td>
+                  <td>
+                    {student.status || "Active"}
+                  </td>
 
-                  </tr>
+                </tr>
 
-                )
-              )
+              ))
 
             ) : (
 

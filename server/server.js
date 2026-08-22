@@ -2,6 +2,8 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
+const { createClient } = require("@supabase/supabase-js");
+
 const app = express();
 
 app.use(cors());
@@ -9,52 +11,27 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 5000;
 
-// ========================================
-// AIRTABLE CONFIGURATION
-// ========================================
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const AIRTABLE_TOKEN = process.env.AIRTABLE_TOKEN;
-const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  console.error(
+    "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in server/.env"
+  );
+  process.exit(1);
+}
 
-const AIRTABLE_STUDENTS_TABLE =
-  process.env.AIRTABLE_STUDENTS_TABLE || "Students";
+const supabase = createClient(
+  SUPABASE_URL,
+  SUPABASE_SERVICE_ROLE_KEY
+);
 
-const AIRTABLE_FEES_TABLE =
-  process.env.AIRTABLE_FEES_TABLE || "Fee Accounts";
+// ======================================================
+// CLASS ORDER
+// ======================================================
 
-const AIRTABLE_ATTENDANCE_TABLE =
-  process.env.AIRTABLE_ATTENDANCE_TABLE || "Attendance";
-
-// ========================================
-// AIRTABLE URLS
-// ========================================
-
-const airtableUrl =
-  `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/` +
-  `${encodeURIComponent(AIRTABLE_STUDENTS_TABLE)}`;
-
-const feesAirtableUrl =
-  `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/` +
-  `${encodeURIComponent(AIRTABLE_FEES_TABLE)}`;
-
-const attendanceAirtableUrl =
-  `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/` +
-  `${encodeURIComponent(AIRTABLE_ATTENDANCE_TABLE)}`;
-
-// ========================================
-// AIRTABLE HEADERS
-// ========================================
-
-const airtableHeaders = {
-  Authorization: `Bearer ${AIRTABLE_TOKEN}`,
-  "Content-Type": "application/json",
-};
-
-// ========================================
-// VALID SCHOOL CLASSES
-// ========================================
-
-const validClasses = [
+const CLASS_ORDER = [
   "Creche",
   "Nursery 1",
   "Nursery 2",
@@ -71,285 +48,718 @@ const validClasses = [
   "SS 3",
 ];
 
-// ========================================
-// VALID ATTENDANCE STATUSES
-// ========================================
-
-const validAttendanceStatuses = [
-  "Present",
-  "Absent",
-  "Late",
-  "Excused",
-];
-
-// ========================================
+// ======================================================
 // HEALTH CHECK
-// ========================================
+// ======================================================
 
 app.get("/", (req, res) => {
   res.json({
     message: "Predvic School Portal API is running",
+    backend: "Supabase",
     status: "OK",
   });
 });
 
-// ========================================
-// GET STUDENTS
-// ========================================
+// ======================================================
+// TEST SUPABASE CONNECTION
+// ======================================================
 
-app.get("/api/students", async (req, res) => {
+app.get("/api/test-supabase", async (req, res) => {
   try {
-    const response = await fetch(airtableUrl, {
-      headers: {
-        Authorization: `Bearer ${AIRTABLE_TOKEN}`,
-      },
-    });
+    const { data, error } = await supabase
+      .from("students")
+      .select("id, admission_no, first_name, last_name")
+      .limit(10);
 
-    const data = await response.json();
+    if (error) {
+      console.error("SUPABASE TEST ERROR:", error);
 
-    if (!response.ok) {
-      return res.status(response.status).json({
-        error:
-          data?.error?.message ||
-          "Unable to load students.",
+      return res.status(500).json({
+        success: false,
+        error: error.message,
+        details: error,
       });
     }
 
-    const students = (data.records || []).map(
-      (record) => {
-        const fields = record.fields || {};
-
-        return {
-          id: record.id,
-
-          studentId:
-            fields["Student ID Auto"] || "",
-
-          firstName:
-            fields["First Name"] || "",
-
-          lastName:
-            fields["Last Name"] || "",
-
-          fullName:
-            fields["Name"] ||
-            [
-              fields["First Name"],
-              fields["Last Name"],
-            ]
-              .filter(Boolean)
-              .join(" "),
-
-          className:
-            fields["Class"] || "",
-
-          studentNumber:
-            fields["Student Number"] || "",
-
-          parentPhone:
-            fields["Parent Phone"] || "",
-
-          status:
-            fields["Status"] || "Active",
-        };
-      }
-    );
-
-    res.json(students);
+    res.json({
+      success: true,
+      count: data?.length || 0,
+      students: data || [],
+    });
   } catch (error) {
-    console.error(
-      "GET students error:",
-      error
-    );
+    console.error("SUPABASE TEST ERROR:", error);
 
     res.status(500).json({
-      error: "Unable to load students.",
+      success: false,
+      error: error.message,
     });
   }
 });
 
-// ========================================
-// CREATE STUDENT
-// ========================================
+// ======================================================
+// GET CLASSES
+// ======================================================
 
-app.post("/api/students", async (req, res) => {
+app.get("/api/classes", async (req, res) => {
   try {
-    const {
-      firstName,
-      lastName,
-      parentPhone,
-      className,
-      status,
-    } = req.body;
+    const { data, error } = await supabase
+      .from("classes")
+      .select("id, name, display_order");
 
-    if (
-      !firstName ||
-      !String(firstName).trim()
-    ) {
-      return res.status(400).json({
-        error: "First name is required.",
-      });
+    if (error) {
+      throw error;
     }
 
-    if (
-      !lastName ||
-      !String(lastName).trim()
-    ) {
-      return res.status(400).json({
-        error: "Last name is required.",
-      });
-    }
+    const classes = [...(data || [])].sort(
+      (a, b) => {
+        const aIndex = CLASS_ORDER.indexOf(a.name);
+        const bIndex = CLASS_ORDER.indexOf(b.name);
 
-    if (
-      !className ||
-      !validClasses.includes(className)
-    ) {
-      return res.status(400).json({
-        error: "Please select a valid class.",
-      });
-    }
-
-    const cleanFirstName =
-      String(firstName).trim();
-
-    const cleanLastName =
-      String(lastName).trim();
-
-    // ====================================
-    // IMPORTANT:
-    // Populate Airtable's primary Name
-    // field so linked records show
-    // the student's actual name.
-    // ====================================
-
-    const fields = {
-      Name:
-        `${cleanFirstName} ${cleanLastName}`,
-
-      "First Name":
-        cleanFirstName,
-
-      "Last Name":
-        cleanLastName,
-
-      Class: className,
-
-      Status:
-        status || "Active",
-    };
-
-    if (
-      parentPhone &&
-      String(parentPhone).trim()
-    ) {
-      fields["Parent Phone"] =
-        String(parentPhone).trim();
-    }
-
-    const response = await fetch(
-      airtableUrl,
-      {
-        method: "POST",
-        headers: airtableHeaders,
-
-        body: JSON.stringify({
-          fields,
-        }),
+        return (
+          (aIndex === -1 ? 999 : aIndex) -
+          (bIndex === -1 ? 999 : bIndex)
+        );
       }
     );
 
-    const data =
-      await response.json();
+    res.json(classes);
+  } catch (error) {
+    console.error("GET CLASSES ERROR:", error);
 
-    if (!response.ok) {
+    res.status(500).json({
+      error: error.message,
+    });
+  }
+});
+
+// ======================================================
+// GET STUDENTS
+// ======================================================
+
+app.get("/api/students", async (req, res) => {
+  try {
+    console.log(
+      "========================================"
+    );
+
+    console.log(
+      "GET /api/students"
+    );
+
+    console.log(
+      "Querying Supabase students table..."
+    );
+
+    // IMPORTANT:
+    // No status filter.
+    // No class relationship.
+    // No enrollment requirement.
+    // Just get the students.
+
+    const {
+      data: students,
+      error,
+    } = await supabase
+      .from("students")
+      .select(`
+        id,
+        admission_no,
+        first_name,
+        middle_name,
+        last_name,
+        gender,
+        class_id,
+        status,
+        student_type,
+        date_of_birth,
+        parent_name,
+        parent_phone,
+        parent_email,
+        address,
+        admission_date,
+        created_at,
+        updated_at
+      `)
+      .order("created_at", {
+        ascending: true,
+      });
+
+    if (error) {
       console.error(
-        "CREATE student error:",
-        JSON.stringify(
-          data,
-          null,
-          2
-        )
+        "SUPABASE STUDENTS ERROR:"
       );
 
-      return res.status(
-        response.status
-      ).json({
-        error:
-          data?.error?.message ||
-          "Unable to create student.",
+      console.error(error);
+
+      return res.status(500).json({
+        error: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
       });
     }
 
     console.log(
-      `Student created: ${cleanFirstName} ${cleanLastName}`
+      `SUPABASE RETURNED ${
+        students?.length || 0
+      } STUDENTS`
     );
 
-    res.status(201).json(data);
+    // --------------------------------------------------
+    // Get classes separately
+    // --------------------------------------------------
+
+    const {
+      data: classes,
+      error: classError,
+    } = await supabase
+      .from("classes")
+      .select(
+        "id, name, display_order"
+      );
+
+    if (classError) {
+      console.error(
+        "SUPABASE CLASSES ERROR:",
+        classError
+      );
+
+      return res.status(500).json({
+        error: classError.message,
+      });
+    }
+
+    // --------------------------------------------------
+    // Build class lookup
+    // --------------------------------------------------
+
+    const classMap = new Map();
+
+    for (
+      const classItem of classes || []
+    ) {
+      classMap.set(
+        classItem.id,
+        classItem.name
+      );
+    }
+
+    // --------------------------------------------------
+    // Format students for frontend
+    // --------------------------------------------------
+
+    const result =
+      (students || []).map(
+        (student) => {
+          const className =
+            classMap.get(
+              student.class_id
+            ) || "";
+
+          const fullName = [
+            student.first_name,
+            student.middle_name,
+            student.last_name,
+          ]
+            .filter(Boolean)
+            .join(" ");
+
+          return {
+            id: student.id,
+
+            studentId: student.id,
+
+            firstName:
+              student.first_name || "",
+
+            middleName:
+              student.middle_name || "",
+
+            lastName:
+              student.last_name || "",
+
+            fullName,
+
+            studentNumber:
+              student.admission_no || "",
+
+            admissionNo:
+              student.admission_no || "",
+
+            classId:
+              student.class_id || null,
+
+            className,
+
+            gender:
+              student.gender || "",
+
+            status:
+              student.status || "Active",
+
+            studentType:
+              student.student_type || "",
+
+            dateOfBirth:
+              student.date_of_birth || null,
+
+            parentName:
+              student.parent_name || "",
+
+            parentPhone:
+              student.parent_phone || "",
+
+            parentEmail:
+              student.parent_email || "",
+
+            address:
+              student.address || "",
+
+            admissionDate:
+              student.admission_date || null,
+
+            createdAt:
+              student.created_at || null,
+
+            updatedAt:
+              student.updated_at || null,
+          };
+        }
+      );
+
+    console.log(
+      "FIRST STUDENT:"
+    );
+
+    console.log(
+      result[0] || "NO STUDENTS"
+    );
+
+    console.log(
+      "========================================"
+    );
+
+    res.json(result);
   } catch (error) {
     console.error(
-      "CREATE STUDENT error:",
-      error
+      "GET STUDENTS ERROR:"
     );
 
+    console.error(error);
+
     res.status(500).json({
-      error:
-        "Unable to create student.",
+      error: error.message,
     });
   }
 });
 
-// ========================================
-// GET ATTENDANCE
-// ========================================
+// ======================================================
+// GET ONE STUDENT
+// ======================================================
 
 app.get(
-  "/api/attendance",
+  "/api/students/:id",
   async (req, res) => {
     try {
-      const response =
-        await fetch(
-          attendanceAirtableUrl,
-          {
-            headers: {
-              Authorization:
-                `Bearer ${AIRTABLE_TOKEN}`,
-            },
-          }
-        );
+      const {
+        data,
+        error,
+      } = await supabase
+        .from("students")
+        .select(`
+          id,
+          admission_no,
+          first_name,
+          middle_name,
+          last_name,
+          gender,
+          class_id,
+          status,
+          student_type,
+          date_of_birth,
+          parent_name,
+          parent_phone,
+          parent_email,
+          address,
+          admission_date,
+          created_at,
+          updated_at
+        `)
+        .eq(
+          "id",
+          req.params.id
+        )
+        .maybeSingle();
 
-      const data =
-        await response.json();
+      if (error) {
+        throw error;
+      }
 
-      if (!response.ok) {
-        return res.status(
-          response.status
-        ).json({
+      if (!data) {
+        return res.status(404).json({
           error:
-            data?.error?.message ||
-            "Unable to load attendance.",
+            "Student not found.",
         });
       }
 
-      res.json(
-        data.records || []
-      );
+      res.json(data);
     } catch (error) {
       console.error(
-        "GET attendance error:",
+        "GET ONE STUDENT ERROR:",
         error
       );
 
       res.status(500).json({
-        error:
-          "Unable to load attendance.",
+        error: error.message,
       });
     }
   }
 );
 
-// ========================================
-// SAVE STUDENT ATTENDANCE
-// ========================================
+// ======================================================
+// CREATE STUDENT
+// ======================================================
+
+app.post("/api/students", async (req, res) => {
+  try {
+    const {
+      firstName,
+      middleName,
+      lastName,
+      gender,
+      parentName,
+      parentPhone,
+      parentEmail,
+      address,
+      classId,
+      className,
+      studentType,
+      admissionDate,
+      dateOfBirth,
+    } = req.body;
+
+    if (!firstName?.trim()) {
+      return res.status(400).json({
+        error:
+          "First name is required.",
+      });
+    }
+
+    if (!lastName?.trim()) {
+      return res.status(400).json({
+        error:
+          "Last name is required.",
+      });
+    }
+
+    let selectedClassId =
+      classId || null;
+
+    // If frontend sends class name,
+    // find its ID.
+    if (
+      !selectedClassId &&
+      className
+    ) {
+      const {
+        data: classRecord,
+        error: classError,
+      } = await supabase
+        .from("classes")
+        .select("id, name")
+        .eq(
+          "name",
+          className
+        )
+        .maybeSingle();
+
+      if (classError) {
+        throw classError;
+      }
+
+      if (!classRecord) {
+        return res.status(400).json({
+          error:
+            "Selected class does not exist.",
+        });
+      }
+
+      selectedClassId =
+        classRecord.id;
+    }
+
+    if (!selectedClassId) {
+      return res.status(400).json({
+        error:
+          "A class is required.",
+      });
+    }
+
+    // Generate admission number.
+    const {
+      count,
+      error: countError,
+    } = await supabase
+      .from("students")
+      .select("id", {
+        count: "exact",
+        head: true,
+      });
+
+    if (countError) {
+      throw countError;
+    }
+
+    const nextNumber =
+      Number(count || 0) + 1;
+
+    const admissionNo =
+      `ADM-${new Date().getFullYear()}-${String(
+        nextNumber
+      ).padStart(4, "0")}`;
+
+    const {
+      data: student,
+      error,
+    } = await supabase
+      .from("students")
+      .insert({
+        admission_no:
+          admissionNo,
+
+        first_name:
+          firstName.trim(),
+
+        middle_name:
+          middleName?.trim() || null,
+
+        last_name:
+          lastName.trim(),
+
+        gender:
+          gender || null,
+
+        class_id:
+          selectedClassId,
+
+        status:
+          "Active",
+
+        student_type:
+          studentType === "new"
+            ? "new"
+            : "returning",
+
+        date_of_birth:
+          dateOfBirth || null,
+
+        parent_name:
+          parentName?.trim() || null,
+
+        parent_phone:
+          parentPhone?.trim() || null,
+
+        parent_email:
+          parentEmail?.trim() || null,
+
+        address:
+          address?.trim() || null,
+
+        admission_date:
+          admissionDate ||
+          new Date()
+            .toISOString()
+            .slice(0, 10),
+      })
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    res.status(201).json({
+      message:
+        "Student created successfully.",
+
+      student,
+    });
+  } catch (error) {
+    console.error(
+      "CREATE STUDENT ERROR:",
+      error
+    );
+
+    res.status(500).json({
+      error: error.message,
+    });
+  }
+});
+
+// ======================================================
+// CURRENT ACADEMIC SESSION
+// ======================================================
+
+app.get(
+  "/api/academic/current",
+  async (req, res) => {
+    try {
+      const {
+        data: session,
+        error: sessionError,
+      } = await supabase
+        .from(
+          "academic_sessions"
+        )
+        .select(
+          "id, name, is_active, starts_on, ends_on"
+        )
+        .eq(
+          "is_active",
+          true
+        )
+        .maybeSingle();
+
+      if (sessionError) {
+        throw sessionError;
+      }
+
+      if (!session) {
+        return res.status(404).json({
+          error:
+            "No active academic session.",
+        });
+      }
+
+      const {
+        data: term,
+        error: termError,
+      } = await supabase
+        .from("terms")
+        .select(`
+          id,
+          academic_session_id,
+          name,
+          starts_on,
+          ends_on,
+          status
+        `)
+        .eq(
+          "academic_session_id",
+          session.id
+        )
+        .eq(
+          "status",
+          "active"
+        )
+        .maybeSingle();
+
+      if (termError) {
+        throw termError;
+      }
+
+      res.json({
+        session,
+        term: term || null,
+      });
+    } catch (error) {
+      console.error(
+        "ACADEMIC ERROR:",
+        error
+      );
+
+      res.status(500).json({
+        error: error.message,
+      });
+    }
+  }
+);
+
+// ======================================================
+// GET ATTENDANCE
+// ======================================================
+
+app.get(
+  "/api/attendance",
+  async (req, res) => {
+    try {
+      let query =
+        supabase
+          .from(
+            "student_attendance"
+          )
+          .select(`
+            id,
+            student_id,
+            enrollment_id,
+            attendance_date,
+            status,
+            note,
+            created_at
+          `)
+          .order(
+            "attendance_date",
+            {
+              ascending: true,
+            }
+          );
+
+      if (req.query.date) {
+        query =
+          query.eq(
+            "attendance_date",
+            req.query.date
+          );
+      }
+
+      if (
+        req.query.startDate
+      ) {
+        query =
+          query.gte(
+            "attendance_date",
+            req.query.startDate
+          );
+      }
+
+      if (
+        req.query.endDate
+      ) {
+        query =
+          query.lte(
+            "attendance_date",
+            req.query.endDate
+          );
+      }
+
+      const {
+        data,
+        error,
+      } = await query;
+
+      if (error) {
+        throw error;
+      }
+
+      res.json(
+        data || []
+      );
+    } catch (error) {
+      console.error(
+        "GET ATTENDANCE ERROR:",
+        error
+      );
+
+      res.status(500).json({
+        error: error.message,
+      });
+    }
+  }
+);
+
+// ======================================================
+// SAVE ATTENDANCE
+// ======================================================
 
 app.post(
   "/api/attendance",
@@ -357,14 +767,8 @@ app.post(
     try {
       const {
         date,
-        className,
         attendance,
-        recordedBy,
       } = req.body;
-
-      // ====================================
-      // VALIDATION
-      // ====================================
 
       if (!date) {
         return res.status(400).json({
@@ -374,18 +778,9 @@ app.post(
       }
 
       if (
-        !className ||
-        !validClasses.includes(className)
-      ) {
-        return res.status(400).json({
-          error:
-            "Please select a valid class.",
-        });
-      }
-
-      if (
         !attendance ||
-        typeof attendance !== "object"
+        typeof attendance !==
+          "object"
       ) {
         return res.status(400).json({
           error:
@@ -393,626 +788,136 @@ app.post(
         });
       }
 
-      const studentIds =
-        Object.keys(attendance);
+      const records =
+        Object.entries(
+          attendance
+        ).map(
+          ([
+            studentId,
+            status,
+          ]) => ({
+            student_id:
+              studentId,
 
-      if (studentIds.length === 0) {
-        return res.status(400).json({
-          error:
-            "No attendance records were provided.",
-        });
-      }
+            attendance_date:
+              date,
 
-      // ====================================
-      // LOAD STUDENTS
-      // ====================================
+            status,
+          })
+        );
 
-      const studentResponse =
-        await fetch(
-          airtableUrl,
+      const {
+        data,
+        error,
+      } = await supabase
+        .from(
+          "student_attendance"
+        )
+        .upsert(
+          records,
           {
-            headers: {
-              Authorization:
-                `Bearer ${AIRTABLE_TOKEN}`,
-            },
+            onConflict:
+              "student_id,attendance_date",
           }
-        );
+        )
+        .select();
 
-      const studentData =
-        await studentResponse.json();
-
-      if (!studentResponse.ok) {
-        return res.status(500).json({
-          error:
-            "Unable to verify students.",
-        });
+      if (error) {
+        throw error;
       }
-
-      const studentRecords =
-        studentData.records || [];
-
-      const studentMap =
-        new Map(
-          studentRecords.map(
-            (student) => [
-              student.id,
-              student,
-            ]
-          )
-        );
-
-      // ====================================
-      // VERIFY CLASS + STATUS
-      // ====================================
-
-      for (const studentId of studentIds) {
-        const student =
-          studentMap.get(
-            studentId
-          );
-
-        if (!student) {
-          return res.status(400).json({
-            error:
-              `Student ${studentId} could not be found.`,
-          });
-        }
-
-        const studentClass =
-          student.fields?.Class;
-
-        if (
-          studentClass !== className
-        ) {
-          return res.status(400).json({
-            error:
-              `Student does not belong to ${className}.`,
-          });
-        }
-
-        if (
-          !validAttendanceStatuses.includes(
-            attendance[studentId]
-          )
-        ) {
-          return res.status(400).json({
-            error:
-              `Invalid attendance status for ${studentId}.`,
-          });
-        }
-      }
-
-      // ====================================
-      // LOAD EXISTING ATTENDANCE
-      // ====================================
-
-      const existingResponse =
-        await fetch(
-          attendanceAirtableUrl,
-          {
-            headers: {
-              Authorization:
-                `Bearer ${AIRTABLE_TOKEN}`,
-            },
-          }
-        );
-
-      const existingData =
-        await existingResponse.json();
-
-      if (!existingResponse.ok) {
-        return res.status(500).json({
-          error:
-            "Unable to check existing attendance.",
-        });
-      }
-
-      const existingRecords =
-        existingData.records || [];
-
-      // ====================================
-      // FIND EXISTING RECORDS
-      //
-      // ONE STUDENT + ONE DATE
-      // = ONE ATTENDANCE RECORD
-      // ====================================
-
-      const existingMap =
-        new Map();
-
-      existingRecords.forEach(
-        (record) => {
-          const fields =
-            record.fields || {};
-
-          const studentLinks =
-            fields.Student || [];
-
-          const recordDate =
-            fields.Date;
-
-          if (
-            studentLinks.length > 0 &&
-            recordDate
-          ) {
-            const key =
-              `${studentLinks[0]}_${recordDate}`;
-
-            existingMap.set(
-              key,
-              record
-            );
-          }
-        }
-      );
-
-      const recordsToCreate = [];
-      const recordsToUpdate = [];
-
-      // ====================================
-      // CREATE OR UPDATE
-      // ====================================
-
-      for (const studentId of studentIds) {
-        const key =
-          `${studentId}_${date}`;
-
-        const existingRecord =
-          existingMap.get(key);
-
-        if (existingRecord) {
-          recordsToUpdate.push({
-            id: existingRecord.id,
-
-            fields: {
-              Status:
-                attendance[
-                  studentId
-                ],
-
-              "Recorded By":
-                recordedBy ||
-                "School Admin",
-            },
-          });
-        } else {
-          recordsToCreate.push({
-            fields: {
-              "Attendance ID":
-                `ATT-${date}-${studentId}`,
-
-              Student: [
-                studentId,
-              ],
-
-              Date: date,
-
-              Status:
-                attendance[
-                  studentId
-                ],
-
-              "Recorded By":
-                recordedBy ||
-                "School Admin",
-            },
-          });
-        }
-      }
-
-      // ====================================
-      // CREATE NEW RECORDS
-      // ====================================
-
-      const createdRecords = [];
-
-      for (
-        let i = 0;
-        i < recordsToCreate.length;
-        i += 50
-      ) {
-        const batch =
-          recordsToCreate.slice(
-            i,
-            i + 50
-          );
-
-        const response =
-          await fetch(
-            attendanceAirtableUrl,
-            {
-              method: "POST",
-
-              headers:
-                airtableHeaders,
-
-              body: JSON.stringify({
-                records: batch,
-              }),
-            }
-          );
-
-        const data =
-          await response.json();
-
-        if (!response.ok) {
-          console.error(
-            "CREATE attendance error:",
-            JSON.stringify(
-              data,
-              null,
-              2
-            )
-          );
-
-          return res.status(
-            response.status
-          ).json({
-            error:
-              data?.error?.message ||
-              "Unable to create attendance.",
-          });
-        }
-
-        createdRecords.push(
-          ...(data.records || [])
-        );
-      }
-
-      // ====================================
-      // UPDATE EXISTING RECORDS
-      // ====================================
-
-      const updatedRecords = [];
-
-      for (
-        let i = 0;
-        i < recordsToUpdate.length;
-        i += 50
-      ) {
-        const batch =
-          recordsToUpdate.slice(
-            i,
-            i + 50
-          );
-
-        const response =
-          await fetch(
-            attendanceAirtableUrl,
-            {
-              method: "PATCH",
-
-              headers:
-                airtableHeaders,
-
-              body: JSON.stringify({
-                records: batch,
-              }),
-            }
-          );
-
-        const data =
-          await response.json();
-
-        if (!response.ok) {
-          console.error(
-            "UPDATE attendance error:",
-            JSON.stringify(
-              data,
-              null,
-              2
-            )
-          );
-
-          return res.status(
-            response.status
-          ).json({
-            error:
-              data?.error?.message ||
-              "Unable to update attendance.",
-          });
-        }
-
-        updatedRecords.push(
-          ...(data.records || [])
-        );
-      }
-
-      // ====================================
-      // SUCCESS
-      // ====================================
-
-      console.log(
-        `Attendance saved for ${studentIds.length} student(s) in ${className} on ${date}.`
-      );
 
       res.status(201).json({
         message:
           "Attendance saved successfully.",
 
-        date,
-
-        className,
-
-        created:
-          createdRecords.length,
-
-        updated:
-          updatedRecords.length,
-
-        recordsProcessed:
-          studentIds.length,
+        records:
+          data || [],
       });
     } catch (error) {
       console.error(
-        "SAVE ATTENDANCE error:",
+        "SAVE ATTENDANCE ERROR:",
         error
       );
 
       res.status(500).json({
-        error:
-          "Unable to save attendance.",
+        error: error.message,
       });
     }
   }
 );
 
-// ========================================
-// GET FEE ACCOUNTS
-// ========================================
+// ======================================================
+// FEE ACCOUNTS
+// ======================================================
 
 app.get(
   "/api/fee-accounts",
   async (req, res) => {
     try {
-      const response =
-        await fetch(
-          feesAirtableUrl,
+      const {
+        data,
+        error,
+      } = await supabase
+        .from(
+          "fee_accounts"
+        )
+        .select("*")
+        .order(
+          "created_at",
           {
-            headers: {
-              Authorization:
-                `Bearer ${AIRTABLE_TOKEN}`,
-            },
+            ascending: false,
           }
         );
 
-      const data =
-        await response.json();
-
-      if (!response.ok) {
-        return res.status(
-          response.status
-        ).json({
-          error:
-            data?.error?.message ||
-            "Unable to load fee accounts.",
-        });
+      if (error) {
+        throw error;
       }
 
       res.json(
-        data.records || []
+        data || []
       );
     } catch (error) {
       console.error(
-        "GET fee accounts error:",
+        "FEE ACCOUNTS ERROR:",
         error
       );
 
       res.status(500).json({
-        error:
-          "Unable to load fee accounts.",
+        error: error.message,
       });
     }
   }
 );
 
-// ========================================
-// CREATE FEE ACCOUNT
-// ========================================
-
-app.post(
-  "/api/fee-accounts",
-  async (req, res) => {
-    try {
-      const {
-        studentRecordId,
-        session,
-        term,
-        totalFee,
-      } = req.body;
-
-      if (!studentRecordId) {
-        return res.status(400).json({
-          error:
-            "Student is required.",
-        });
-      }
-
-      if (
-        !session ||
-        !String(session).trim()
-      ) {
-        return res.status(400).json({
-          error:
-            "Session is required.",
-        });
-      }
-
-      if (
-        !term ||
-        !String(term).trim()
-      ) {
-        return res.status(400).json({
-          error:
-            "Term is required.",
-        });
-      }
-
-      const feeAmount =
-        Number(totalFee);
-
-      if (
-        !Number.isFinite(
-          feeAmount
-        ) ||
-        feeAmount <= 0
-      ) {
-        return res.status(400).json({
-          error:
-            "Enter a valid total fee.",
-        });
-      }
-
-      // VERIFY STUDENT
-
-      const studentResponse =
-        await fetch(
-          `${airtableUrl}/${studentRecordId}`,
-          {
-            headers: {
-              Authorization:
-                `Bearer ${AIRTABLE_TOKEN}`,
-            },
-          }
-        );
-
-      const studentData =
-        await studentResponse.json();
-
-      if (!studentResponse.ok) {
-        return res.status(400).json({
-          error:
-            "The selected student could not be found.",
-        });
-      }
-
-      // GET EXISTING FEE IDS
-
-      const existingResponse =
-        await fetch(
-          feesAirtableUrl,
-          {
-            headers: {
-              Authorization:
-                `Bearer ${AIRTABLE_TOKEN}`,
-            },
-          }
-        );
-
-      const existingData =
-        await existingResponse.json();
-
-      if (!existingResponse.ok) {
-        return res.status(500).json({
-          error:
-            "Unable to generate fee account ID.",
-        });
-      }
-
-      const existingIds =
-        (existingData.records || [])
-          .map(
-            (record) =>
-              record.fields?.[
-                "Fee Account ID"
-              ]
-          )
-          .filter(Boolean);
-
-      let highestNumber = 0;
-
-      for (const id of existingIds) {
-        const match =
-          String(id).match(
-            /^Fe(\d+)$/i
-          );
-
-        if (match) {
-          const number =
-            Number(match[1]);
-
-          if (
-            number >
-            highestNumber
-          ) {
-            highestNumber =
-              number;
-          }
-        }
-      }
-
-      const feeAccountId =
-        `Fe${String(
-          highestNumber + 1
-        ).padStart(3, "0")}`;
-
-      const fields = {
-        "Fee Account ID":
-          feeAccountId,
-
-        Student: [
-          studentRecordId,
-        ],
-
-        Session:
-          String(session).trim(),
-
-        Term:
-          String(term).trim(),
-
-        "Total Fee":
-          feeAmount,
-      };
-
-      const response =
-        await fetch(
-          feesAirtableUrl,
-          {
-            method: "POST",
-
-            headers:
-              airtableHeaders,
-
-            body: JSON.stringify({
-              fields,
-            }),
-          }
-        );
-
-      const data =
-        await response.json();
-
-      if (!response.ok) {
-        return res.status(
-          response.status
-        ).json({
-          error:
-            data?.error?.message ||
-            "Unable to create fee account.",
-        });
-      }
-
-      res.status(201).json(data);
-    } catch (error) {
-      console.error(
-        "CREATE FEE ACCOUNT error:",
-        error
-      );
-
-      res.status(500).json({
-        error:
-          "Unable to create fee account.",
-      });
-    }
-  }
-);
-
-// ========================================
+// ======================================================
 // START SERVER
-// ========================================
+// ======================================================
 
-app.listen(PORT, () => {
-  console.log(
-    `Predvic School Portal API running on http://localhost:${PORT}`
-  );
-});
+app.listen(
+  PORT,
+  () => {
+    console.log("");
+    console.log(
+      "========================================"
+    );
+    console.log(
+      "PREDVIC SCHOOL PORTAL BACKEND"
+    );
+    console.log(
+      "========================================"
+    );
+    console.log(
+      `Server: http://localhost:${PORT}`
+    );
+    console.log(
+      "Database: Supabase"
+    );
+    console.log(
+      "Airtable: DISCONNECTED"
+    );
+    console.log(
+      "========================================"
+    );
+    console.log("");
+  }
+);
