@@ -2113,6 +2113,115 @@ app.get(
 );
 
 // ======================================================
+// SEARCH EXISTING STUDENTS FOR RETURNING ENROLLMENT
+// ======================================================
+
+app.get(
+ "/api/returning-students/search",
+  async (req, res) => {
+    try {
+      const {
+        firstName,
+        lastName,
+        dateOfBirth,
+        parentPhone,
+      } = req.query;
+
+      if (
+        !firstName &&
+        !lastName &&
+        !dateOfBirth &&
+        !parentPhone
+      ) {
+        return res.status(400).json({
+          error:
+            "Enter at least one identifying detail.",
+        });
+      }
+
+      let query = supabase
+        .from("students")
+        .select(`
+          id,
+          admission_no,
+          first_name,
+          middle_name,
+          last_name,
+          date_of_birth,
+          parent_name,
+          parent_phone,
+          address,
+          student_type,
+          status
+        `)
+        .eq(
+          "status",
+          "Active"
+        );
+
+      if (firstName?.trim()) {
+        query = query.ilike(
+          "first_name",
+          `%${firstName.trim()}%`
+        );
+      }
+
+      if (lastName?.trim()) {
+        query = query.ilike(
+          "last_name",
+          `%${lastName.trim()}%`
+        );
+      }
+
+      if (dateOfBirth) {
+        query = query.eq(
+          "date_of_birth",
+          dateOfBirth
+        );
+      }
+
+      if (parentPhone?.trim()) {
+        query = query.ilike(
+          "parent_phone",
+          `%${parentPhone.trim()}%`
+        );
+      }
+
+      const {
+        data,
+        error,
+      } = await query
+        .order(
+          "last_name",
+          {
+            ascending: true,
+          }
+        )
+        .limit(20);
+
+      if (error) {
+        throw error;
+      }
+
+      res.json(
+        data || []
+      );
+
+    } catch (error) {
+      console.error(
+        "RETURNING STUDENT SEARCH ERROR:",
+        error
+      );
+
+      res.status(500).json({
+        error:
+          error.message,
+      });
+    }
+  }
+);
+
+// ======================================================
 // SERVER START
 // ======================================================
 

@@ -100,6 +100,15 @@ export default function Students() {
   const [returningStudent, setReturningStudent] =
     useState(EMPTY_RETURNING_STUDENT);
 
+  const [returningMatches, setReturningMatches] =
+  useState([]);
+
+const [selectedReturningStudent, setSelectedReturningStudent] =
+  useState(null);
+
+const [searchingReturning, setSearchingReturning] =
+  useState(false);
+
   // ==================================================
   // LOAD STUDENTS
   // ==================================================
@@ -555,6 +564,96 @@ export default function Students() {
   };
 
   // ==================================================
+// SEARCH RETURNING STUDENT
+// ==================================================
+
+const searchReturningStudents = async () => {
+  const form = returningStudent;
+
+  if (
+    !form.firstName.trim() &&
+    !form.lastName.trim() &&
+    !form.dateOfBirth &&
+    !form.parentPhone.trim()
+  ) {
+    setError(
+      "Enter at least one identifying detail."
+    );
+    return;
+  }
+
+  try {
+    setSearchingReturning(true);
+    setError("");
+    setReturningMatches([]);
+    setSelectedReturningStudent(null);
+
+    const params =
+      new URLSearchParams();
+
+    if (form.firstName.trim()) {
+      params.set(
+        "firstName",
+        form.firstName.trim()
+      );
+    }
+
+    if (form.lastName.trim()) {
+      params.set(
+        "lastName",
+        form.lastName.trim()
+      );
+    }
+
+    if (form.dateOfBirth) {
+      params.set(
+        "dateOfBirth",
+        form.dateOfBirth
+      );
+    }
+
+    if (form.parentPhone.trim()) {
+      params.set(
+        "parentPhone",
+        form.parentPhone.trim()
+      );
+    }
+
+    const response = await fetch(
+      `${API_URL}/api/returning-students/search?${params.toString()}`
+    );
+
+    const data =
+      await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.error ||
+          "Unable to search for student."
+      );
+    }
+
+    setReturningMatches(data);
+
+    if (data.length === 0) {
+      setError(
+        "No matching existing student found."
+      );
+    }
+
+  } catch (err) {
+    console.error(err);
+
+    setError(
+      err.message ||
+        "Unable to search for student."
+    );
+  } finally {
+    setSearchingReturning(false);
+  }
+};
+
+  // ==================================================
   // SUBMIT RETURNING STUDENT
   // ==================================================
 
@@ -575,15 +674,7 @@ export default function Students() {
       );
       return;
     }
-
-    if (!form.dateOfBirth) {
-      setError(
-        "Date of birth is required."
-      );
-      return;
-    }
-
-    if (!form.parentName.trim()) {
+   if (!form.parentName.trim()) {
       setError(
         "Parent/guardian name is required."
       );
@@ -610,6 +701,12 @@ export default function Students() {
       );
       return;
     }
+    if (!selectedReturningStudent) {
+  setError(
+    "Search for and select the existing student first."
+  );
+  return;
+}
 
     try {
       setSaving(true);
@@ -638,6 +735,8 @@ export default function Students() {
           },
 
           body: JSON.stringify({
+            studentId:
+               selectedReturningStudent?.id,
             firstName:
               form.firstName.trim(),
 
@@ -1893,6 +1992,83 @@ export default function Students() {
                         "90px",
                     }}
                   />
+
+                  <button
+  type="button"
+  className="primary-btn"
+  onClick={searchReturningStudents}
+  disabled={searchingReturning}
+  style={{
+    gridColumn: "1 / -1",
+  }}
+>
+  {searchingReturning
+    ? "Searching..."
+    : "Search Existing Student"}
+</button>
+{returningMatches.length > 0 && (
+  <div
+    style={{
+      gridColumn: "1 / -1",
+      marginTop: "10px",
+      padding: "15px",
+      border: "1px solid #e2e8f0",
+      borderRadius: "10px",
+      background: "#f8fafc",
+    }}
+  >
+    <h4>Matching Students</h4>
+
+    {returningMatches.map((student) => (
+      <button
+        key={student.id}
+        type="button"
+        onClick={() =>
+          setSelectedReturningStudent(student)
+        }
+        style={{
+          display: "block",
+          width: "100%",
+          textAlign: "left",
+          padding: "12px",
+          marginTop: "8px",
+          border: "1px solid #cbd5e1",
+          borderRadius: "8px",
+          background:
+            selectedReturningStudent?.id === student.id
+            ? "#e0f2fe"
+            : "#fff",
+
+          color: "#1f2937",
+
+          cursor: "pointer",
+        }}
+      >
+        <strong>
+          {student.first_name} {student.last_name}
+        </strong>
+
+        <br />
+
+        <small>
+          Admission No: {student.admission_no}
+        </small>
+
+        <br />
+
+        <small>
+          Parent: {student.parent_name || "—"}
+        </small>
+
+        <br />
+
+        <small>
+          Phone: {student.parent_phone || "—"}
+        </small>
+      </button>
+    ))}
+  </div>
+)}
 
                   <select
                     value={
