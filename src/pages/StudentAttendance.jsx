@@ -45,8 +45,29 @@ const getWeekDates = (date) => {
   return Array.from({ length: 5 }, (_, index) => {
     const day = new Date(monday);
     day.setDate(monday.getDate() + index);
+
     return day;
   });
+};
+
+const getExpectedWeekdayCount = (dates, term, referenceDate = new Date()) => {
+  if (!term) return 0;
+
+  const todayString = getDateString(referenceDate);
+
+  return dates.filter((date) => {
+    const dateString = getDateString(date);
+    const day = date.getDay();
+
+    if (day === 0 || day === 6) return false;
+    if (term.starts_on && dateString < term.starts_on) return false;
+    if (term.ends_on && dateString > term.ends_on) return false;
+
+    // Do not count future school days in the current week.
+    if (dateString > todayString) return false;
+
+    return true;
+  }).length;
 };
 
 const formatDate = (date) => {
@@ -56,32 +77,72 @@ const formatDate = (date) => {
   });
 };
 
+const formatLongDate = (date) => {
+  return date.toLocaleDateString("en-NG", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+};
+
 export default function StudentAttendance() {
   const [students, setStudents] = useState([]);
   const [classes, setClasses] = useState([]);
 
-  const [academicSession, setAcademicSession] = useState(null);
-  const [activeTerm, setActiveTerm] = useState(null);
+  const [academicSession, setAcademicSession] =
+    useState(null);
 
-  const [selectedClass, setSelectedClass] = useState("");
+  const [activeTerm, setActiveTerm] =
+    useState(null);
 
-  const [attendanceDate, setAttendanceDate] = useState(
-    getDateString(new Date())
-  );
+  const [selectedClass, setSelectedClass] =
+    useState("");
 
-  const [weekDate, setWeekDate] = useState(
-    getDateString(new Date())
-  );
+  const [attendanceDate, setAttendanceDate] =
+    useState(getDateString(new Date()));
 
-  const [attendance, setAttendance] = useState({});
-  const [weeklyRecords, setWeeklyRecords] = useState({});
+  const [weekDate, setWeekDate] =
+    useState(getDateString(new Date()));
 
-  const [loading, setLoading] = useState(true);
-  const [loadingWeekly, setLoadingWeekly] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [attendance, setAttendance] =
+    useState({});
 
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  // Attendance already saved for this date is locked.
+  // This prevents changing Present to Absent (or vice versa)
+  // after the daily record has been submitted.
+  const [lockedAttendance, setLockedAttendance] =
+    useState({});
+
+  const [weeklyRecords, setWeeklyRecords] =
+    useState({});
+
+  const [termRecords, setTermRecords] =
+    useState({});
+
+  const [weeklyExpectedDays, setWeeklyAttendanceDays] =
+    useState(0);
+
+  const [termAttendanceDays, setTermAttendanceDays] =
+    useState(0);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [loadingWeekly, setLoadingWeekly] =
+    useState(false);
+
+  const [loadingTerm, setLoadingTerm] =
+    useState(false);
+
+  const [saving, setSaving] =
+    useState(false);
+
+  const [error, setError] =
+    useState("");
+
+  const [success, setSuccess] =
+    useState("");
 
   // =========================================================
   // ACADEMIC SESSION + ACTIVE TERM
@@ -89,14 +150,20 @@ export default function StudentAttendance() {
 
   const fetchAcademicContext = async () => {
     try {
-      const { data: session, error: sessionError } =
-        await supabase
-          .from("academic_sessions")
-          .select("id, name, is_active")
-          .eq("is_active", true)
-          .maybeSingle();
+      const {
+        data: session,
+        error: sessionError,
+      } = await supabase
+        .from("academic_sessions")
+        .select(
+          "id, name, is_active"
+        )
+        .eq("is_active", true)
+        .maybeSingle();
 
-      if (sessionError) throw sessionError;
+      if (sessionError) {
+        throw sessionError;
+      }
 
       if (!session) {
         setAcademicSession(null);
@@ -109,22 +176,31 @@ export default function StudentAttendance() {
 
       setAcademicSession(session);
 
-      const { data: term, error: termError } =
-        await supabase
-          .from("terms")
-          .select(`
-            id,
-            academic_session_id,
-            name,
-            status,
-            started_at,
-            closed_at
-          `)
-          .eq("academic_session_id", session.id)
-          .eq("status", "active")
-          .maybeSingle();
+      const {
+        data: term,
+        error: termError,
+      } = await supabase
+        .from("terms")
+        .select(`
+          id,
+          academic_session_id,
+          name,
+          status,
+          starts_on,
+          ends_on,
+          started_at,
+          closed_at
+        `)
+        .eq(
+          "academic_session_id",
+          session.id
+        )
+        .eq("status", "active")
+        .maybeSingle();
 
-      if (termError) throw termError;
+      if (termError) {
+        throw termError;
+      }
 
       if (!term) {
         setActiveTerm(null);
@@ -135,8 +211,33 @@ export default function StudentAttendance() {
       }
 
       setActiveTerm(term);
+
+      // Put the attendance date inside the active term
+      // when possible.
+      if (term.starts_on) {
+        const today = new Date();
+        const todayString =
+          getDateString(today);
+
+        if (
+          todayString <
+          term.starts_on
+        ) {
+          setAttendanceDate(
+            term.starts_on
+          );
+
+          setWeekDate(
+            term.starts_on
+          );
+        }
+      }
     } catch (err) {
-      console.error(err);
+      console.error(
+        "ACADEMIC CONTEXT ERROR:",
+        err
+      );
+
       setError(
         err.message ||
           "Unable to load academic session."
@@ -150,52 +251,74 @@ export default function StudentAttendance() {
 
   const fetchClasses = async () => {
     try {
-      const { data, error } = await supabase
+      const {
+        data,
+        error,
+      } = await supabase
         .from("classes")
-        .select("id, name, display_order");
+        .select(
+          "id, name, display_order"
+        );
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
-      /*
-       * IMPORTANT:
-       * We deliberately sort AGAIN in JavaScript.
-       * This guarantees that the UI follows the school's
-       * academic order even if Supabase returns the rows
-       * in a different order.
-       */
+      const sortedClasses =
+        [...(data || [])].sort(
+          (a, b) => {
+            const orderA =
+              SCHOOL_CLASS_ORDER.indexOf(
+                a.name
+              );
 
-      const sortedClasses = [...(data || [])].sort(
-        (a, b) => {
-          const orderA =
-            SCHOOL_CLASS_ORDER.indexOf(a.name);
+            const orderB =
+              SCHOOL_CLASS_ORDER.indexOf(
+                b.name
+              );
 
-          const orderB =
-            SCHOOL_CLASS_ORDER.indexOf(b.name);
+            if (
+              orderA !== -1 &&
+              orderB !== -1
+            ) {
+              return (
+                orderA - orderB
+              );
+            }
 
-          // Known classes follow the school order.
-          if (orderA !== -1 && orderB !== -1) {
-            return orderA - orderB;
+            if (
+              orderA !== -1
+            ) {
+              return -1;
+            }
+
+            if (
+              orderB !== -1
+            ) {
+              return 1;
+            }
+
+            return (
+              (a.display_order ??
+                999) -
+              (b.display_order ??
+                999)
+            );
           }
+        );
 
-          // Known classes always come before unknown classes.
-          if (orderA !== -1) return -1;
-          if (orderB !== -1) return 1;
-
-          // Unknown classes fall back to database order.
-          return (
-            (a.display_order ?? 999) -
-            (b.display_order ?? 999)
-          );
-        }
+      setClasses(
+        sortedClasses
       );
-
-      setClasses(sortedClasses);
     } catch (err) {
-      console.error("CLASS LOAD ERROR:", err);
+      console.error(
+        "CLASS LOAD ERROR:",
+        err
+      );
 
       setError(
         err.message ||
-          "Unable to load classes from Supabase."
+          "Unable to load classes."
       );
     }
   };
@@ -209,12 +332,18 @@ export default function StudentAttendance() {
     termId
   ) => {
     try {
-      if (!sessionId || !termId) {
+      if (
+        !sessionId ||
+        !termId
+      ) {
         setStudents([]);
         return;
       }
 
-      const { data, error } = await supabase
+      const {
+        data,
+        error,
+      } = await supabase
         .from("student_enrollments")
         .select(`
           id,
@@ -236,49 +365,88 @@ export default function StudentAttendance() {
             name
           )
         `)
-        .eq("session_id", sessionId)
-        .eq("term_id", termId)
-        .eq("status", "active");
-
-      if (error) throw error;
-
-      const formattedStudents = (data || [])
-        .filter(
-          (enrollment) =>
-            enrollment.students
+        .eq(
+          "session_id",
+          sessionId
         )
-        .map((enrollment) => ({
-          enrollmentId: enrollment.id,
-          id: enrollment.students.id,
+        .eq(
+          "term_id",
+          termId
+        )
+        .eq(
+          "status",
+          "active"
+        );
 
-          studentNumber:
-            enrollment.students.admission_no,
+      if (error) {
+        throw error;
+      }
 
-          firstName:
-            enrollment.students.first_name,
+      const formattedStudents =
+        (data || [])
+          .filter(
+            (enrollment) =>
+              enrollment.students
+          )
+          .map(
+            (enrollment) => ({
+              enrollmentId:
+                enrollment.id,
 
-          lastName:
-            enrollment.students.last_name,
+              id:
+                enrollment
+                  .students
+                  .id,
 
-          fullName: [
-            enrollment.students.first_name,
-            enrollment.students.last_name,
-          ]
-            .filter(Boolean)
-            .join(" "),
+              studentNumber:
+                enrollment
+                  .students
+                  .admission_no,
 
-          studentType:
-            enrollment.students.student_type,
+              firstName:
+                enrollment
+                  .students
+                  .first_name,
 
-          classId: enrollment.class_id,
+              lastName:
+                enrollment
+                  .students
+                  .last_name,
 
-          className:
-            enrollment.classes?.name || "",
-        }));
+              fullName: [
+                enrollment
+                  .students
+                  .first_name,
+                enrollment
+                  .students
+                  .last_name,
+              ]
+                .filter(Boolean)
+                .join(" "),
 
-      setStudents(formattedStudents);
+              studentType:
+                enrollment
+                  .students
+                  .student_type,
+
+              classId:
+                enrollment.class_id,
+
+              className:
+                enrollment
+                  .classes
+                  ?.name || "",
+            })
+          );
+
+      setStudents(
+        formattedStudents
+      );
     } catch (err) {
-      console.error("STUDENT LOAD ERROR:", err);
+      console.error(
+        "STUDENT LOAD ERROR:",
+        err
+      );
 
       setError(
         err.message ||
@@ -292,17 +460,18 @@ export default function StudentAttendance() {
   // =========================================================
 
   useEffect(() => {
-    const initialize = async () => {
-      setLoading(true);
-      setError("");
+    const initialize =
+      async () => {
+        setLoading(true);
+        setError("");
 
-      await Promise.all([
-        fetchAcademicContext(),
-        fetchClasses(),
-      ]);
+        await Promise.all([
+          fetchAcademicContext(),
+          fetchClasses(),
+        ]);
 
-      setLoading(false);
-    };
+        setLoading(false);
+      };
 
     initialize();
   }, []);
@@ -312,7 +481,10 @@ export default function StudentAttendance() {
   // =========================================================
 
   useEffect(() => {
-    if (!academicSession || !activeTerm) {
+    if (
+      !academicSession ||
+      !activeTerm
+    ) {
       setStudents([]);
       return;
     }
@@ -321,98 +493,451 @@ export default function StudentAttendance() {
       academicSession.id,
       activeTerm.id
     );
-  }, [academicSession, activeTerm]);
+  }, [
+    academicSession,
+    activeTerm,
+  ]);
 
   // =========================================================
   // SELECTED CLASS STUDENTS
   // =========================================================
 
-  const classStudents = useMemo(() => {
-    return students.filter(
-      (student) =>
-        student.classId === selectedClass
-    );
-  }, [students, selectedClass]);
+  const classStudents =
+    useMemo(() => {
+      return students.filter(
+        (student) =>
+          student.classId ===
+          selectedClass
+      );
+    }, [
+      students,
+      selectedClass,
+    ]);
 
   // =========================================================
   // WEEK
   // =========================================================
 
-  const weekDates = useMemo(() => {
-    return getWeekDates(
-      new Date(`${weekDate}T00:00:00`)
-    );
-  }, [weekDate]);
-
-  // =========================================================
-  // WEEKLY ATTENDANCE
-  // =========================================================
-
-  const fetchWeeklyAttendance = async () => {
-    if (
-      !selectedClass ||
-      classStudents.length === 0
-    ) {
-      setWeeklyRecords({});
-      return;
-    }
-
-    try {
-      setLoadingWeekly(true);
-
-      const startDate = getDateString(
-        weekDates[0]
-      );
-
-      const endDate = getDateString(
-        weekDates[4]
-      );
-
-      const studentIds = classStudents.map(
-        (student) => student.id
-      );
-
-      const { data, error } = await supabase
-        .from("student_attendance")
-        .select(
-          "student_id, enrollment_id, attendance_date, status"
+  const weekDates =
+    useMemo(() => {
+      return getWeekDates(
+        new Date(
+          `${weekDate}T00:00:00`
         )
-        .in("student_id", studentIds)
-        .gte("attendance_date", startDate)
-        .lte("attendance_date", endDate);
+      );
+    }, [weekDate]);
 
-      if (error) throw error;
+  // =========================================================
+  // CHECK DATE IS IN ACTIVE TERM
+  // =========================================================
 
-      const records = {};
+  const isDateWithinActiveTerm =
+    (dateString) => {
+      if (!activeTerm) {
+        return false;
+      }
 
-      (data || []).forEach((record) => {
-        if (!records[record.student_id]) {
-          records[record.student_id] = {};
+      if (
+        activeTerm.starts_on &&
+        dateString <
+          activeTerm.starts_on
+      ) {
+        return false;
+      }
+
+      if (
+        activeTerm.ends_on &&
+        dateString >
+          activeTerm.ends_on
+      ) {
+        return false;
+      }
+
+      return true;
+    };
+
+  // =========================================================
+  // LOAD EXISTING ATTENDANCE FOR SELECTED DATE
+  // =========================================================
+
+  const fetchDailyAttendance =
+    async () => {
+      if (
+        !selectedClass ||
+        !academicSession ||
+        !activeTerm ||
+        classStudents.length === 0
+      ) {
+        setAttendance({});
+        setLockedAttendance({});
+        return;
+      }
+
+      try {
+        const studentIds =
+          classStudents.map(
+            (student) =>
+              student.id
+          );
+
+        const {
+          data,
+          error,
+        } = await supabase
+          .from(
+            "student_attendance"
+          )
+          .select(`
+            student_id,
+            enrollment_id,
+            class_id,
+            session_id,
+            term_id,
+            attendance_date,
+            status
+          `)
+          .in(
+            "student_id",
+            studentIds
+          )
+          .eq(
+            "class_id",
+            selectedClass
+          )
+          .eq(
+            "session_id",
+            academicSession.id
+          )
+          .eq(
+            "term_id",
+            activeTerm.id
+          )
+          .eq(
+            "attendance_date",
+            attendanceDate
+          );
+
+        if (error) {
+          throw error;
         }
 
-        records[record.student_id][
-          record.attendance_date
-        ] = record.status;
-      });
+        const existing = {};
+        const locked = {};
 
-      setWeeklyRecords(records);
-    } catch (err) {
-      console.error(err);
+        (data || []).forEach(
+          (record) => {
+            existing[record.student_id] =
+              record.status;
 
-      setError(
-        err.message ||
-          "Unable to load weekly attendance."
-      );
-    } finally {
-      setLoadingWeekly(false);
-    }
-  };
+            locked[record.student_id] = true;
+          }
+        );
+
+        setAttendance(existing);
+        setLockedAttendance(locked);
+      } catch (err) {
+        console.error(
+          "DAILY ATTENDANCE LOAD ERROR:",
+          err
+        );
+
+        setError(
+          err.message ||
+            "Unable to load daily attendance."
+        );
+      }
+    };
+
+  useEffect(() => {
+    fetchDailyAttendance();
+  }, [
+    selectedClass,
+    attendanceDate,
+    academicSession,
+    activeTerm,
+    classStudents.length,
+  ]);
+
+  // =========================================================
+  // LOAD WEEKLY ATTENDANCE
+  // =========================================================
+
+  const fetchWeeklyAttendance =
+    async () => {
+      if (
+        !selectedClass ||
+        !academicSession ||
+        !activeTerm ||
+        classStudents.length === 0
+      ) {
+        setWeeklyRecords({});
+        setWeeklyAttendanceDays(0);
+        return;
+      }
+
+      try {
+        setLoadingWeekly(true);
+
+        const startDate =
+          getDateString(
+            weekDates[0]
+          );
+
+        const endDate =
+          getDateString(
+            weekDates[4]
+          );
+
+        const studentIds =
+          classStudents.map(
+            (student) =>
+              student.id
+          );
+
+        const {
+          data,
+          error,
+        } = await supabase
+          .from(
+            "student_attendance"
+          )
+          .select(`
+            student_id,
+            attendance_date,
+            status
+          `)
+          .in(
+            "student_id",
+            studentIds
+          )
+          .eq(
+            "class_id",
+            selectedClass
+          )
+          .eq(
+            "session_id",
+            academicSession.id
+          )
+          .eq(
+            "term_id",
+            activeTerm.id
+          )
+          .gte(
+            "attendance_date",
+            startDate
+          )
+          .lte(
+            "attendance_date",
+            endDate
+          );
+
+        if (error) {
+          throw error;
+        }
+
+        const records =
+          {};
+
+        (data || []).forEach(
+          (record) => {
+            if (
+              !records[
+                record.student_id
+              ]
+            ) {
+              records[
+                record.student_id
+              ] = {};
+            }
+
+            records[
+              record.student_id
+            ][
+              record.attendance_date
+            ] =
+              record.status;
+          }
+        );
+
+        // Percentage denominator is expected Monday-Friday
+        // school days, not merely the number of records saved.
+        const expectedDays =
+          getExpectedWeekdayCount(
+            weekDates,
+            activeTerm
+          );
+
+        setWeeklyRecords(
+          records
+        );
+
+        setWeeklyExpectedDays(
+          expectedDays
+        );
+
+      } catch (err) {
+        console.error(
+          "WEEKLY ATTENDANCE ERROR:",
+          err
+        );
+
+        setError(
+          err.message ||
+            "Unable to load weekly attendance."
+        );
+      } finally {
+        setLoadingWeekly(false);
+      }
+    };
 
   useEffect(() => {
     fetchWeeklyAttendance();
   }, [
     selectedClass,
     weekDate,
+    academicSession,
+    activeTerm,
+    classStudents.length,
+  ]);
+
+  // =========================================================
+  // TERM ATTENDANCE
+  // =========================================================
+
+  const fetchTermAttendance =
+    async () => {
+      if (
+        !selectedClass ||
+        !academicSession ||
+        !activeTerm ||
+        classStudents.length === 0
+      ) {
+        setTermRecords({});
+        setTermAttendanceDays(0);
+        return;
+      }
+
+      try {
+        setLoadingTerm(true);
+
+        const studentIds =
+          classStudents.map(
+            (student) =>
+              student.id
+          );
+
+        let query =
+          supabase
+            .from(
+              "student_attendance"
+            )
+            .select(`
+              student_id,
+              attendance_date,
+              status
+            `)
+            .in(
+              "student_id",
+              studentIds
+            )
+            .eq(
+              "class_id",
+              selectedClass
+            )
+            .eq(
+              "session_id",
+              academicSession.id
+            )
+            .eq(
+              "term_id",
+              activeTerm.id
+            );
+
+        if (
+          activeTerm.starts_on
+        ) {
+          query =
+            query.gte(
+              "attendance_date",
+              activeTerm.starts_on
+            );
+        }
+
+        if (
+          activeTerm.ends_on
+        ) {
+          query =
+            query.lte(
+              "attendance_date",
+              activeTerm.ends_on
+            );
+        }
+
+        const {
+          data,
+          error,
+        } = await query;
+
+        if (error) {
+          throw error;
+        }
+
+        const records =
+          {};
+
+        const attendanceDates =
+          new Set();
+
+        (data || []).forEach(
+          (record) => {
+            if (
+              !records[
+                record.student_id
+              ]
+            ) {
+              records[
+                record.student_id
+              ] = [];
+            }
+
+            records[
+              record.student_id
+            ].push(record);
+
+            attendanceDates.add(
+              record.attendance_date
+            );
+          }
+        );
+
+        setTermRecords(
+          records
+        );
+
+        setTermAttendanceDays(
+          attendanceDates.size
+        );
+      } catch (err) {
+        console.error(
+          "TERM ATTENDANCE ERROR:",
+          err
+        );
+
+        setError(
+          err.message ||
+            "Unable to load term attendance."
+        );
+      } finally {
+        setLoadingTerm(false);
+      }
+    };
+
+  useEffect(() => {
+    fetchTermAttendance();
+  }, [
+    selectedClass,
+    academicSession,
+    activeTerm,
     classStudents.length,
   ]);
 
@@ -424,157 +949,305 @@ export default function StudentAttendance() {
     studentId,
     status
   ) => {
-    setAttendance((current) => ({
-      ...current,
-      [studentId]: status,
-    }));
-  };
-
-  const markAllPresent = () => {
-    const updated = {};
-
-    classStudents.forEach((student) => {
-      updated[student.id] = "Present";
-    });
-
-    setAttendance(updated);
-  };
-
-  const resetAttendance = () => {
-    setAttendance({});
-    setSuccess("");
-    setError("");
-  };
-
-  // =========================================================
-  // SAVE
-  // =========================================================
-
-  const handleSaveAttendance = async () => {
-    if (!academicSession || !activeTerm) {
-      alert(
-        "Attendance cannot be recorded because there is no active term."
-      );
+    // Once a daily record has been saved, it is locked.
+    if (lockedAttendance[studentId]) {
       return;
     }
 
-    if (!selectedClass) {
-      alert("Please select a class.");
-      return;
-    }
-
-    if (classStudents.length === 0) {
-      alert(
-        "There are no students enrolled in this class."
-      );
-      return;
-    }
-
-    const unmarked = classStudents.filter(
-      (student) =>
-        !attendance[student.id]
+    setAttendance(
+      (current) => ({
+        ...current,
+        [studentId]: status,
+      })
     );
-
-    if (unmarked.length > 0) {
-      alert(
-        `Please mark attendance for all ${unmarked.length} remaining student(s).`
-      );
-      return;
-    }
-
-    try {
-      setSaving(true);
-      setError("");
-      setSuccess("");
-
-      const records = classStudents.map(
-        (student) => ({
-          student_id: student.id,
-          enrollment_id:
-            student.enrollmentId,
-          attendance_date:
-            attendanceDate,
-          status:
-            attendance[student.id],
-        })
-      );
-
-      const { error } = await supabase
-        .from("student_attendance")
-        .upsert(records, {
-          onConflict:
-            "student_id,attendance_date",
-        });
-
-      if (error) throw error;
-
-      setSuccess(
-        "Attendance saved successfully."
-      );
-
-      setAttendance({});
-
-      await fetchWeeklyAttendance();
-    } catch (err) {
-      console.error(err);
-
-      setError(
-        err.message ||
-          "Unable to save attendance."
-      );
-    } finally {
-      setSaving(false);
-    }
   };
+
+  const markAllPresent =
+    () => {
+      const updated = {
+        ...attendance,
+      };
+
+      classStudents.forEach(
+        (student) => {
+          if (!lockedAttendance[student.id]) {
+            updated[student.id] = "Present";
+          }
+        }
+      );
+
+      setAttendance(updated);
+    };
+
+  const resetAttendance =
+    () => {
+      setAttendance({});
+      setSuccess("");
+      setError("");
+    };
+
+  // =========================================================
+  // SAVE ATTENDANCE
+  // =========================================================
+
+  const handleSaveAttendance =
+    async () => {
+      if (
+        !academicSession ||
+        !activeTerm
+      ) {
+        alert(
+          "Attendance cannot be recorded because there is no active term."
+        );
+        return;
+      }
+
+      if (!selectedClass) {
+        alert(
+          "Please select a class."
+        );
+        return;
+      }
+
+      if (
+        !isDateWithinActiveTerm(
+          attendanceDate
+        )
+      ) {
+        alert(
+          "The selected date is outside the active academic term."
+        );
+        return;
+      }
+
+      if (
+        classStudents.length ===
+        0
+      ) {
+        alert(
+          "There are no students enrolled in this class."
+        );
+        return;
+      }
+
+      const unmarked =
+        classStudents.filter(
+          (student) =>
+            !attendance[
+              student.id
+            ]
+        );
+
+      if (
+        unmarked.length > 0
+      ) {
+        alert(
+          `Please mark attendance for all ${unmarked.length} remaining student(s).`
+        );
+        return;
+      }
+
+      const studentsToSave =
+        classStudents.filter(
+          (student) =>
+            !lockedAttendance[student.id]
+        );
+
+      if (studentsToSave.length === 0) {
+        setSuccess(
+          "Attendance for this date has already been saved. Saved records are locked."
+        );
+        return;
+      }
+
+      try {
+        setSaving(true);
+        setError("");
+        setSuccess("");
+
+        const records =
+          studentsToSave.map(
+            (student) => ({
+              student_id:
+                student.id,
+
+              enrollment_id:
+                student.enrollmentId,
+
+              class_id:
+                student.classId,
+
+              session_id:
+                academicSession.id,
+
+              term_id:
+                activeTerm.id,
+
+              attendance_date:
+                attendanceDate,
+
+              status:
+                attendance[
+                  student.id
+                ],
+            })
+          );
+
+        const {
+          error,
+        } = await supabase
+          .from(
+            "student_attendance"
+          )
+          .upsert(
+            records,
+            {
+              onConflict:
+                "student_id,session_id,term_id,attendance_date",
+            }
+          );
+
+        if (error) {
+          throw error;
+        }
+
+        setSuccess(
+          `Attendance for ${formatLongDate(
+            new Date(
+              `${attendanceDate}T00:00:00`
+            )
+          )} saved successfully.`
+        );
+
+        await Promise.all([
+          fetchDailyAttendance(),
+          fetchWeeklyAttendance(),
+          fetchTermAttendance(),
+        ]);
+      } catch (err) {
+        console.error(
+          "SAVE ATTENDANCE ERROR:",
+          err
+        );
+
+        setError(
+          err.message ||
+            "Unable to save attendance."
+        );
+      } finally {
+        setSaving(false);
+      }
+    };
 
   // =========================================================
   // WEEKLY STATS
   // =========================================================
 
-  const getWeeklyStats = (studentId) => {
-    const records =
-      weeklyRecords[studentId] || {};
+  const getWeeklyStats =
+    (studentId) => {
+      const records =
+        weeklyRecords[
+          studentId
+        ] || {};
 
-    let presentDays = 0;
-    let absentDays = 0;
+      let presentDays = 0;
+      let absentDays = 0;
 
-    weekDates.forEach((date) => {
-      const dateString =
-        getDateString(date);
+      Object.values(records).forEach(
+        (status) => {
+          if (
+            status ===
+            "Present"
+          ) {
+            presentDays++;
+          }
 
-      const status =
-        records[dateString];
+          if (
+            status ===
+            "Absent"
+          ) {
+            absentDays++;
+          }
+        }
+      );
 
-      if (status === "Present") {
-        presentDays++;
-      }
+      const percentage =
+        weeklyExpectedDays >
+        0
+          ? Math.round(
+              (presentDays /
+                weeklyExpectedDays) *
+                100
+            )
+          : 0;
 
-      if (status === "Absent") {
-        absentDays++;
-      }
-    });
-
-    return {
-      presentDays,
-      absentDays,
-      percentage: Math.round(
-        (presentDays / 5) * 100
-      ),
+      return {
+        presentDays,
+        absentDays,
+        percentage,
+      };
     };
-  };
+
+  // =========================================================
+  // TERMLY STATS
+  // =========================================================
+
+  const getTermStats =
+    (studentId) => {
+      const records =
+        termRecords[
+          studentId
+        ] || [];
+
+      const presentDays =
+        records.filter(
+          (record) =>
+            record.status ===
+            "Present"
+        ).length;
+
+      const absentDays =
+        records.filter(
+          (record) =>
+            record.status ===
+            "Absent"
+        ).length;
+
+      const percentage =
+        termAttendanceDays >
+        0
+          ? Math.round(
+              (presentDays /
+                termAttendanceDays) *
+                100
+            )
+          : 0;
+
+      return {
+        presentDays,
+        absentDays,
+        percentage,
+      };
+    };
+
+  // =========================================================
+  // DAILY COUNTS
+  // =========================================================
 
   const presentCount =
     classStudents.filter(
       (student) =>
-        attendance[student.id] ===
-        "Present"
+        attendance[
+          student.id
+        ] === "Present"
     ).length;
 
   const absentCount =
     classStudents.filter(
       (student) =>
-        attendance[student.id] ===
-        "Absent"
+        attendance[
+          student.id
+        ] === "Absent"
     ).length;
 
   const unmarkedCount =
@@ -583,14 +1256,30 @@ export default function StudentAttendance() {
     absentCount;
 
   // =========================================================
+  // SELECTED CLASS NAME
+  // =========================================================
+
+  const selectedClassName =
+    classes.find(
+      (item) =>
+        item.id ===
+        selectedClass
+    )?.name || "";
+
+  // =========================================================
   // LOADING
   // =========================================================
 
   if (loading) {
     return (
       <div className="page">
-        <h1>Student Attendance</h1>
-        <p>Loading attendance system...</p>
+        <h1>
+          Student Attendance
+        </h1>
+
+        <p>
+          Loading attendance system...
+        </p>
       </div>
     );
   }
@@ -602,19 +1291,26 @@ export default function StudentAttendance() {
   return (
     <div className="page">
 
+      {/* HEADER */}
+
       <div className="page-header">
         <div>
-          <h1>Student Attendance</h1>
+          <h1>
+            Student Attendance
+          </h1>
 
           <p
             style={{
-              color: "#64748b",
-              marginTop: "6px",
+              color:
+                "#64748b",
+              marginTop:
+                "6px",
             }}
           >
-            Record daily attendance and
-            monitor individual weekly
-            attendance percentages.
+            Record daily attendance
+            and monitor weekly and
+            termly attendance
+            percentages.
           </p>
         </div>
       </div>
@@ -624,12 +1320,14 @@ export default function StudentAttendance() {
       <div
         className="page-card"
         style={{
-          marginBottom: "20px",
+          marginBottom:
+            "20px",
         }}
       >
         <div
           style={{
-            display: "grid",
+            display:
+              "grid",
             gridTemplateColumns:
               "1fr 1fr",
             gap: "15px",
@@ -638,9 +1336,12 @@ export default function StudentAttendance() {
           <div>
             <label
               style={{
-                display: "block",
-                marginBottom: "8px",
-                fontWeight: "600",
+                display:
+                  "block",
+                marginBottom:
+                  "8px",
+                fontWeight:
+                  "600",
               }}
             >
               Academic Session
@@ -648,11 +1349,14 @@ export default function StudentAttendance() {
 
             <div
               style={{
-                padding: "12px 16px",
-                background: "#f8fafc",
+                padding:
+                  "12px 16px",
+                background:
+                  "#f8fafc",
                 border:
                   "1px solid #e2e8f0",
-                borderRadius: "8px",
+                borderRadius:
+                  "8px",
               }}
             >
               {academicSession?.name ||
@@ -663,9 +1367,12 @@ export default function StudentAttendance() {
           <div>
             <label
               style={{
-                display: "block",
-                marginBottom: "8px",
-                fontWeight: "600",
+                display:
+                  "block",
+                marginBottom:
+                  "8px",
+                fontWeight:
+                  "600",
               }}
             >
               Current Term
@@ -673,11 +1380,14 @@ export default function StudentAttendance() {
 
             <div
               style={{
-                padding: "12px 16px",
-                background: "#f8fafc",
+                padding:
+                  "12px 16px",
+                background:
+                  "#f8fafc",
                 border:
                   "1px solid #e2e8f0",
-                borderRadius: "8px",
+                borderRadius:
+                  "8px",
               }}
             >
               {activeTerm?.name ||
@@ -688,13 +1398,19 @@ export default function StudentAttendance() {
 
         <p
           style={{
-            marginTop: "12px",
-            color: "#64748b",
-            fontSize: "13px",
+            marginTop:
+              "12px",
+            color:
+              "#64748b",
+            fontSize:
+              "13px",
           }}
         >
-          Academic session and term are
-          controlled by the administrator.
+          Attendance is stored against
+          the student's class,
+          enrollment, session and
+          term at the time it is
+          recorded.
         </p>
       </div>
 
@@ -703,11 +1419,16 @@ export default function StudentAttendance() {
       {error && (
         <div
           style={{
-            background: "#fee2e2",
-            color: "#991b1b",
-            padding: "12px 15px",
-            borderRadius: "8px",
-            marginBottom: "20px",
+            background:
+              "#fee2e2",
+            color:
+              "#991b1b",
+            padding:
+              "12px 15px",
+            borderRadius:
+              "8px",
+            marginBottom:
+              "20px",
           }}
         >
           {error}
@@ -719,11 +1440,16 @@ export default function StudentAttendance() {
       {success && (
         <div
           style={{
-            background: "#dcfce7",
-            color: "#166534",
-            padding: "12px 15px",
-            borderRadius: "8px",
-            marginBottom: "20px",
+            background:
+              "#dcfce7",
+            color:
+              "#166534",
+            padding:
+              "12px 15px",
+            borderRadius:
+              "8px",
+            marginBottom:
+              "20px",
           }}
         >
           {success}
@@ -735,12 +1461,14 @@ export default function StudentAttendance() {
       <div
         className="page-card"
         style={{
-          marginBottom: "20px",
+          marginBottom:
+            "20px",
         }}
       >
         <h2
           style={{
-            marginBottom: "20px",
+            marginBottom:
+              "20px",
           }}
         >
           Daily Attendance
@@ -748,7 +1476,8 @@ export default function StudentAttendance() {
 
         <div
           style={{
-            display: "grid",
+            display:
+              "grid",
             gridTemplateColumns:
               "1fr 1fr",
             gap: "15px",
@@ -757,9 +1486,12 @@ export default function StudentAttendance() {
           <div>
             <label
               style={{
-                display: "block",
-                marginBottom: "8px",
-                fontWeight: "600",
+                display:
+                  "block",
+                marginBottom:
+                  "8px",
+                fontWeight:
+                  "600",
               }}
             >
               Attendance Date
@@ -767,12 +1499,23 @@ export default function StudentAttendance() {
 
             <input
               type="date"
-              value={attendanceDate}
-              onChange={(e) =>
+              value={
+                attendanceDate
+              }
+              min={
+                activeTerm?.starts_on ||
+                undefined
+              }
+              max={
+                activeTerm?.ends_on ||
+                undefined
+              }
+              onChange={(e) => {
                 setAttendanceDate(
                   e.target.value
-                )
-              }
+                );
+                setSuccess("");
+              }}
               className="search-input"
             />
           </div>
@@ -780,40 +1523,58 @@ export default function StudentAttendance() {
           <div>
             <label
               style={{
-                display: "block",
-                marginBottom: "8px",
-                fontWeight: "600",
+                display:
+                  "block",
+                marginBottom:
+                  "8px",
+                fontWeight:
+                  "600",
               }}
             >
               Class
             </label>
 
             <select
-              value={selectedClass}
+              value={
+                selectedClass
+              }
               onChange={(e) => {
                 setSelectedClass(
                   e.target.value
                 );
-                setAttendance({});
+
+                setAttendance(
+                  { }
+                );
+
                 setSuccess("");
               }}
               className="filter-select"
               style={{
-                width: "100%",
+                width:
+                  "100%",
               }}
             >
               <option value="">
                 Select Class
               </option>
 
-              {classes.map((classItem) => (
-                <option
-                  key={classItem.id}
-                  value={classItem.id}
-                >
-                  {classItem.name}
-                </option>
-              ))}
+              {classes.map(
+                (classItem) => (
+                  <option
+                    key={
+                      classItem.id
+                    }
+                    value={
+                      classItem.id
+                    }
+                  >
+                    {
+                      classItem.name
+                    }
+                  </option>
+                )
+              )}
             </select>
           </div>
         </div>
@@ -825,45 +1586,52 @@ export default function StudentAttendance() {
         <div
           className="page-card"
           style={{
-            marginBottom: "25px",
+            marginBottom:
+              "25px",
           }}
         >
           <div
             style={{
-              display: "flex",
+              display:
+                "flex",
               justifyContent:
                 "space-between",
-              alignItems: "center",
-              marginBottom: "20px",
-              flexWrap: "wrap",
+              alignItems:
+                "center",
+              marginBottom:
+                "20px",
+              flexWrap:
+                "wrap",
               gap: "15px",
             }}
           >
             <div>
               <h2>
                 {
-                  classes.find(
-                    (item) =>
-                      item.id ===
-                      selectedClass
-                  )?.name
+                  selectedClassName
                 }
               </h2>
 
               <p
                 style={{
-                  color: "#64748b",
-                  marginTop: "5px",
+                  color:
+                    "#64748b",
+                  marginTop:
+                    "5px",
                 }}
               >
-                {classStudents.length}{" "}
-                enrolled student(s)
+                {
+                  classStudents.length
+                }{" "}
+                enrolled
+                student(s)
               </p>
             </div>
 
             <div
               style={{
-                display: "flex",
+                display:
+                  "flex",
                 gap: "10px",
               }}
             >
@@ -872,6 +1640,10 @@ export default function StudentAttendance() {
                 className="primary-btn"
                 onClick={
                   markAllPresent
+                }
+                disabled={
+                  classStudents.length ===
+                  0
                 }
               >
                 Mark All Present
@@ -884,7 +1656,8 @@ export default function StudentAttendance() {
                   resetAttendance
                 }
                 style={{
-                  background: "#64748b",
+                  background:
+                    "#64748b",
                 }}
               >
                 Reset
@@ -896,62 +1669,84 @@ export default function StudentAttendance() {
 
           <div
             style={{
-              display: "flex",
+              display:
+                "flex",
               gap: "15px",
-              marginBottom: "20px",
-              flexWrap: "wrap",
+              marginBottom:
+                "20px",
+              flexWrap:
+                "wrap",
             }}
           >
             <div
               style={{
-                background: "#f0fdf4",
+                background:
+                  "#f0fdf4",
                 padding:
                   "12px 18px",
-                borderRadius: "8px",
+                borderRadius:
+                  "8px",
               }}
             >
-              <strong>Present:</strong>{" "}
+              <strong>
+                Present:
+              </strong>{" "}
               {presentCount}
             </div>
 
             <div
               style={{
-                background: "#fef2f2",
+                background:
+                  "#fef2f2",
                 padding:
                   "12px 18px",
-                borderRadius: "8px",
+                borderRadius:
+                  "8px",
               }}
             >
-              <strong>Absent:</strong>{" "}
+              <strong>
+                Absent:
+              </strong>{" "}
               {absentCount}
             </div>
 
             <div
               style={{
-                background: "#f8fafc",
+                background:
+                  "#f8fafc",
                 padding:
                   "12px 18px",
-                borderRadius: "8px",
+                borderRadius:
+                  "8px",
               }}
             >
-              <strong>Unmarked:</strong>{" "}
+              <strong>
+                Unmarked:
+              </strong>{" "}
               {unmarkedCount}
             </div>
 
             <div
               style={{
-                background: "#f8fafc",
+                background:
+                  "#f8fafc",
                 padding:
                   "12px 18px",
-                borderRadius: "8px",
+                borderRadius:
+                  "8px",
               }}
             >
-              <strong>Total:</strong>{" "}
-              {classStudents.length}
+              <strong>
+                Total:
+              </strong>{" "}
+              {
+                classStudents.length
+              }
             </div>
           </div>
 
-          {classStudents.length > 0 ? (
+          {classStudents.length >
+          0 ? (
             <table>
               <thead>
                 <tr>
@@ -978,13 +1773,17 @@ export default function StudentAttendance() {
                       }
                     >
                       <td>
-                        {student.studentNumber ||
-                          "—"}
+                        {
+                          student.studentNumber ||
+                          "—"
+                        }
                       </td>
 
                       <td>
-                        {student.fullName ||
-                          "—"}
+                        {
+                          student.fullName ||
+                          "—"
+                        }
                       </td>
 
                       <td>
@@ -1003,13 +1802,35 @@ export default function StudentAttendance() {
                                 "Present"
                               )
                             }
+                            disabled={
+                              !!lockedAttendance[
+                                student.id
+                              ]
+                            }
+                            title={
+                              lockedAttendance[
+                                student.id
+                              ]
+                                ? "Attendance already saved for this date"
+                                : "Mark Present"
+                            }
                             style={{
                               padding:
                                 "8px 14px",
                               borderRadius:
                                 "6px",
                               cursor:
-                                "pointer",
+                                lockedAttendance[
+                                  student.id
+                                ]
+                                  ? "not-allowed"
+                                  : "pointer",
+                              opacity:
+                                lockedAttendance[
+                                  student.id
+                                ]
+                                  ? 0.65
+                                  : 1,
                               border:
                                 attendance[
                                   student.id
@@ -1039,13 +1860,35 @@ export default function StudentAttendance() {
                                 "Absent"
                               )
                             }
+                            disabled={
+                              !!lockedAttendance[
+                                student.id
+                              ]
+                            }
+                            title={
+                              lockedAttendance[
+                                student.id
+                              ]
+                                ? "Attendance already saved for this date"
+                                : "Mark Absent"
+                            }
                             style={{
                               padding:
                                 "8px 14px",
                               borderRadius:
                                 "6px",
                               cursor:
-                                "pointer",
+                                lockedAttendance[
+                                  student.id
+                                ]
+                                  ? "not-allowed"
+                                  : "pointer",
+                              opacity:
+                                lockedAttendance[
+                                  student.id
+                                ]
+                                  ? 0.65
+                                  : 1,
                               border:
                                 attendance[
                                   student.id
@@ -1066,6 +1909,19 @@ export default function StudentAttendance() {
                           >
                             Absent
                           </button>
+                          {lockedAttendance[
+                            student.id
+                          ] && (
+                            <div
+                              style={{
+                                fontSize: "11px",
+                                color: "#64748b",
+                                marginTop: "6px",
+                              }}
+                            >
+                              Saved
+                            </div>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1076,20 +1932,26 @@ export default function StudentAttendance() {
           ) : (
             <div
               style={{
-                textAlign: "center",
-                padding: "40px",
-                color: "#64748b",
+                textAlign:
+                  "center",
+                padding:
+                  "40px",
+                color:
+                  "#64748b",
               }}
             >
-              No students are currently
-              enrolled in this class.
+              No students are
+              currently enrolled in
+              this class.
             </div>
           )}
 
-          {classStudents.length > 0 && (
+          {classStudents.length >
+            0 && (
             <div
               style={{
-                marginTop: "25px",
+                marginTop:
+                  "25px",
               }}
             >
               <button
@@ -1100,7 +1962,13 @@ export default function StudentAttendance() {
                 }
                 disabled={
                   saving ||
-                  !activeTerm
+                  !activeTerm ||
+                  classStudents.every(
+                    (student) =>
+                      !!lockedAttendance[
+                        student.id
+                      ]
+                  )
                 }
               >
                 {saving
@@ -1112,18 +1980,30 @@ export default function StudentAttendance() {
         </div>
       )}
 
-      {/* WEEKLY */}
+      {/* =====================================================
+          WEEKLY ATTENDANCE
+      ===================================================== */}
 
       {selectedClass && (
-        <div className="page-card">
+        <div
+          className="page-card"
+          style={{
+            marginBottom:
+              "25px",
+          }}
+        >
           <div
             style={{
-              display: "flex",
+              display:
+                "flex",
               justifyContent:
                 "space-between",
-              alignItems: "center",
-              marginBottom: "20px",
-              flexWrap: "wrap",
+              alignItems:
+                "center",
+              marginBottom:
+                "20px",
+              flexWrap:
+                "wrap",
               gap: "15px",
             }}
           >
@@ -1134,21 +2014,29 @@ export default function StudentAttendance() {
 
               <p
                 style={{
-                  color: "#64748b",
-                  marginTop: "5px",
+                  color:
+                    "#64748b",
+                  marginTop:
+                    "5px",
                 }}
               >
-                Individual attendance
-                percentage for each student.
+                Attendance percentage
+                calculated from expected
+                Monday-Friday school days.
+                Weekends and dates outside
+                the active term are excluded.
               </p>
             </div>
 
             <div>
               <label
                 style={{
-                  display: "block",
-                  marginBottom: "8px",
-                  fontWeight: "600",
+                  display:
+                    "block",
+                  marginBottom:
+                    "8px",
+                  fontWeight:
+                    "600",
                 }}
               >
                 Select Week
@@ -1156,7 +2044,9 @@ export default function StudentAttendance() {
 
               <input
                 type="date"
-                value={weekDate}
+                value={
+                  weekDate
+                }
                 onChange={(e) =>
                   setWeekDate(
                     e.target.value
@@ -1169,13 +2059,19 @@ export default function StudentAttendance() {
 
           <div
             style={{
-              background: "#f8fafc",
-              padding: "12px 16px",
-              borderRadius: "8px",
-              marginBottom: "20px",
+              background:
+                "#f8fafc",
+              padding:
+                "12px 16px",
+              borderRadius:
+                "8px",
+              marginBottom:
+                "20px",
             }}
           >
-            <strong>Week:</strong>{" "}
+            <strong>
+              Week:
+            </strong>{" "}
             {formatDate(
               weekDates[0]
             )}{" "}
@@ -1186,22 +2082,31 @@ export default function StudentAttendance() {
 
             <span
               style={{
-                marginLeft: "15px",
-                color: "#64748b",
+                marginLeft:
+                  "15px",
+                color:
+                  "#64748b",
               }}
             >
-              5 school days
+              {weeklyExpectedDays}{" "}
+              expected school day
+              {weeklyExpectedDays ===
+              1
+                ? ""
+                : "s"}
             </span>
           </div>
 
           {loadingWeekly ? (
             <p>
-              Loading weekly attendance...
+              Loading weekly
+              attendance...
             </p>
           ) : (
             <div
               style={{
-                overflowX: "auto",
+                overflowX:
+                  "auto",
               }}
             >
               <table>
@@ -1276,8 +2181,10 @@ export default function StudentAttendance() {
                           }
                         >
                           <td>
-                            {student.studentNumber ||
-                              "—"}
+                            {
+                              student.studentNumber ||
+                              "—"
+                            }
                           </td>
 
                           <td>
@@ -1348,7 +2255,11 @@ export default function StudentAttendance() {
                               {
                                 stats.presentDays
                               }
-                              /5 present
+                              /
+                              {
+                                weeklyExpectedDays
+                              }{" "}
+                              present
                             </div>
                           </td>
                         </tr>
@@ -1362,17 +2273,230 @@ export default function StudentAttendance() {
         </div>
       )}
 
+      {/* =====================================================
+          TERMLY ATTENDANCE
+      ===================================================== */}
+
+      {selectedClass && (
+        <div className="page-card">
+          <div
+            style={{
+              marginBottom:
+                "20px",
+            }}
+          >
+            <h2>
+              Termly Attendance
+            </h2>
+
+            <p
+              style={{
+                color:
+                  "#64748b",
+                marginTop:
+                  "5px",
+              }}
+            >
+              Term percentage is
+              calculated from all
+              daily attendance records
+              for the selected class,
+              session and term.
+            </p>
+          </div>
+
+          <div
+            style={{
+              display:
+                "flex",
+              gap: "15px",
+              flexWrap:
+                "wrap",
+              marginBottom:
+                "20px",
+            }}
+          >
+            <div
+              style={{
+                background:
+                  "#f8fafc",
+                padding:
+                  "14px 18px",
+                borderRadius:
+                  "8px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize:
+                    "13px",
+                  color:
+                    "#64748b",
+                }}
+              >
+                Term
+              </div>
+
+              <strong>
+                {activeTerm?.name ||
+                  "—"}
+              </strong>
+            </div>
+
+            <div
+              style={{
+                background:
+                  "#f8fafc",
+                padding:
+                  "14px 18px",
+                borderRadius:
+                  "8px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize:
+                    "13px",
+                  color:
+                    "#64748b",
+                }}
+              >
+                Attendance Days
+              </div>
+
+              <strong>
+                {
+                  termAttendanceDays
+                }
+              </strong>
+            </div>
+          </div>
+
+          {loadingTerm ? (
+            <p>
+              Loading termly
+              attendance...
+            </p>
+          ) : (
+            <div
+              style={{
+                overflowX:
+                  "auto",
+              }}
+            >
+              <table>
+                <thead>
+                  <tr>
+                    <th>
+                      Student Number
+                    </th>
+
+                    <th>
+                      Student Name
+                    </th>
+
+                    <th>
+                      Present
+                    </th>
+
+                    <th>
+                      Absent
+                    </th>
+
+                    <th>
+                      Attendance Days
+                    </th>
+
+                    <th>
+                      Term %
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {classStudents.map(
+                    (student) => {
+                      const stats =
+                        getTermStats(
+                          student.id
+                        );
+
+                      return (
+                        <tr
+                          key={
+                            student.id
+                          }
+                        >
+                          <td>
+                            {
+                              student.studentNumber ||
+                              "—"
+                            }
+                          </td>
+
+                          <td>
+                            <strong>
+                              {
+                                student.fullName
+                              }
+                            </strong>
+                          </td>
+
+                          <td>
+                            {
+                              stats.presentDays
+                            }
+                          </td>
+
+                          <td>
+                            {
+                              stats.absentDays
+                            }
+                          </td>
+
+                          <td>
+                            {
+                              stats.presentDays +
+                              stats.absentDays
+                            }
+                          </td>
+
+                          <td>
+                            <strong>
+                              {
+                                stats.percentage
+                              }
+                              %
+                            </strong>
+                          </td>
+                        </tr>
+                      );
+                    }
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* NO CLASS */}
+
       {!selectedClass && (
         <div
           className="page-card"
           style={{
-            textAlign: "center",
-            padding: "50px",
-            color: "#64748b",
+            textAlign:
+              "center",
+            padding:
+              "50px",
+            color:
+              "#64748b",
           }}
         >
           Select a class to begin
-          recording attendance.
+          recording and viewing
+          attendance.
         </div>
       )}
     </div>

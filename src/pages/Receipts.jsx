@@ -1,11 +1,42 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-export default function Receipts({ payments }) {
+const API_URL = "http://localhost:5000";
+
+export default function Receipts() {
   const [selectedPayment, setSelectedPayment] = useState(null);
+  const [payments, setPayments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const formatReceiptNumber = (index) => {
-    return `REC-${String(index + 1).padStart(4, "0")}`;
-  };
+  useEffect(() => {
+    const loadPayments = async () => {
+      try {
+        const response = await fetch(
+          API_URL + "/api/payments"
+        );
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.error ||
+              "Unable to load receipts."
+          );
+        }
+
+        setPayments(data);
+      } catch (err) {
+        console.error(err);
+        setError(
+          err.message ||
+            "Unable to load receipts."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPayments();
+  }, []);
 
   return (
     <div className="page">
@@ -14,9 +45,23 @@ export default function Receipts({ payments }) {
         <h1>Receipts</h1>
       </div>
 
+      {error && (
+        <p
+          style={{
+            color: "#b91c1c",
+            marginBottom: "15px",
+          }}
+        >
+          {error}
+        </p>
+      )}
+
       {!selectedPayment ? (
         <div className="page-card">
 
+          {loading ? (
+            <p>Loading receipts...</p>
+          ) : (
           <table>
             <thead>
               <tr>
@@ -33,26 +78,30 @@ export default function Receipts({ payments }) {
 
             <tbody>
               {payments.length > 0 ? (
-                payments.map((payment, index) => (
+                payments.map((payment) => (
                   <tr key={payment.id}>
 
                     <td>
-                      {formatReceiptNumber(index)}
+                      {payment.receiptNumber || "—"}
                     </td>
 
-                    <td>{payment.student}</td>
+                    <td>{payment.studentName}</td>
 
                     <td>{payment.className}</td>
 
-                    <td>{payment.feeAccount}</td>
+                    <td>School Fee</td>
 
                     <td>
-                      ₦{payment.amount.toLocaleString()}
+                      ₦{Number(payment.amount).toLocaleString()}
                     </td>
 
                     <td>{payment.method}</td>
 
-                    <td>{payment.date}</td>
+                    <td>
+                      {new Date(
+                        payment.paymentDate
+                      ).toLocaleDateString("en-NG")}
+                    </td>
 
                     <td>
                       <button
@@ -61,7 +110,8 @@ export default function Receipts({ payments }) {
                           setSelectedPayment({
                             ...payment,
                             receiptNumber:
-                              formatReceiptNumber(index),
+                              payment.receiptNumber ||
+                              "—",
                           })
                         }
                       >
@@ -87,6 +137,7 @@ export default function Receipts({ payments }) {
               )}
             </tbody>
           </table>
+          )}
 
         </div>
       ) : (
@@ -145,7 +196,7 @@ export default function Receipts({ payments }) {
 
               <div>
                 <strong>Student</strong>
-                <p>{selectedPayment.student}</p>
+                <p>{selectedPayment.studentName}</p>
               </div>
 
               <div>
@@ -155,7 +206,11 @@ export default function Receipts({ payments }) {
 
               <div>
                 <strong>Payment Date</strong>
-                <p>{selectedPayment.date}</p>
+                <p>
+                  {new Date(
+                    selectedPayment.paymentDate
+                  ).toLocaleDateString("en-NG")}
+                </p>
               </div>
 
               <div>
@@ -176,10 +231,12 @@ export default function Receipts({ payments }) {
 
               <tbody>
                 <tr>
-                  <td>{selectedPayment.feeAccount}</td>
+                  <td>School Fee</td>
 
                   <td>
-                    ₦{selectedPayment.amount.toLocaleString()}
+                    ₦{Number(
+                      selectedPayment.amount
+                    ).toLocaleString()}
                   </td>
                 </tr>
 
@@ -187,7 +244,9 @@ export default function Receipts({ payments }) {
                   <th>Total Paid</th>
 
                   <th>
-                    ₦{selectedPayment.amount.toLocaleString()}
+                    ₦{Number(
+                      selectedPayment.amount
+                    ).toLocaleString()}
                   </th>
                 </tr>
               </tbody>

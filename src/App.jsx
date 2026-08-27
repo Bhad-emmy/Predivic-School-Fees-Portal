@@ -15,55 +15,25 @@ import "./styles/App.css";
 function App() {
   const [page, setPage] = useState("dashboard");
 
-  // Shared application data
-  const [students, setStudents] = useState([]);
-  const [feeAccounts, setFeeAccounts] = useState([]);
-  const [payments, setPayments] = useState([]);
-
   const renderPage = () => {
     switch (page) {
       case "students":
-        return (
-          <Students
-            students={students}
-            setStudents={setStudents}
-          />
-        );
+        return <Students />;
 
       case "student-attendance":
-        return (
-          <StudentAttendance
-            students={students}
-          />
-        );
+        return <StudentAttendance />;
 
       case "teacher-attendance":
         return <TeacherAttendance />;
 
       case "fees":
-        return (
-          <FeeAccounts
-            feeAccounts={feeAccounts}
-            setFeeAccounts={setFeeAccounts}
-          />
-        );
+        return <FeeAccounts />;
 
       case "payments":
-        return (
-          <Payments
-            students={students}
-            feeAccounts={feeAccounts}
-            payments={payments}
-            setPayments={setPayments}
-          />
-        );
+        return <Payments />;
 
       case "receipts":
-        return (
-          <Receipts
-            payments={payments}
-          />
-        );
+        return <Receipts />;
 
       case "reports":
         return <Reports />;

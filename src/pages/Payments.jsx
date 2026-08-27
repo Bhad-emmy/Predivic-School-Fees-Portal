@@ -1,148 +1,272 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-export default function Payments({
-  students,
-  feeAccounts,
-  payments,
-  setPayments,
-}) {
+const API_URL = "http://localhost:5000";
+const EMPTY_PAYMENT = {
+  studentFeeAccountId: "",
+  amount: "",
+  method: "Cash",
+  paymentDate: new Date().toISOString().slice(0, 10),
+  notes: "",
+  reference: "",
+};
+
+const formatAmount = (amount) =>
+  "₦" + Number(amount || 0).toLocaleString();
+
+export default function Payments() {
+  const [payments, setPayments] = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [studentFeeAccounts, setStudentFeeAccounts] =
+    useState([]);
   const [showForm, setShowForm] = useState(false);
-
+  const [form, setForm] = useState(EMPTY_PAYMENT);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [search, setSearch] = useState("");
-  const [classFilter, setClassFilter] = useState("All Classes");
-  const [methodFilter, setMethodFilter] = useState("All Methods");
-  const [statusFilter, setStatusFilter] = useState("All Status");
+  const [classFilter, setClassFilter] =
+    useState("All Classes");
+  const [methodFilter, setMethodFilter] =
+    useState("All Methods");
 
-  const [form, setForm] = useState({
-    student: "",
-    feeAccount: "",
-    amount: "",
-    method: "",
-    date: "",
-  });
+  const loadPaymentData = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const responses = await Promise.all([
+        fetch(API_URL + "/api/payments"),
+        fetch(API_URL + "/api/student-fee-accounts"),
+        fetch(API_URL + "/api/classes"),
+      ]);
+      const data = await Promise.all(
+        responses.map((response) => response.json())
+      );
 
-  const handleChange = (e) => {
+      if (!responses[0].ok) {
+        throw new Error(
+          data[0].error || "Unable to load payments."
+        );
+      }
+      if (!responses[1].ok) {
+        throw new Error(
+          data[1].error ||
+            "Unable to load fee accounts."
+        );
+      }
+      if (!responses[2].ok) {
+        throw new Error(
+          data[2].error || "Unable to load classes."
+        );
+      }
+
+      setPayments(data[0]);
+      setStudentFeeAccounts(data[1]);
+      setClasses(data[2]);
+    } catch (err) {
+      console.error(err);
+      setError(
+        err.message ||
+          "Unable to load payment data."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPaymentData();
+  }, []);
+
+  const payableAccounts = useMemo(
+    () =>
+      studentFeeAccounts.filter(
+        (account) => Number(account.balance) > 0
+      ),
+    [studentFeeAccounts]
+  );
+
+  const selectedAccount = useMemo(
+    () =>
+      studentFeeAccounts.find(
+        (account) =>
+          account.id === form.studentFeeAccountId
+      ) || null,
+    [
+      form.studentFeeAccountId,
+      studentFeeAccounts,
+    ]
+  );
+
+  const availableClasses = useMemo(
+    () =>
+      classes
+        .map((schoolClass) => schoolClass.name)
+        .filter(Boolean),
+    [classes]
+  );
+
+  const filteredPayments = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    return payments.filter((payment) => {
+      const matchesSearch =
+        !query ||
+        [
+          payment.studentName,
+          payment.admissionNo,
+          payment.receiptNumber,
+          payment.reference,
+        ]
+          .filter(Boolean)
+          .some((value) =>
+            value.toLowerCase().includes(query)
+          );
+
+      return (
+        matchesSearch &&
+        (classFilter === "All Classes" ||
+          payment.className === classFilter) &&
+        (methodFilter === "All Methods" ||
+          payment.method === methodFilter)
+      );
+    });
+  }, [
+    payments,
+    search,
+    classFilter,
+    methodFilter,
+  ]);
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setForm((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  };
+
+  const resetForm = () => {
     setForm({
-      ...form,
-      [e.target.name]: e.target.value,
+      ...EMPTY_PAYMENT,
+      paymentDate: new Date()
+        .toISOString()
+        .slice(0, 10),
     });
   };
 
-  const handleStudentChange = (e) => {
-    setForm({
-      ...form,
-      student: e.target.value,
-    });
-  };
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError("");
+    setSuccess("");
 
-  const handleFeeChange = (e) => {
-    const selectedFee = feeAccounts.find(
-      (fee) => fee.id === Number(e.target.value)
-    );
-
-    setForm({
-      ...form,
-      feeAccount: e.target.value,
-      amount: selectedFee ? selectedFee.amount : "",
-    });
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    if (
-      !form.student ||
-      !form.feeAccount ||
-      !form.amount ||
-      !form.method ||
-      !form.date
-    ) {
-      alert("Please fill in all fields.");
+    if (!selectedAccount) {
+      setError("Select a student fee account.");
       return;
     }
 
-    const selectedStudent = students.find(
-      (student) => student.name === form.student
-    );
-
-    const selectedFee = feeAccounts.find(
-      (fee) => fee.id === Number(form.feeAccount)
-    );
-
-    if (!selectedStudent || !selectedFee) {
-      alert("Please select a valid student and fee account.");
+    const amount = Number(form.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setError(
+        "Enter a payment amount greater than zero."
+      );
+      return;
+    }
+    if (amount > Number(selectedAccount.balance)) {
+      setError(
+        "Amount cannot exceed the outstanding balance of " +
+          formatAmount(selectedAccount.balance) +
+          "."
+      );
       return;
     }
 
-    const newPayment = {
-      id: Date.now(),
-      student: selectedStudent.name,
-      className: selectedStudent.className,
-      feeAccount: selectedFee.name,
-      amount: Number(form.amount),
-      method: form.method,
-      date: form.date,
-      status: "Paid",
-    };
+    try {
+      setSaving(true);
+      const response = await fetch(
+        API_URL + "/api/payments",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            studentId: selectedAccount.studentId,
+            studentFeeAccountId: selectedAccount.id,
+            amount,
+            method: form.method,
+            paymentDate: form.paymentDate,
+            notes: form.notes,
+            reference: form.reference,
+          }),
+        }
+      );
+      const data = await response.json();
 
-    setPayments([...payments, newPayment]);
+      if (!response.ok) {
+        throw new Error(
+          data.error || "Unable to record payment."
+        );
+      }
 
-    setForm({
-      student: "",
-      feeAccount: "",
-      amount: "",
-      method: "",
-      date: "",
-    });
-
-    setShowForm(false);
+      setSuccess(
+        "Payment recorded. Receipt number: " +
+          data.receiptNumber +
+          ". Remaining balance: " +
+          formatAmount(data.balance) +
+          "."
+      );
+      setShowForm(false);
+      resetForm();
+      await loadPaymentData();
+    } catch (err) {
+      console.error(err);
+      setError(
+        err.message ||
+          "Unable to record payment."
+      );
+    } finally {
+      setSaving(false);
+    }
   };
-
-  const filteredPayments = payments.filter((payment) => {
-    const matchesSearch =
-      payment.student
-        .toLowerCase()
-        .includes(search.toLowerCase()) ||
-      payment.feeAccount
-        .toLowerCase()
-        .includes(search.toLowerCase());
-
-    const matchesClass =
-      classFilter === "All Classes" ||
-      payment.className === classFilter;
-
-    const matchesMethod =
-      methodFilter === "All Methods" ||
-      payment.method === methodFilter;
-
-    const matchesStatus =
-      statusFilter === "All Status" ||
-      payment.status === statusFilter;
-
-    return (
-      matchesSearch &&
-      matchesClass &&
-      matchesMethod &&
-      matchesStatus
-    );
-  });
 
   return (
     <div className="page">
-
-      {/* PAGE HEADER */}
       <div className="page-header">
         <h1>Payments</h1>
-
         <button
           className="primary-btn"
-          onClick={() => setShowForm(true)}
+          onClick={() => {
+            setError("");
+            setSuccess("");
+            setShowForm(true);
+          }}
         >
           + Record Payment
         </button>
       </div>
 
-      {/* RECORD PAYMENT FORM */}
+      {error && (
+        <p
+          style={{
+            color: "#b91c1c",
+            marginBottom: "15px",
+          }}
+        >
+          {error}
+        </p>
+      )}
+      {success && (
+        <p
+          style={{
+            color: "#166534",
+            marginBottom: "15px",
+          }}
+        >
+          {success}
+        </p>
+      )}
+
       {showForm && (
         <div
           className="page-card"
@@ -151,160 +275,164 @@ export default function Payments({
           <h2 style={{ marginBottom: "20px" }}>
             Record Payment
           </h2>
-
           <form onSubmit={handleSubmit}>
-
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(2, 1fr)",
+                gridTemplateColumns:
+                  "repeat(2, minmax(0, 1fr))",
                 gap: "15px",
               }}
             >
-
-              {/* STUDENT */}
               <select
-                name="student"
-                value={form.student}
-                onChange={handleStudentChange}
+                name="studentFeeAccountId"
+                value={form.studentFeeAccountId}
+                onChange={handleChange}
                 className="filter-select"
+                required
               >
                 <option value="">
-                  Select Student
+                  Select student fee account
                 </option>
-
-                {students.map((student) => (
+                {payableAccounts.map((account) => (
                   <option
-                    key={student.id}
-                    value={student.name}
+                    key={account.id}
+                    value={account.id}
                   >
-                    {student.name} - {student.className}
+                    {account.student?.fullName ||
+                      "Unknown Student"}{" "}
+                    — {account.className} —{" "}
+                    {account.term} (
+                    {formatAmount(account.balance)} due)
                   </option>
                 ))}
               </select>
 
-              {/* FEE ACCOUNT */}
-              <select
-                name="feeAccount"
-                value={form.feeAccount}
-                onChange={handleFeeChange}
-                className="filter-select"
-              >
-                <option value="">
-                  Select Fee Account
-                </option>
-
-                {feeAccounts.map((fee) => (
-                  <option
-                    key={fee.id}
-                    value={fee.id}
-                  >
-                    {fee.name} - {fee.className}
-                  </option>
-                ))}
-              </select>
-
-              {/* AMOUNT */}
               <input
                 type="number"
                 name="amount"
+                min="0.01"
+                step="0.01"
+                max={
+                  selectedAccount?.balance || undefined
+                }
                 placeholder="Amount"
                 value={form.amount}
                 onChange={handleChange}
                 className="search-input"
+                required
               />
 
-              {/* PAYMENT METHOD */}
               <select
                 name="method"
                 value={form.method}
                 onChange={handleChange}
                 className="filter-select"
+                required
               >
-                <option value="">
-                  Select Payment Method
-                </option>
-
                 <option>Cash</option>
                 <option>Bank Transfer</option>
                 <option>POS</option>
                 <option>Online</option>
               </select>
 
-              {/* PAYMENT DATE */}
               <input
                 type="date"
-                name="date"
-                value={form.date}
+                name="paymentDate"
+                value={form.paymentDate}
+                onChange={handleChange}
+                className="search-input"
+                required
+              />
+
+              <input
+                type="text"
+                name="reference"
+                placeholder="Reference (optional)"
+                value={form.reference}
                 onChange={handleChange}
                 className="search-input"
               />
 
+              <input
+                type="text"
+                name="notes"
+                placeholder="Notes (optional)"
+                value={form.notes}
+                onChange={handleChange}
+                className="search-input"
+              />
             </div>
 
-            {/* FORM BUTTONS */}
-            <div style={{ marginTop: "20px" }}>
+            {selectedAccount && (
+              <p
+                style={{
+                  marginTop: "15px",
+                  color: "#475569",
+                }}
+              >
+                Outstanding balance:{" "}
+                {formatAmount(selectedAccount.balance)}
+              </p>
+            )}
 
+            <div style={{ marginTop: "20px" }}>
               <button
                 type="submit"
                 className="primary-btn"
+                disabled={saving}
               >
-                Save Payment
+                {saving
+                  ? "Recording..."
+                  : "Save Payment"}
               </button>
-
               <button
                 type="button"
-                className="primary-btn"
-                onClick={() => setShowForm(false)}
-                style={{
-                  background: "#64748b",
-                  marginLeft: "10px",
+                className="secondary-btn"
+                onClick={() => {
+                  setShowForm(false);
+                  resetForm();
                 }}
+                style={{ marginLeft: "10px" }}
+                disabled={saving}
               >
                 Cancel
               </button>
-
             </div>
-
           </form>
         </div>
       )}
 
-      {/* SEARCH AND FILTERS */}
       <div className="table-controls">
-
         <input
           type="text"
-          placeholder="Search payment..."
+          placeholder="Search student, admission number, receipt, or reference..."
           className="search-input"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(event) =>
+            setSearch(event.target.value)
+          }
         />
-
         <select
           className="filter-select"
           value={classFilter}
-          onChange={(e) => setClassFilter(e.target.value)}
+          onChange={(event) =>
+            setClassFilter(event.target.value)
+          }
         >
           <option>All Classes</option>
-          <option>Primary 1</option>
-          <option>Primary 2</option>
-          <option>Primary 3</option>
-          <option>Primary 4</option>
-          <option>Primary 5</option>
-          <option>Primary 6</option>
-          <option>JSS 1</option>
-          <option>JSS 2</option>
-          <option>JSS 3</option>
-          <option>SS 1</option>
-          <option>SS 2</option>
-          <option>SS 3</option>
+          {availableClasses.map((className) => (
+            <option key={className}>
+              {className}
+            </option>
+          ))}
         </select>
-
         <select
           className="filter-select"
           value={methodFilter}
-          onChange={(e) => setMethodFilter(e.target.value)}
+          onChange={(event) =>
+            setMethodFilter(event.target.value)
+          }
         >
           <option>All Methods</option>
           <option>Cash</option>
@@ -312,82 +440,66 @@ export default function Payments({
           <option>POS</option>
           <option>Online</option>
         </select>
-
-        <select
-          className="filter-select"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option>All Status</option>
-          <option>Paid</option>
-          <option>Pending</option>
-          <option>Failed</option>
-        </select>
-
       </div>
 
-      {/* PAYMENTS TABLE */}
-      <div className="page-card">
-
-        <table>
-
-          <thead>
-            <tr>
-              <th>Student</th>
-              <th>Class</th>
-              <th>Fee</th>
-              <th>Amount</th>
-              <th>Method</th>
-              <th>Date</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-
-          <tbody>
-
-            {filteredPayments.length > 0 ? (
-              filteredPayments.map((payment) => (
-                <tr key={payment.id}>
-
-                  <td>{payment.student}</td>
-
-                  <td>{payment.className}</td>
-
-                  <td>{payment.feeAccount}</td>
-
-                  <td>
-                    ₦{payment.amount.toLocaleString()}
-                  </td>
-
-                  <td>{payment.method}</td>
-
-                  <td>{payment.date}</td>
-
-                  <td>{payment.status}</td>
-
-                </tr>
-              ))
-            ) : (
+      <div
+        className="page-card"
+        style={{ overflowX: "auto" }}
+      >
+        {loading ? (
+          <p>Loading payments...</p>
+        ) : (
+          <table>
+            <thead>
               <tr>
-                <td
-                  colSpan="7"
-                  style={{
-                    textAlign: "center",
-                    padding: "30px",
-                    color: "#64748b",
-                  }}
-                >
-                  No payments recorded yet.
-                </td>
+                <th>Receipt No.</th>
+                <th>Student</th>
+                <th>Class</th>
+                <th>Amount</th>
+                <th>Method</th>
+                <th>Date</th>
+                <th>Status</th>
               </tr>
-            )}
-
-          </tbody>
-
-        </table>
-
+            </thead>
+            <tbody>
+              {filteredPayments.length > 0 ? (
+                filteredPayments.map((payment) => (
+                  <tr key={payment.id}>
+                    <td>
+                      {payment.receiptNumber || "—"}
+                    </td>
+                    <td>{payment.studentName}</td>
+                    <td>{payment.className}</td>
+                    <td>
+                      {formatAmount(payment.amount)}
+                    </td>
+                    <td>{payment.method}</td>
+                    <td>
+                      {new Date(
+                        payment.paymentDate
+                      ).toLocaleDateString("en-NG")}
+                    </td>
+                    <td>{payment.status}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td
+                    colSpan="7"
+                    style={{
+                      textAlign: "center",
+                      padding: "30px",
+                      color: "#64748b",
+                    }}
+                  >
+                    No payments recorded yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
-
     </div>
   );
 }

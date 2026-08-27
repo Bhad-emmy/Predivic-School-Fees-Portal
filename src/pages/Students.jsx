@@ -65,13 +65,11 @@ const EMPTY_NEW_STUDENT = {
 };
 
 const EMPTY_RETURNING_STUDENT = {
+  admissionNo: "",
   firstName: "",
-  middleName: "",
   lastName: "",
   dateOfBirth: "",
-  parentName: "",
   parentPhone: "",
-  address: "",
   classId: "",
   className: "",
 };
@@ -84,7 +82,6 @@ export default function Students() {
   const [saving, setSaving] = useState(false);
 
   const [showForm, setShowForm] = useState(false);
-
   const [registrationType, setRegistrationType] =
     useState("new");
 
@@ -101,13 +98,13 @@ export default function Students() {
     useState(EMPTY_RETURNING_STUDENT);
 
   const [returningMatches, setReturningMatches] =
-  useState([]);
+    useState([]);
 
-const [selectedReturningStudent, setSelectedReturningStudent] =
-  useState(null);
+  const [selectedReturningStudent, setSelectedReturningStudent] =
+    useState(null);
 
-const [searchingReturning, setSearchingReturning] =
-  useState(false);
+  const [searchingReturning, setSearchingReturning] =
+    useState(false);
 
   // ==================================================
   // LOAD STUDENTS
@@ -116,7 +113,6 @@ const [searchingReturning, setSearchingReturning] =
   const fetchStudents = async () => {
     try {
       setLoading(true);
-      setError("");
 
       const response = await fetch(
         `${API_URL}/api/students`
@@ -126,7 +122,8 @@ const [searchingReturning, setSearchingReturning] =
 
       if (!response.ok) {
         throw new Error(
-          data.error || "Unable to load students."
+          data.error ||
+            "Unable to load students."
         );
       }
 
@@ -182,9 +179,7 @@ const [searchingReturning, setSearchingReturning] =
   // NEW STUDENT CHANGE
   // ==================================================
 
-  const handleNewStudentChange = (
-    event
-  ) => {
+  const handleNewStudentChange = (event) => {
     const {
       name,
       value,
@@ -200,9 +195,7 @@ const [searchingReturning, setSearchingReturning] =
   // RETURNING STUDENT CHANGE
   // ==================================================
 
-  const handleReturningStudentChange = (
-    event
-  ) => {
+  const handleReturningStudentChange = (event) => {
     const {
       name,
       value,
@@ -212,15 +205,19 @@ const [searchingReturning, setSearchingReturning] =
       ...current,
       [name]: value,
     }));
+
+    // If the user changes search information,
+    // the previous selection is no longer trusted.
+    setSelectedReturningStudent(null);
+    setReturningMatches([]);
+    setError("");
   };
 
   // ==================================================
-  // NEW STUDENT GUARDIAN CHANGE
+  // GUARDIAN CHANGE
   // ==================================================
 
-  const handleGuardianChange = (
-    event
-  ) => {
+  const handleGuardianChange = (event) => {
     const {
       name,
       value,
@@ -240,9 +237,7 @@ const [searchingReturning, setSearchingReturning] =
   // ADMISSION CHANGE
   // ==================================================
 
-  const handleAdmissionChange = (
-    event
-  ) => {
+  const handleAdmissionChange = (event) => {
     const {
       name,
       value,
@@ -262,24 +257,18 @@ const [searchingReturning, setSearchingReturning] =
   // NEW STUDENT CLASS
   // ==================================================
 
-  const handleNewStudentClassChange = (
-    event
-  ) => {
-    const classId =
-      event.target.value;
+  const handleNewStudentClassChange = (event) => {
+    const classId = event.target.value;
 
-    const selectedClass =
-      classes.find(
-        (item) =>
-          String(item.id) ===
-          String(classId)
-      );
+    const selectedClass = classes.find(
+      (item) =>
+        String(item.id) ===
+        String(classId)
+    );
 
     setNewStudent((current) => ({
       ...current,
-
       classId,
-
       className:
         selectedClass?.name || "",
     }));
@@ -289,24 +278,18 @@ const [searchingReturning, setSearchingReturning] =
   // RETURNING STUDENT CLASS
   // ==================================================
 
-  const handleReturningClassChange = (
-    event
-  ) => {
-    const classId =
-      event.target.value;
+  const handleReturningClassChange = (event) => {
+    const classId = event.target.value;
 
-    const selectedClass =
-      classes.find(
-        (item) =>
-          String(item.id) ===
-          String(classId)
-      );
+    const selectedClass = classes.find(
+      (item) =>
+        String(item.id) ===
+        String(classId)
+    );
 
     setReturningStudent((current) => ({
       ...current,
-
       classId,
-
       className:
         selectedClass?.name || "",
     }));
@@ -376,7 +359,8 @@ const [searchingReturning, setSearchingReturning] =
               form.gender,
 
             dateOfBirth:
-              form.dateOfBirth || null,
+              form.dateOfBirth ||
+              null,
 
             age:
               form.age,
@@ -408,7 +392,8 @@ const [searchingReturning, setSearchingReturning] =
             className:
               form.className,
 
-            studentType: "new",
+            studentType:
+              "new",
 
             admissionDate:
               form.admissionDate ||
@@ -540,6 +525,7 @@ const [searchingReturning, setSearchingReturning] =
       setSuccess(
         `New student added successfully. Admission No: ${
           data.studentNumber ||
+          data.student?.admission_no ||
           "Generated"
         }`
       );
@@ -564,165 +550,174 @@ const [searchingReturning, setSearchingReturning] =
   };
 
   // ==================================================
-// SEARCH RETURNING STUDENT
-// ==================================================
+  // SEARCH RETURNING STUDENT
+  // ==================================================
 
-const searchReturningStudents = async () => {
-  const form = returningStudent;
+  const searchReturningStudents = async () => {
+    const form =
+      returningStudent;
 
-  if (
-    !form.firstName.trim() &&
-    !form.lastName.trim() &&
-    !form.dateOfBirth &&
-    !form.parentPhone.trim()
-  ) {
-    setError(
-      "Enter at least one identifying detail."
-    );
-    return;
-  }
+    const admissionNo =
+      form.admissionNo.trim();
 
-  try {
-    setSearchingReturning(true);
-    setError("");
-    setReturningMatches([]);
-    setSelectedReturningStudent(null);
+    const firstName =
+      form.firstName.trim();
 
-    const params =
-      new URLSearchParams();
+    const lastName =
+      form.lastName.trim();
 
-    if (form.firstName.trim()) {
-      params.set(
-        "firstName",
-        form.firstName.trim()
+    const parentPhone =
+      form.parentPhone.trim();
+
+    if (
+      !admissionNo &&
+      !firstName &&
+      !lastName &&
+      !form.dateOfBirth &&
+      !parentPhone
+    ) {
+      setError(
+        "Enter an admission number, name, date of birth, or parent phone number."
       );
+      return;
     }
 
-    if (form.lastName.trim()) {
-      params.set(
-        "lastName",
-        form.lastName.trim()
+    try {
+      setSearchingReturning(true);
+      setError("");
+      setSuccess("");
+
+      setReturningMatches([]);
+      setSelectedReturningStudent(null);
+
+      const params =
+        new URLSearchParams();
+
+      if (admissionNo) {
+        params.set(
+          "admissionNo",
+          admissionNo
+        );
+      } else {
+        if (firstName) {
+          params.set(
+            "firstName",
+            firstName
+          );
+        }
+
+        if (lastName) {
+          params.set(
+            "lastName",
+            lastName
+          );
+        }
+
+        if (form.dateOfBirth) {
+          params.set(
+            "dateOfBirth",
+            form.dateOfBirth
+          );
+        }
+
+        if (parentPhone) {
+          params.set(
+            "parentPhone",
+            parentPhone
+          );
+        }
+      }
+
+      const response = await fetch(
+        `${API_URL}/api/returning-students/search?${params.toString()}`
       );
-    }
 
-    if (form.dateOfBirth) {
-      params.set(
-        "dateOfBirth",
-        form.dateOfBirth
-      );
-    }
+      const data =
+        await response.json();
 
-    if (form.parentPhone.trim()) {
-      params.set(
-        "parentPhone",
-        form.parentPhone.trim()
-      );
-    }
+      if (!response.ok) {
+        throw new Error(
+          data.error ||
+            "Unable to search for student."
+        );
+      }
 
-    const response = await fetch(
-      `${API_URL}/api/returning-students/search?${params.toString()}`
-    );
+      const matches =
+        Array.isArray(data)
+          ? data
+          : [];
 
-    const data =
-      await response.json();
+      setReturningMatches(matches);
 
-    if (!response.ok) {
-      throw new Error(
-        data.error ||
+      if (matches.length === 0) {
+        setError(
+          "No matching existing student found."
+        );
+        return;
+      }
+
+      // IMPORTANT:
+      // If there is exactly one match,
+      // select it automatically.
+      if (matches.length === 1) {
+        setSelectedReturningStudent(
+          matches[0]
+        );
+
+        setSuccess(
+          "Existing student found and selected."
+        );
+      }
+    } catch (err) {
+      console.error(err);
+
+      setError(
+        err.message ||
           "Unable to search for student."
       );
+    } finally {
+      setSearchingReturning(false);
     }
+  };
 
-    setReturningMatches(data);
+  // ==================================================
+  // SELECT RETURNING STUDENT
+  // ==================================================
 
-    if (data.length === 0) {
-      setError(
-        "No matching existing student found."
-      );
-    }
-
-  } catch (err) {
-    console.error(err);
-
-    setError(
-      err.message ||
-        "Unable to search for student."
+  const selectReturningStudent = (student) => {
+    setSelectedReturningStudent(
+      student
     );
-  } finally {
-    setSearchingReturning(false);
-  }
-};
+
+    setError("");
+    setSuccess(
+      "Existing student selected."
+    );
+  };
 
   // ==================================================
   // SUBMIT RETURNING STUDENT
   // ==================================================
 
   const submitReturningStudent = async () => {
-    const form =
-      returningStudent;
-
-    if (!form.firstName.trim()) {
-      setError(
-        "First name is required."
-      );
-      return;
-    }
-
-    if (!form.lastName.trim()) {
-      setError(
-        "Last name is required."
-      );
-      return;
-    }
-   if (!form.parentName.trim()) {
-      setError(
-        "Parent/guardian name is required."
-      );
-      return;
-    }
-
-    if (!form.parentPhone.trim()) {
-      setError(
-        "Parent/guardian phone number is required."
-      );
-      return;
-    }
-
-    if (!form.address.trim()) {
-      setError(
-        "Address is required."
-      );
-      return;
-    }
-
-    if (!form.classId) {
-      setError(
-        "Please select the student's class."
-      );
-      return;
-    }
     if (!selectedReturningStudent) {
-  setError(
-    "Search for and select the existing student first."
-  );
-  return;
-}
+      setError(
+        "Search for and select the existing student first."
+      );
+      return;
+    }
+
+    if (!returningStudent.classId) {
+      setError(
+        "Please select the student's current class."
+      );
+      return;
+    }
 
     try {
       setSaving(true);
       setError("");
       setSuccess("");
-
-      /*
-        IMPORTANT:
-
-        Returning-student enrollment should
-        eventually search for the existing
-        student record before creating/updating.
-
-        This endpoint is intentionally kept
-        separate from the new-student flow.
-      */
 
       const response = await fetch(
         `${API_URL}/api/students/returning`,
@@ -736,33 +731,10 @@ const searchReturningStudents = async () => {
 
           body: JSON.stringify({
             studentId:
-               selectedReturningStudent?.id,
-            firstName:
-              form.firstName.trim(),
-
-            middleName:
-              form.middleName.trim(),
-
-            lastName:
-              form.lastName.trim(),
-
-            dateOfBirth:
-              form.dateOfBirth,
-
-            parentName:
-              form.parentName.trim(),
-
-            parentPhone:
-              form.parentPhone.trim(),
-
-            address:
-              form.address.trim(),
+              selectedReturningStudent.id,
 
             classId:
-              form.classId,
-
-            className:
-              form.className,
+              returningStudent.classId,
           }),
         }
       );
@@ -773,17 +745,23 @@ const searchReturningStudents = async () => {
       if (!response.ok) {
         throw new Error(
           data.error ||
-            "Unable to process returning student."
+            "Unable to register returning student."
         );
       }
 
       setSuccess(
         data.message ||
-          "Returning student processed successfully."
+          "Returning student registered successfully."
       );
 
       setReturningStudent(
         EMPTY_RETURNING_STUDENT
+      );
+
+      setReturningMatches([]);
+
+      setSelectedReturningStudent(
+        null
       );
 
       setShowForm(false);
@@ -794,7 +772,7 @@ const searchReturningStudents = async () => {
 
       setError(
         err.message ||
-          "Unable to process returning student."
+          "Unable to register returning student."
       );
     } finally {
       setSaving(false);
@@ -805,9 +783,7 @@ const searchReturningStudents = async () => {
   // FORM SUBMIT
   // ==================================================
 
-  const handleSubmit = async (
-    event
-  ) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     if (
@@ -818,6 +794,31 @@ const searchReturningStudents = async () => {
     } else {
       await submitReturningStudent();
     }
+  };
+
+  // ==================================================
+  // RESET REGISTRATION FORM
+  // ==================================================
+
+  const resetRegistration = () => {
+    setRegistrationType("new");
+
+    setNewStudent(
+      EMPTY_NEW_STUDENT
+    );
+
+    setReturningStudent(
+      EMPTY_RETURNING_STUDENT
+    );
+
+    setReturningMatches([]);
+
+    setSelectedReturningStudent(
+      null
+    );
+
+    setError("");
+    setSuccess("");
   };
 
   // ==================================================
@@ -847,7 +848,9 @@ const searchReturningStudents = async () => {
           .toLowerCase()
           .includes(query) ||
         String(
-          student.admissionNo || ""
+          student.admissionNo ||
+            student.admission_no ||
+            ""
         )
           .toLowerCase()
           .includes(query);
@@ -889,7 +892,9 @@ const searchReturningStudents = async () => {
 
       <div className="page-header">
 
-        <h1>Students</h1>
+        <h1>
+          Students
+        </h1>
 
         <button
           className="primary-btn"
@@ -969,9 +974,7 @@ const searchReturningStudents = async () => {
             Student Registration
           </h2>
 
-          {/* ================================
-              STUDENT TYPE
-          ================================= */}
+          {/* STUDENT TYPE */}
 
           <div
             style={{
@@ -1000,12 +1003,32 @@ const searchReturningStudents = async () => {
                 registrationType
               }
               onChange={(event) => {
+                const type =
+                  event.target.value;
+
                 setRegistrationType(
-                  event.target.value
+                  type
                 );
 
                 setError("");
                 setSuccess("");
+
+                if (
+                  type ===
+                  "returning"
+                ) {
+                  setReturningStudent(
+                    EMPTY_RETURNING_STUDENT
+                  );
+
+                  setReturningMatches(
+                    []
+                  );
+
+                  setSelectedReturningStudent(
+                    null
+                  );
+                }
               }}
               className="filter-select"
               style={{
@@ -1035,19 +1058,15 @@ const searchReturningStudents = async () => {
           >
 
             {/* ==================================================
-                NEW STUDENT FORM
+                NEW STUDENT
             ================================================== */}
 
             {registrationType ===
               "new" && (
               <>
 
-                {/* STUDENT INFORMATION */}
-
                 <h3
                   style={{
-                    marginTop:
-                      "10px",
                     marginBottom:
                       "15px",
                     color:
@@ -1146,7 +1165,6 @@ const searchReturningStudents = async () => {
                     type="number"
                     name="age"
                     placeholder="Age"
-                    min="0"
                     value={
                       newStudent.age
                     }
@@ -1211,7 +1229,7 @@ const searchReturningStudents = async () => {
                   <input
                     type="text"
                     name="lga"
-                    placeholder="Local Government Area"
+                    placeholder="LGA"
                     value={
                       newStudent.lga
                     }
@@ -1246,8 +1264,6 @@ const searchReturningStudents = async () => {
                     }
                     className="search-input"
                   />
-
-                  {/* ONLY CLASS DROPDOWN */}
 
                   <select
                     value={
@@ -1380,10 +1396,6 @@ const searchReturningStudents = async () => {
                       handleNewStudentChange
                     }
                     className="search-input"
-                    style={{
-                      minHeight:
-                        "90px",
-                    }}
                   />
 
                   <input
@@ -1536,9 +1548,7 @@ const searchReturningStudents = async () => {
                     name="fullName"
                     placeholder="Guardian full name"
                     value={
-                      newStudent
-                        .guardian
-                        .fullName
+                      newStudent.guardian.fullName
                     }
                     onChange={
                       handleGuardianChange
@@ -1551,9 +1561,7 @@ const searchReturningStudents = async () => {
                     name="relationship"
                     placeholder="Guardian relationship"
                     value={
-                      newStudent
-                        .guardian
-                        .relationship
+                      newStudent.guardian.relationship
                     }
                     onChange={
                       handleGuardianChange
@@ -1566,9 +1574,7 @@ const searchReturningStudents = async () => {
                     name="nationality"
                     placeholder="Guardian nationality"
                     value={
-                      newStudent
-                        .guardian
-                        .nationality
+                      newStudent.guardian.nationality
                     }
                     onChange={
                       handleGuardianChange
@@ -1581,9 +1587,7 @@ const searchReturningStudents = async () => {
                     name="state"
                     placeholder="Guardian state"
                     value={
-                      newStudent
-                        .guardian
-                        .state
+                      newStudent.guardian.state
                     }
                     onChange={
                       handleGuardianChange
@@ -1596,9 +1600,7 @@ const searchReturningStudents = async () => {
                     name="occupation"
                     placeholder="Guardian occupation"
                     value={
-                      newStudent
-                        .guardian
-                        .occupation
+                      newStudent.guardian.occupation
                     }
                     onChange={
                       handleGuardianChange
@@ -1611,9 +1613,7 @@ const searchReturningStudents = async () => {
                     name="religion"
                     placeholder="Guardian religion"
                     value={
-                      newStudent
-                        .guardian
-                        .religion
+                      newStudent.guardian.religion
                     }
                     onChange={
                       handleGuardianChange
@@ -1626,9 +1626,7 @@ const searchReturningStudents = async () => {
                     name="denomination"
                     placeholder="Guardian denomination"
                     value={
-                      newStudent
-                        .guardian
-                        .denomination
+                      newStudent.guardian.denomination
                     }
                     onChange={
                       handleGuardianChange
@@ -1640,9 +1638,7 @@ const searchReturningStudents = async () => {
                     type="date"
                     name="dateOfBirth"
                     value={
-                      newStudent
-                        .guardian
-                        .dateOfBirth
+                      newStudent.guardian.dateOfBirth
                     }
                     onChange={
                       handleGuardianChange
@@ -1654,9 +1650,7 @@ const searchReturningStudents = async () => {
                     type="date"
                     name="marriageAnniversary"
                     value={
-                      newStudent
-                        .guardian
-                        .marriageAnniversary
+                      newStudent.guardian.marriageAnniversary
                     }
                     onChange={
                       handleGuardianChange
@@ -1668,9 +1662,7 @@ const searchReturningStudents = async () => {
                     name="residentialAddress"
                     placeholder="Guardian residential address"
                     value={
-                      newStudent
-                        .guardian
-                        .residentialAddress
+                      newStudent.guardian.residentialAddress
                     }
                     onChange={
                       handleGuardianChange
@@ -1682,9 +1674,7 @@ const searchReturningStudents = async () => {
                     name="contactAddress"
                     placeholder="Guardian contact address"
                     value={
-                      newStudent
-                        .guardian
-                        .contactAddress
+                      newStudent.guardian.contactAddress
                     }
                     onChange={
                       handleGuardianChange
@@ -1696,9 +1686,7 @@ const searchReturningStudents = async () => {
                     name="medicalDeclaration"
                     placeholder="Guardian medical declaration"
                     value={
-                      newStudent
-                        .guardian
-                        .medicalDeclaration
+                      newStudent.guardian.medicalDeclaration
                     }
                     onChange={
                       handleGuardianChange
@@ -1737,9 +1725,7 @@ const searchReturningStudents = async () => {
                   <select
                     name="admissionStatus"
                     value={
-                      newStudent
-                        .admission
-                        .admissionStatus
+                      newStudent.admission.admissionStatus
                     }
                     onChange={
                       handleAdmissionChange
@@ -1763,9 +1749,7 @@ const searchReturningStudents = async () => {
                     type="date"
                     name="declarationDate"
                     value={
-                      newStudent
-                        .admission
-                        .declarationDate
+                      newStudent.admission.declarationDate
                     }
                     onChange={
                       handleAdmissionChange
@@ -1777,9 +1761,7 @@ const searchReturningStudents = async () => {
                     name="parentDeclaration"
                     placeholder="Parent declaration"
                     value={
-                      newStudent
-                        .admission
-                        .parentDeclaration
+                      newStudent.admission.parentDeclaration
                     }
                     onChange={
                       handleAdmissionChange
@@ -1792,9 +1774,7 @@ const searchReturningStudents = async () => {
                     name="parentSignatureName"
                     placeholder="Parent signature / name"
                     value={
-                      newStudent
-                        .admission
-                        .parentSignatureName
+                      newStudent.admission.parentSignatureName
                     }
                     onChange={
                       handleAdmissionChange
@@ -1807,9 +1787,7 @@ const searchReturningStudents = async () => {
                     name="schoolAuthorizedBy"
                     placeholder="School authorized by"
                     value={
-                      newStudent
-                        .admission
-                        .schoolAuthorizedBy
+                      newStudent.admission.schoolAuthorizedBy
                     }
                     onChange={
                       handleAdmissionChange
@@ -1822,9 +1800,7 @@ const searchReturningStudents = async () => {
                     name="schoolSignatureName"
                     placeholder="School signature / name"
                     value={
-                      newStudent
-                        .admission
-                        .schoolSignatureName
+                      newStudent.admission.schoolSignatureName
                     }
                     onChange={
                       handleAdmissionChange
@@ -1838,7 +1814,7 @@ const searchReturningStudents = async () => {
             )}
 
             {/* ==================================================
-                RETURNING STUDENT FORM
+                RETURNING STUDENT
             ================================================== */}
 
             {registrationType ===
@@ -1871,11 +1847,12 @@ const searchReturningStudents = async () => {
                         "#64748b",
                     }}
                   >
-                    Enter only the
-                    information available
-                    from the school's
-                    existing records.
+                    Search the student's
+                    existing school record.
+                    Do not create a duplicate
+                    student record.
                   </p>
+
                 </div>
 
                 <h3
@@ -1886,7 +1863,7 @@ const searchReturningStudents = async () => {
                       "#1f2a44",
                   }}
                 >
-                  Student Information
+                  Find Existing Student
                 </h3>
 
                 <div
@@ -1902,8 +1879,23 @@ const searchReturningStudents = async () => {
 
                   <input
                     type="text"
+                    name="admissionNo"
+                    placeholder="Admission Number"
+                    value={
+                      returningStudent.admissionNo
+                    }
+                    onChange={
+                      handleReturningStudentChange
+                    }
+                    className="search-input"
+                  />
+
+                  <div />
+
+                  <input
+                    type="text"
                     name="firstName"
-                    placeholder="First name *"
+                    placeholder="First name"
                     value={
                       returningStudent.firstName
                     }
@@ -1915,21 +1907,8 @@ const searchReturningStudents = async () => {
 
                   <input
                     type="text"
-                    name="middleName"
-                    placeholder="Middle name"
-                    value={
-                      returningStudent.middleName
-                    }
-                    onChange={
-                      handleReturningStudentChange
-                    }
-                    className="search-input"
-                  />
-
-                  <input
-                    type="text"
                     name="lastName"
-                    placeholder="Last name *"
+                    placeholder="Last name"
                     value={
                       returningStudent.lastName
                     }
@@ -1952,22 +1931,9 @@ const searchReturningStudents = async () => {
                   />
 
                   <input
-                    type="text"
-                    name="parentName"
-                    placeholder="Parent / Guardian name *"
-                    value={
-                      returningStudent.parentName
-                    }
-                    onChange={
-                      handleReturningStudentChange
-                    }
-                    className="search-input"
-                  />
-
-                  <input
                     type="tel"
                     name="parentPhone"
-                    placeholder="Parent / Guardian phone *"
+                    placeholder="Parent phone"
                     value={
                       returningStudent.parentPhone
                     }
@@ -1977,129 +1943,262 @@ const searchReturningStudents = async () => {
                     className="search-input"
                   />
 
-                  <textarea
-                    name="address"
-                    placeholder="Address *"
-                    value={
-                      returningStudent.address
-                    }
-                    onChange={
-                      handleReturningStudentChange
-                    }
-                    className="search-input"
-                    style={{
-                      minHeight:
-                        "90px",
-                    }}
-                  />
-
                   <button
-  type="button"
-  className="primary-btn"
-  onClick={searchReturningStudents}
-  disabled={searchingReturning}
-  style={{
-    gridColumn: "1 / -1",
-  }}
->
-  {searchingReturning
-    ? "Searching..."
-    : "Search Existing Student"}
-</button>
-{returningMatches.length > 0 && (
-  <div
-    style={{
-      gridColumn: "1 / -1",
-      marginTop: "10px",
-      padding: "15px",
-      border: "1px solid #e2e8f0",
-      borderRadius: "10px",
-      background: "#f8fafc",
-    }}
-  >
-    <h4>Matching Students</h4>
-
-    {returningMatches.map((student) => (
-      <button
-        key={student.id}
-        type="button"
-        onClick={() =>
-          setSelectedReturningStudent(student)
-        }
-        style={{
-          display: "block",
-          width: "100%",
-          textAlign: "left",
-          padding: "12px",
-          marginTop: "8px",
-          border: "1px solid #cbd5e1",
-          borderRadius: "8px",
-          background:
-            selectedReturningStudent?.id === student.id
-            ? "#e0f2fe"
-            : "#fff",
-
-          color: "#1f2937",
-
-          cursor: "pointer",
-        }}
-      >
-        <strong>
-          {student.first_name} {student.last_name}
-        </strong>
-
-        <br />
-
-        <small>
-          Admission No: {student.admission_no}
-        </small>
-
-        <br />
-
-        <small>
-          Parent: {student.parent_name || "—"}
-        </small>
-
-        <br />
-
-        <small>
-          Phone: {student.parent_phone || "—"}
-        </small>
-      </button>
-    ))}
-  </div>
-)}
-
-                  <select
-                    value={
-                      returningStudent.classId
+                    type="button"
+                    className="primary-btn"
+                    onClick={
+                      searchReturningStudents
                     }
-                    onChange={
-                      handleReturningClassChange
+                    disabled={
+                      searchingReturning
                     }
-                    className="filter-select"
+                    style={{
+                      gridColumn:
+                        "1 / -1",
+                    }}
                   >
-                    <option value="">
-                      Select Current Class *
-                    </option>
-
-                    {classes.map(
-                      (item) => (
-                        <option
-                          key={
-                            item.id
-                          }
-                          value={
-                            item.id
-                          }
-                        >
-                          {item.name}
-                        </option>
-                      )
-                    )}
-                  </select>
+                    {searchingReturning
+                      ? "Searching..."
+                      : "Search Existing Student"}
+                  </button>
 
                 </div>
+
+                {/* MATCHES */}
+
+                {returningMatches.length >
+                  0 && (
+                  <div
+                    style={{
+                      marginTop:
+                        "20px",
+                      padding:
+                        "15px",
+                      border:
+                        "1px solid #e2e8f0",
+                      borderRadius:
+                        "10px",
+                      background:
+                        "#f8fafc",
+                    }}
+                  >
+
+                    <h3>
+                      Matching Students
+                    </h3>
+
+                    {returningMatches.map(
+                      (student) => {
+                        const isSelected =
+                          selectedReturningStudent?.id ===
+                          student.id;
+
+                        return (
+                          <button
+                            key={
+                              student.id
+                            }
+                            type="button"
+                            onClick={() =>
+                              selectReturningStudent(
+                                student
+                              )
+                            }
+                            style={{
+                              display:
+                                "block",
+                              width:
+                                "100%",
+                              textAlign:
+                                "left",
+                              padding:
+                                "15px",
+                              marginTop:
+                                "10px",
+                              border:
+                                isSelected
+                                  ? "2px solid #1f2a44"
+                                  : "1px solid #cbd5e1",
+                              borderRadius:
+                                "8px",
+                              background:
+                                isSelected
+                                  ? "#e0f2fe"
+                                  : "#fff",
+                              color:
+                                "#1f2937",
+                              cursor:
+                                "pointer",
+                            }}
+                          >
+
+                            <strong>
+                              {student.first_name}{" "}
+                              {student.middle_name
+                                ? `${student.middle_name} `
+                                : ""}
+                              {student.last_name}
+                            </strong>
+
+                            <br />
+
+                            <small>
+                              Admission No:{" "}
+                              {
+                                student.admission_no
+                              }
+                            </small>
+
+                            <br />
+
+                            <small>
+                              Parent:{" "}
+                              {
+                                student.parent_name ||
+                                "—"
+                              }
+                            </small>
+
+                            <br />
+
+                            <small>
+                              Phone:{" "}
+                              {
+                                student.parent_phone ||
+                                "—"
+                              }
+                            </small>
+
+                            {isSelected && (
+                              <div
+                                style={{
+                                  marginTop:
+                                    "8px",
+                                  fontWeight:
+                                    "600",
+                                }}
+                              >
+                                ✓ Student selected
+                              </div>
+                            )}
+
+                          </button>
+                        );
+                      }
+                    )}
+
+                  </div>
+                )}
+
+                {/* SELECTED STUDENT */}
+
+                {selectedReturningStudent && (
+                  <div
+                    style={{
+                      marginTop:
+                        "20px",
+                      padding:
+                        "18px",
+                      borderRadius:
+                        "10px",
+                      background:
+                        "#ecfdf5",
+                      border:
+                        "1px solid #86efac",
+                    }}
+                  >
+
+                    <h3>
+                      Selected Student
+                    </h3>
+
+                    <p>
+                      <strong>
+                        {
+                          selectedReturningStudent.first_name
+                        }{" "}
+                        {
+                          selectedReturningStudent.last_name
+                        }
+                      </strong>
+                    </p>
+
+                    <p>
+                      Admission No:{" "}
+                      <strong>
+                        {
+                          selectedReturningStudent.admission_no
+                        }
+                      </strong>
+                    </p>
+
+                    <p
+                      style={{
+                        marginBottom:
+                          "0",
+                        color:
+                          "#166534",
+                      }}
+                    >
+                      Existing student record
+                      confirmed. Only the new
+                      enrollment will be created.
+                    </p>
+
+                  </div>
+                )}
+
+                {/* CURRENT CLASS */}
+
+                <h3
+                  style={{
+                    marginTop:
+                      "30px",
+                    marginBottom:
+                      "15px",
+                    color:
+                      "#1f2a44",
+                  }}
+                >
+                  Current Academic Class
+                </h3>
+
+                <select
+                  value={
+                    returningStudent.classId
+                  }
+                  onChange={
+                    handleReturningClassChange
+                  }
+                  className="filter-select"
+                  style={{
+                    width:
+                      "100%",
+                    maxWidth:
+                      "500px",
+                  }}
+                >
+
+                  <option value="">
+                    Select Current Class *
+                  </option>
+
+                  {classes.map(
+                    (item) => (
+                      <option
+                        key={
+                          item.id
+                        }
+                        value={
+                          item.id
+                        }
+                      >
+                        {item.name}
+                      </option>
+                    )
+                  )}
+
+                </select>
 
               </>
             )}
@@ -2118,7 +2217,14 @@ const searchReturningStudents = async () => {
               <button
                 type="submit"
                 className="primary-btn"
-                disabled={saving}
+                disabled={
+                  saving ||
+                  (
+                    registrationType ===
+                      "returning" &&
+                    !selectedReturningStudent
+                  )
+                }
               >
                 {saving
                   ? "Saving..."
@@ -2133,8 +2239,7 @@ const searchReturningStudents = async () => {
                 className="primary-btn"
                 onClick={() => {
                   setShowForm(false);
-                  setError("");
-                  setSuccess("");
+                  resetRegistration();
                 }}
                 style={{
                   background:
@@ -2149,6 +2254,7 @@ const searchReturningStudents = async () => {
             </div>
 
           </form>
+
         </div>
       )}
 
@@ -2179,6 +2285,7 @@ const searchReturningStudents = async () => {
           }
           className="filter-select"
         >
+
           <option value="">
             All Classes
           </option>
@@ -2186,13 +2293,18 @@ const searchReturningStudents = async () => {
           {classes.map(
             (item) => (
               <option
-                key={item.id}
-                value={item.name}
+                key={
+                  item.id
+                }
+                value={
+                  item.name
+                }
               >
                 {item.name}
               </option>
             )
           )}
+
         </select>
 
       </div>
@@ -2218,6 +2330,10 @@ const searchReturningStudents = async () => {
               <th>
                 Class
               </th>
+
+              <th>
+                Student Type
+              </th>
             </tr>
           </thead>
 
@@ -2232,6 +2348,7 @@ const searchReturningStudents = async () => {
                       student.id
                     }
                   >
+
                     <td>
                       {
                         student.admissionNo
@@ -2246,23 +2363,30 @@ const searchReturningStudents = async () => {
 
                     <td>
                       {
-                        student.className
+                        student.className ||
+                        "—"
                       }
                     </td>
+
+                    <td>
+                      {
+                        student.studentType ||
+                        "—"
+                      }
+                    </td>
+
                   </tr>
                 )
               )
             ) : (
               <tr>
                 <td
-                  colSpan="3"
+                  colSpan="4"
                   style={{
                     textAlign:
                       "center",
                     padding:
-                      "30px",
-                    color:
-                      "#64748b",
+                      "40px",
                   }}
                 >
                   No students found.
