@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { useAuth } from "../context/AuthContext";
 
 const SCHOOL_CLASS_ORDER = [
   "Creche",
@@ -70,6 +71,34 @@ const getExpectedWeekdayCount = (dates, term, referenceDate = new Date()) => {
   }).length;
 };
 
+const isExcludedDate = (dateString, exclusions) => {
+  return (exclusions || []).some((item) =>
+    dateString >= item.start_date && dateString <= item.end_date
+  );
+};
+
+const getExpectedSchoolDays = (startDateString, endDateString, exclusions = []) => {
+  if (!startDateString || !endDateString || startDateString > endDateString) {
+    return 0;
+  }
+
+  const start = new Date(`${startDateString}T00:00:00`);
+  const end = new Date(`${endDateString}T00:00:00`);
+  let count = 0;
+
+  for (const cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
+    const day = cursor.getDay();
+    const dateString = getDateString(cursor);
+
+    if (day === 0 || day === 6) continue;
+    if (isExcludedDate(dateString, exclusions)) continue;
+
+    count++;
+  }
+
+  return count;
+};
+
 const formatDate = (date) => {
   return date.toLocaleDateString("en-NG", {
     day: "numeric",
@@ -87,6 +116,7 @@ const formatLongDate = (date) => {
 };
 
 export default function StudentAttendance() {
+  const { isAdmin } = useAuth();
   const [students, setStudents] = useState([]);
   const [classes, setClasses] = useState([]);
 
@@ -114,8 +144,26 @@ export default function StudentAttendance() {
   const [lockedAttendance, setLockedAttendance] =
     useState({});
 
+  const [attendanceRecordIds, setAttendanceRecordIds] =
+    useState({});
+
+  const [overrideTarget, setOverrideTarget] =
+    useState(null);
+
+  const [overrideStatus, setOverrideStatus] =
+    useState("Present");
+
+  const [overrideReason, setOverrideReason] =
+    useState("");
+
+  const [overriding, setOverriding] =
+    useState(false);
+
   const [weeklyRecords, setWeeklyRecords] =
     useState({});
+
+  const [schoolCalendarExclusions, setSchoolCalendarExclusions] =
+    useState([]);
 
   const [termRecords, setTermRecords] =
     useState({});
@@ -570,6 +618,7 @@ export default function StudentAttendance() {
       ) {
         setAttendance({});
         setLockedAttendance({});
+        setAttendanceRecordIds({});
         return;
       }
 
@@ -588,6 +637,7 @@ export default function StudentAttendance() {
             "student_attendance"
           )
           .select(`
+            id,
             student_id,
             enrollment_id,
             class_id,
@@ -623,6 +673,7 @@ export default function StudentAttendance() {
 
         const existing = {};
         const locked = {};
+        const recordIds = {};
 
         (data || []).forEach(
           (record) => {
@@ -630,11 +681,13 @@ export default function StudentAttendance() {
               record.status;
 
             locked[record.student_id] = true;
+            recordIds[record.student_id] = record.id;
           }
         );
 
         setAttendance(existing);
         setLockedAttendance(locked);
+        setAttendanceRecordIds(recordIds);
       } catch (err) {
         console.error(
           "DAILY ATTENDANCE LOAD ERROR:",
@@ -657,6 +710,41 @@ export default function StudentAttendance() {
     activeTerm,
     classStudents.length,
   ]);
+
+  // =========================================================
+  // LOAD SCHOOL CALENDAR EXCLUSIONS
+  // =========================================================
+
+  const fetchSchoolCalendarExclusions = async () => {
+    if (!academicSession || !activeTerm) {
+      setSchoolCalendarExclusions([]);
+      return;
+    }
+
+    try {
+      let query = supabase
+        .from("school_calendar_exclusions")
+        .select("id, session_id, term_id, start_date, end_date, exclusion_type, reason")
+        .eq("session_id", academicSession.id);
+
+      if (activeTerm.id) {
+        query = query.or(`term_id.is.null,term_id.eq.${activeTerm.id}`);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      setSchoolCalendarExclusions(data || []);
+    } catch (err) {
+      console.error("SCHOOL CALENDAR LOAD ERROR:", err);
+      setSchoolCalendarExclusions([]);
+    }
+  };
+
+  useEffect(() => {
+    fetchSchoolCalendarExclusions();
+  }, [academicSession, activeTerm]);
 
   // =========================================================
   // LOAD WEEKLY ATTENDANCE
@@ -740,6 +828,10 @@ export default function StudentAttendance() {
 
         (data || []).forEach(
           (record) => {
+            if (isExcludedDate(record.attendance_date, schoolCalendarExclusions)) {
+              return;
+            }
+
             if (
               !records[
                 record.student_id
@@ -760,20 +852,25 @@ export default function StudentAttendance() {
         );
 
         // Percentage denominator is expected Monday-Friday
-        // school days, not merely the number of records saved.
-        const expectedDays =
-          getExpectedWeekdayCount(
-            weekDates,
-            activeTerm
-          );
+        // school days, excluding configured holidays/breaks.
+        const expectedDays = weekDates.filter((date) => {
+          const dateString = getDateString(date);
+          const day = date.getDay();
+
+          if (day === 0 || day === 6) return false;
+          if (activeTerm.starts_on && dateString < activeTerm.starts_on) return false;
+          if (activeTerm.ends_on && dateString > activeTerm.ends_on) return false;
+          if (dateString > getDateString(new Date())) return false;
+          if (isExcludedDate(dateString, schoolCalendarExclusions)) return false;
+
+          return true;
+        }).length;
 
         setWeeklyRecords(
           records
         );
-
-        setWeeklyExpectedDays(
-          expectedDays
-        );
+        setWeeklyAttendanceDays
+         (expectedDays);
 
       } catch (err) {
         console.error(
@@ -797,6 +894,7 @@ export default function StudentAttendance() {
     weekDate,
     academicSession,
     activeTerm,
+    schoolCalendarExclusions,
     classStudents.length,
   ]);
 
@@ -890,6 +988,10 @@ export default function StudentAttendance() {
 
         (data || []).forEach(
           (record) => {
+            if (isExcludedDate(record.attendance_date, schoolCalendarExclusions)) {
+              return;
+            }
+
             if (
               !records[
                 record.student_id
@@ -914,8 +1016,20 @@ export default function StudentAttendance() {
           records
         );
 
+        const todayString = getDateString(new Date());
+        const termEndForCalculation =
+          activeTerm.ends_on && activeTerm.ends_on < todayString
+            ? activeTerm.ends_on
+            : todayString;
+
+        const expectedTermDays = getExpectedSchoolDays(
+          activeTerm.starts_on,
+          termEndForCalculation,
+          schoolCalendarExclusions
+        );
+
         setTermAttendanceDays(
-          attendanceDates.size
+          expectedTermDays
         );
       } catch (err) {
         console.error(
@@ -938,6 +1052,7 @@ export default function StudentAttendance() {
     selectedClass,
     academicSession,
     activeTerm,
+    schoolCalendarExclusions,
     classStudents.length,
   ]);
 
@@ -1099,13 +1214,7 @@ export default function StudentAttendance() {
           .from(
             "student_attendance"
           )
-          .upsert(
-            records,
-            {
-              onConflict:
-                "student_id,session_id,term_id,attendance_date",
-            }
-          );
+          .insert(records);
 
         if (error) {
           throw error;
@@ -1138,6 +1247,69 @@ export default function StudentAttendance() {
         setSaving(false);
       }
     };
+
+  const openOverride = (student) => {
+    const attendanceId = attendanceRecordIds[student.id];
+
+    if (!attendanceId) {
+      setError("Unable to locate the saved attendance record for override.");
+      return;
+    }
+
+    setOverrideTarget({
+      attendanceId,
+      studentName: student.fullName || student.studentNumber || "this student",
+      currentStatus: attendance[student.id],
+    });
+    setOverrideStatus(attendance[student.id] === "Present" ? "Absent" : "Present");
+    setOverrideReason("");
+  };
+
+  const handleOverrideAttendance = async () => {
+    if (!overrideTarget) return;
+
+    if (!overrideReason.trim()) {
+      setError("An override reason is required.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Override ${overrideTarget.studentName}'s attendance from ${overrideTarget.currentStatus} to ${overrideStatus}?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setOverriding(true);
+      setError("");
+      setSuccess("");
+
+      const { error: overrideError } = await supabase.rpc(
+        "override_student_attendance",
+        {
+          p_attendance_id: overrideTarget.attendanceId,
+          p_new_status: overrideStatus,
+          p_reason: overrideReason.trim(),
+        }
+      );
+
+      if (overrideError) throw overrideError;
+
+      setOverrideTarget(null);
+      setSuccess("Attendance override saved and recorded in the audit log.");
+
+      await Promise.all([
+        fetchDailyAttendance(),
+        fetchWeeklyAttendance(),
+        fetchTermAttendance(),
+      ]);
+    } catch (err) {
+      console.error("ATTENDANCE OVERRIDE ERROR:", err);
+      setError(err.message || "Unable to save the attendance override.");
+    } finally {
+      setOverriding(false);
+    }
+  };
 
   // =========================================================
   // WEEKLY STATS
@@ -1920,6 +2092,25 @@ export default function StudentAttendance() {
                               }}
                             >
                               Saved
+                              {isAdmin && (
+                                <button
+                                  type="button"
+                                  onClick={() => openOverride(student)}
+                                  style={{
+                                    display: "block",
+                                    marginTop: "6px",
+                                    padding: "4px 8px",
+                                    border: "1px solid #94a3b8",
+                                    borderRadius: "4px",
+                                    background: "#fff",
+                                    color: "#334155",
+                                    cursor: "pointer",
+                                    fontSize: "11px",
+                                  }}
+                                >
+                                  Override
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>
@@ -2497,6 +2688,66 @@ export default function StudentAttendance() {
           Select a class to begin
           recording and viewing
           attendance.
+        </div>
+      )}
+
+      {overrideTarget && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="attendance-override-title"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 20,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+            background: "rgba(15, 23, 42, 0.45)",
+          }}
+        >
+          <div className="page-card" style={{ width: "min(100%, 460px)" }}>
+            <h2 id="attendance-override-title">Override saved attendance</h2>
+            <p style={{ margin: "10px 0 18px", color: "#475569" }}>
+              {overrideTarget.studentName}: {overrideTarget.currentStatus} → {overrideStatus}
+            </p>
+
+            <label style={{ display: "block", marginBottom: "7px", fontWeight: 600 }}>
+              New status
+            </label>
+            <select
+              className="filter-select"
+              value={overrideStatus}
+              onChange={(event) => setOverrideStatus(event.target.value)}
+              style={{ width: "100%", marginBottom: "16px" }}
+            >
+              <option value="Present">Present</option>
+              <option value="Absent">Absent</option>
+            </select>
+
+            <label htmlFor="attendance-override-reason" style={{ display: "block", marginBottom: "7px", fontWeight: 600 }}>
+              Override reason
+            </label>
+            <textarea
+              id="attendance-override-reason"
+              value={overrideReason}
+              onChange={(event) => setOverrideReason(event.target.value)}
+              required
+              rows="4"
+              style={{ width: "100%", padding: "10px", border: "1px solid #d1d5db", borderRadius: "8px", marginBottom: "18px" }}
+              placeholder="Explain why this saved record is being changed."
+            />
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <button type="button" className="secondary-btn" disabled={overriding} onClick={() => setOverrideTarget(null)}>
+                Cancel
+              </button>
+              <button type="button" className="primary-btn" disabled={overriding || !overrideReason.trim() || overrideStatus === overrideTarget.currentStatus} onClick={handleOverrideAttendance}>
+                {overriding ? "Saving override..." : "Confirm override"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -59,6 +59,24 @@ select {
   font-size: 24px;
 }
 
+.sidebar-user {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #324766;
+  font-size: 13px;
+}
+
+.sidebar-user span {
+  color: #cbd5e1;
+}
+
+.sidebar-signout {
+  margin-top: auto;
+}
+
 .sidebar button {
   background: none;
   border: none;
@@ -113,6 +131,51 @@ select {
 
   overflow-x: hidden;
   overflow-y: auto;
+}
+
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.auth-card {
+  width: min(100%, 420px);
+  background: #ffffff;
+  padding: 32px;
+  border-radius: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.auth-card h1 {
+  font-size: 32px;
+  line-height: 1.15;
+  letter-spacing: normal;
+  margin: 0 0 12px;
+  color: #1f2a44;
+}
+
+.auth-card p {
+  margin-bottom: 20px;
+  color: #64748b;
+}
+
+.auth-card form {
+  display: grid;
+  gap: 10px;
+}
+
+.auth-card input {
+  margin-bottom: 8px;
+  padding: 11px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+}
+
+.auth-error {
+  color: #b91c1c !important;
 }
 
 

@@ -167,7 +167,7 @@ export default function Receipts() {
                   color: "#1f2a44",
                 }}
               >
-                Predvic Schools
+                Predivic Schools
               </h1>
 
               <p

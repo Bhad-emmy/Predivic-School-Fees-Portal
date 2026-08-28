@@ -9,11 +9,30 @@ import Payments from "./pages/Payments";
 import Receipts from "./pages/Receipts";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
+import Login from "./pages/Login";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 
 import "./styles/App.css";
 
 function App() {
+  return (
+    <AuthProvider>
+      <ProtectedApp />
+    </AuthProvider>
+  );
+}
+
+function ProtectedApp() {
+  const { user, staff, loading, signOut } = useAuth();
   const [page, setPage] = useState("dashboard");
+
+  if (loading) {
+    return <main className="auth-page">Loading secure session…</main>;
+  }
+
+  if (!user || !staff) {
+    return <Login />;
+  }
 
   const renderPage = () => {
     switch (page) {
@@ -54,7 +73,12 @@ function App() {
 
       <aside className="sidebar">
 
-        <h2>Predvic Schools</h2>
+        <h2>Predivic Schools</h2>
+
+        <div className="sidebar-user">
+          <strong>{[staff.first_name, staff.last_name].filter(Boolean).join(" ") || "Staff"}</strong>
+          <span>{staff.role}</span>
+        </div>
 
         <button
           onClick={() =>
@@ -126,6 +150,10 @@ function App() {
           }
         >
           Settings
+        </button>
+
+        <button className="sidebar-signout" onClick={signOut}>
+          Sign out
         </button>
 
       </aside>

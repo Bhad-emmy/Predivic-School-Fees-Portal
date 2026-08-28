@@ -1,6 +1,6 @@
-# Predvic School Management Portal
+# Predivic Schools
 
-A web-based school management system being developed for Predvic Schools.
+A web-based school management system being developed for Predivic Schools.
 
 The system is designed to centralize student records, school fee management, payments, receipts, reporting, and student/staff attendance in one application.
 

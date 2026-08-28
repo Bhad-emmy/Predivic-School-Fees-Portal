@@ -195,7 +195,7 @@ function isRecordedPaymentStatus(status) {
 app.get("/", (req, res) => {
   res.json({
     message:
-      "Predvic School Portal API is running",
+      "Predivic Schools API is running",
     backend: "Supabase",
     status: "OK",
   });
@@ -4718,7 +4718,7 @@ app.listen(
   PORT,
   () => {
     console.log(
-      `Predvic School Portal API running on http://localhost:${PORT}`
+      `Predivic Schools API running on http://localhost:${PORT}`
     );
   }
 );
