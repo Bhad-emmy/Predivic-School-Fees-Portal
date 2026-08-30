@@ -620,3 +620,224 @@ tr:hover {
     width: 100%;
   }
 }
+/* =========================================================
+   THERMAL RECEIPT
+========================================================= */
+
+.receipt-screen {
+  width: 100%;
+}
+
+.receipt-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 25px;
+}
+
+.thermal-receipt {
+  width: 80mm;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 8mm 5mm;
+  background: #ffffff;
+  color: #000000;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  line-height: 1.35;
+  border: 1px solid #d1d5db;
+}
+
+.receipt-header {
+  text-align: center;
+}
+
+.receipt-header h1 {
+  margin: 0 0 4px;
+  font-size: 20px;
+  color: #000000;
+}
+
+.receipt-header p {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #000000;
+}
+
+.receipt-divider {
+  border-top: 1px dashed #000000;
+  margin: 10px 0;
+}
+
+.receipt-meta,
+.receipt-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.receipt-meta > div,
+.receipt-info > div,
+.receipt-received {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.receipt-meta span,
+.receipt-info span,
+.receipt-received span {
+  font-weight: 400;
+}
+
+.receipt-meta strong,
+.receipt-info strong,
+.receipt-received strong {
+  text-align: right;
+  font-weight: 700;
+}
+
+.receipt-items {
+  width: 100%;
+}
+
+.receipt-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.receipt-item span:last-child {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.receipt-item-heading {
+  font-weight: 700;
+  border-bottom: 1px solid #000000;
+  padding-bottom: 5px;
+}
+
+.receipt-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.receipt-total strong {
+  font-size: 17px;
+}
+
+.receipt-status {
+  text-align: center;
+  margin-top: 8px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.receipt-received {
+  margin-top: 8px;
+}
+
+.receipt-thanks {
+  text-align: center;
+  margin-top: 18px;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.receipt-footer {
+  text-align: center;
+  margin-top: 14px;
+  font-size: 9px;
+}
+
+.receipt-footer p {
+  margin: 3px 0;
+}
+
+.receipt-error {
+  color: #b91c1c;
+  margin-bottom: 15px;
+}
+
+
+/* =========================================================
+   THERMAL PRINT
+========================================================= */
+
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+
+  html,
+  body {
+    width: 80mm;
+    margin: 0;
+    padding: 0;
+    background: #ffffff !important;
+  }
+
+  body {
+    color: #000000 !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .thermal-receipt,
+  .thermal-receipt * {
+    visibility: visible;
+  }
+
+  .thermal-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    max-width: 80mm;
+    margin: 0;
+    padding: 5mm 4mm;
+    border: none;
+    box-shadow: none;
+    color: #000000;
+    background: #ffffff;
+  }
+
+  .receipt-screen {
+    width: 80mm;
+    margin: 0;
+    padding: 0;
+  }
+
+  .receipt-actions,
+  .sidebar,
+  .content,
+  .page-header,
+  .receipt-list-card {
+    display: none !important;
+  }
+
+  .receipt-header h1,
+  .receipt-header p,
+  .receipt-meta strong,
+  .receipt-info strong,
+  .receipt-total,
+  .receipt-status,
+  .receipt-received strong,
+  .receipt-thanks {
+    color: #000000 !important;
+  }
+
+  * {
+    box-shadow: none !important;
+  }
+}
