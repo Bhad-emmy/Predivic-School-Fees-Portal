@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const API_URL = "http://localhost:5000";
+const API_URL = "https://predivic-school-fees-portal.onrender.com";
 
 const EMPTY_NEW_STUDENT = {
   firstName: "",
@@ -2403,3 +2403,4 @@ export default function Students() {
     </div>
   );
 }
+

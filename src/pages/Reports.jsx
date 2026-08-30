@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 
-const API_URL = "http://localhost:5000";
+const API_URL = "https://predivic-school-fees-portal.onrender.com";
 
 const formatMoney = (amount) =>
   `₦${Number(amount || 0).toLocaleString("en-NG")}`;
@@ -911,3 +911,4 @@ export default function Reports() {
     </div>
   );
 }
+

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const API_URL = "http://localhost:5000";
+const API_URL = "https://predivic-school-fees-portal.onrender.com";
 
 const formatCurrency = (amount) =>
   `₦${Number(amount || 0).toLocaleString("en-NG")}`;
@@ -267,3 +267,4 @@ export default function Receipts() {
     </div>
   );
 }
+
