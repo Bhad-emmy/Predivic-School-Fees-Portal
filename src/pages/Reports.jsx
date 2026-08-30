@@ -4,14 +4,14 @@ import { supabase } from "../lib/supabase";
 const API_URL = "https://predivic-school-fees-portal.onrender.com";
 
 const formatMoney = (amount) =>
-  `₦${Number(amount || 0).toLocaleString("en-NG")}`;
+  `â‚¦${Number(amount || 0).toLocaleString("en-NG")}`;
 
 const formatDate = (date) => {
-  if (!date) return "—";
+  if (!date) return "â€”";
 
   const value = new Date(date);
 
-  if (Number.isNaN(value.getTime())) return "—";
+  if (Number.isNaN(value.getTime())) return "â€”";
 
   return value.toLocaleDateString("en-NG", {
     day: "2-digit",
@@ -636,18 +636,18 @@ export default function Reports() {
                         <tr key={payment.id}>
                           <td>
                             {payment.receiptNumber ||
-                              "—"}
+                              "â€”"}
                           </td>
 
                           <td>
                             {payment.studentName ||
-                              "—"}
+                              "â€”"}
                           </td>
 
                           <td>
                             {payment.className ||
                               payment.class_name ||
-                              "—"}
+                              "â€”"}
                           </td>
 
                           <td>
@@ -658,7 +658,7 @@ export default function Reports() {
 
                           <td>
                             {payment.method ||
-                              "—"}
+                              "â€”"}
                           </td>
 
                           <td>
@@ -669,7 +669,7 @@ export default function Reports() {
 
                           <td>
                             {payment.status ||
-                              "—"}
+                              "â€”"}
                           </td>
                         </tr>
                       )
@@ -875,19 +875,19 @@ export default function Reports() {
                             {student.name ||
                               student.fullName ||
                               student.full_name ||
-                              "—"}
+                              "â€”"}
                           </td>
 
                           <td>
                             {student.className ||
                               student.class_name ||
                               student.class ||
-                              "—"}
+                              "â€”"}
                           </td>
 
                           <td>
                             {student.status ||
-                              "—"}
+                              "â€”"}
                           </td>
                         </tr>
                       )

@@ -3,10 +3,10 @@ import { useEffect, useState } from "react";
 const API_URL = "https://predivic-school-fees-portal.onrender.com";
 
 const formatCurrency = (amount) =>
-  `₦${Number(amount || 0).toLocaleString("en-NG")}`;
+  `â‚¦${Number(amount || 0).toLocaleString("en-NG")}`;
 
 const formatDate = (date) => {
-  if (!date) return "—";
+  if (!date) return "â€”";
 
   return new Date(date).toLocaleDateString("en-NG", {
     day: "2-digit",
@@ -79,11 +79,11 @@ export default function Receipts() {
                   {payments.length > 0 ? (
                     payments.map((payment) => (
                       <tr key={payment.id}>
-                        <td>{payment.receiptNumber || "—"}</td>
+                        <td>{payment.receiptNumber || "â€”"}</td>
 
-                        <td>{payment.studentName || "—"}</td>
+                        <td>{payment.studentName || "â€”"}</td>
 
-                        <td>{payment.className || "—"}</td>
+                        <td>{payment.className || "â€”"}</td>
 
                         <td>School Fee</td>
 
@@ -91,7 +91,7 @@ export default function Receipts() {
                           {formatCurrency(payment.amount)}
                         </td>
 
-                        <td>{payment.method || "—"}</td>
+                        <td>{payment.method || "â€”"}</td>
 
                         <td>
                           {formatDate(payment.paymentDate)}
@@ -104,7 +104,7 @@ export default function Receipts() {
                               setSelectedPayment({
                                 ...payment,
                                 receiptNumber:
-                                  payment.receiptNumber || "—",
+                                  payment.receiptNumber || "â€”",
                               })
                             }
                           >
@@ -162,7 +162,7 @@ export default function Receipts() {
               <div>
                 <span>Receipt No.</span>
                 <strong>
-                  {selectedPayment.receiptNumber || "—"}
+                  {selectedPayment.receiptNumber || "â€”"}
                 </strong>
               </div>
 
@@ -180,14 +180,14 @@ export default function Receipts() {
               <div>
                 <span>Student</span>
                 <strong>
-                  {selectedPayment.studentName || "—"}
+                  {selectedPayment.studentName || "â€”"}
                 </strong>
               </div>
 
               <div>
                 <span>Class</span>
                 <strong>
-                  {selectedPayment.className || "—"}
+                  {selectedPayment.className || "â€”"}
                 </strong>
               </div>
 
@@ -203,7 +203,7 @@ export default function Receipts() {
               <div>
                 <span>Payment Method</span>
                 <strong>
-                  {selectedPayment.method || "—"}
+                  {selectedPayment.method || "â€”"}
                 </strong>
               </div>
 

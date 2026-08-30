@@ -2,12 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 
 const API_URL = "https://predivic-school-fees-portal.onrender.com";
-
 const formatMoney = (amount) =>
-  `₦${Number(amount || 0).toLocaleString("en-NG")}`;
+  `â‚¦${Number(amount || 0).toLocaleString("en-NG")}`;
 
 const formatDate = (date) => {
-  if (!date) return "—";
+  if (!date) return "â€”";
 
   return new Date(date).toLocaleDateString("en-NG", {
     day: "2-digit",
@@ -512,7 +511,7 @@ export default function Dashboard() {
 
                       <td>
                         {payment.className ||
-                          "—"}
+                          "â€”"}
                       </td>
 
                       <td>
@@ -523,7 +522,7 @@ export default function Dashboard() {
 
                       <td>
                         {payment.method ||
-                          "—"}
+                          "â€”"}
                       </td>
 
                       <td>
@@ -534,7 +533,7 @@ export default function Dashboard() {
 
                       <td>
                         {payment.status ||
-                          "—"}
+                          "â€”"}
                       </td>
                     </tr>
                   )

@@ -1514,21 +1514,21 @@ export default function FeeAccounts() {
                           </td>
 
                           <td>
-                            ₦
+                            Ã¢â€šÂ¦
                             {formatMoney(
                               account.totalAmount
                             )}
                           </td>
 
                           <td>
-                            ₦
+                            Ã¢â€šÂ¦
                             {formatMoney(
                               account.totalPaid
                             )}
                           </td>
 
                           <td>
-                            ₦
+                            Ã¢â€šÂ¦
                             {formatMoney(
                               account.balance
                             )}
@@ -2097,7 +2097,7 @@ export default function FeeAccounts() {
                         "#1f2a44",
                     }}
                   >
-                    ₦
+                    Ã¢â€šÂ¦
                     {formatMoney(
                       structureTotal
                     )}
@@ -2249,7 +2249,7 @@ export default function FeeAccounts() {
 
                           <td>
                             {structure.department ||
-                              "—"}
+                              "Ã¢â‚¬â€"}
                           </td>
 
                           <td>
@@ -2288,7 +2288,7 @@ export default function FeeAccounts() {
                                   </span>
 
                                   <span>
-                                    ₦
+                                    Ã¢â€šÂ¦
                                     {formatMoney(
                                       item.amount
                                     )}
@@ -2300,7 +2300,7 @@ export default function FeeAccounts() {
 
                           <td>
                             <strong>
-                              ₦
+                              Ã¢â€šÂ¦
                               {formatMoney(
                                 structure.total
                               )}
@@ -2410,7 +2410,7 @@ export default function FeeAccounts() {
                   assigning
                 }
               >
-                ×
+                Ãƒâ€”
               </button>
             </div>
 
@@ -2466,7 +2466,7 @@ export default function FeeAccounts() {
                             ) ||
                           "Unnamed Student"}
                         {student.className
-                          ? ` — ${student.className}`
+                          ? ` Ã¢â‚¬â€ ${student.className}`
                           : ""}
                       </option>
                     )
@@ -2676,20 +2676,20 @@ export default function FeeAccounts() {
                         }
                       >
                         {structure.className}
-                        {" — "}
+                        {" Ã¢â‚¬â€ "}
                         {structure.studentType}
                         {structure.department
-                          ? ` — ${structure.department}`
+                          ? ` Ã¢â‚¬â€ ${structure.department}`
                           : ""}
-                        {" — "}
+                        {" Ã¢â‚¬â€ "}
                         {structure.session}
-                        {" — "}
+                        {" Ã¢â‚¬â€ "}
                         {
                           displayTermName(
                             structure.term
                           )
                         }
-                        {" — ₦"}
+                        {" Ã¢â‚¬â€ Ã¢â€šÂ¦"}
                         {formatMoney(
                           structure.total
                         )}
@@ -2749,13 +2749,13 @@ export default function FeeAccounts() {
                           selectedFeeStructure.studentType
                         }
 
-                        {" • "}
+                        {" Ã¢â‚¬Â¢ "}
 
                         {
                           selectedFeeStructure.session
                         }
 
-                        {" • "}
+                        {" Ã¢â‚¬Â¢ "}
 
                         {displayTermName(
                           selectedFeeStructure.term
@@ -2771,7 +2771,7 @@ export default function FeeAccounts() {
                           "#1f2a44",
                       }}
                     >
-                      ₦
+                      Ã¢â€šÂ¦
                       {formatMoney(
                         selectedFeeStructure.total
                       )}
@@ -2806,7 +2806,7 @@ export default function FeeAccounts() {
                           </span>
 
                           <span>
-                            ₦
+                            Ã¢â€šÂ¦
                             {formatMoney(
                               item.amount
                             )}

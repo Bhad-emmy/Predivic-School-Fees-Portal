@@ -2055,7 +2055,7 @@ export default function Students() {
                               Parent:{" "}
                               {
                                 student.parent_name ||
-                                "—"
+                                "â€”"
                               }
                             </small>
 
@@ -2065,7 +2065,7 @@ export default function Students() {
                               Phone:{" "}
                               {
                                 student.parent_phone ||
-                                "—"
+                                "â€”"
                               }
                             </small>
 
@@ -2078,7 +2078,7 @@ export default function Students() {
                                     "600",
                                 }}
                               >
-                                ✓ Student selected
+                                âœ“ Student selected
                               </div>
                             )}
 
@@ -2266,7 +2266,7 @@ export default function Students() {
 
         <input
           type="text"
-          placeholder="🔍 Search by name or admission number..."
+          placeholder="ðŸ” Search by name or admission number..."
           value={search}
           onChange={(event) =>
             setSearch(
@@ -2364,14 +2364,14 @@ export default function Students() {
                     <td>
                       {
                         student.className ||
-                        "—"
+                        "â€”"
                       }
                     </td>
 
                     <td>
                       {
                         student.studentType ||
-                        "—"
+                        "â€”"
                       }
                     </td>
 

@@ -11,7 +11,7 @@ const EMPTY_PAYMENT = {
 };
 
 const formatAmount = (amount) =>
-  "₦" + Number(amount || 0).toLocaleString();
+  "â‚¦" + Number(amount || 0).toLocaleString();
 
 export default function Payments() {
   const [payments, setPayments] = useState([]);
@@ -301,7 +301,7 @@ export default function Payments() {
                   >
                     {account.student?.fullName ||
                       "Unknown Student"}{" "}
-                    — {account.className} —{" "}
+                    â€” {account.className} â€”{" "}
                     {account.term} (
                     {formatAmount(account.balance)} due)
                   </option>
@@ -466,7 +466,7 @@ export default function Payments() {
                 filteredPayments.map((payment) => (
                   <tr key={payment.id}>
                     <td>
-                      {payment.receiptNumber || "—"}
+                      {payment.receiptNumber || "â€”"}
                     </td>
                     <td>{payment.studentName}</td>
                     <td>{payment.className}</td>
