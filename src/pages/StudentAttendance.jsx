@@ -116,7 +116,6 @@ const formatLongDate = (date) => {
 };
 
 export default function StudentAttendance() {
-  const { isAdmin } = useAuth();
   const [students, setStudents] = useState([]);
   const [classes, setClasses] = useState([]);
 
@@ -143,21 +142,6 @@ export default function StudentAttendance() {
   // after the daily record has been submitted.
   const [lockedAttendance, setLockedAttendance] =
     useState({});
-
-  const [attendanceRecordIds, setAttendanceRecordIds] =
-    useState({});
-
-  const [overrideTarget, setOverrideTarget] =
-    useState(null);
-
-  const [overrideStatus, setOverrideStatus] =
-    useState("Present");
-
-  const [overrideReason, setOverrideReason] =
-    useState("");
-
-  const [overriding, setOverriding] =
-    useState(false);
 
   const [weeklyRecords, setWeeklyRecords] =
     useState({});
@@ -191,6 +175,25 @@ export default function StudentAttendance() {
 
   const [success, setSuccess] =
     useState("");
+
+  const { isAdmin } = useAuth();
+
+  // Saved attendance can only be changed through the admin
+  // override flow, which records an audit entry in Supabase.
+  const [attendanceRecordIds, setAttendanceRecordIds] =
+    useState({});
+
+  const [overrideTarget, setOverrideTarget] =
+    useState(null);
+
+  const [overrideStatus, setOverrideStatus] =
+    useState("Present");
+
+  const [overrideReason, setOverrideReason] =
+    useState("");
+
+  const [overriding, setOverriding] =
+    useState(false);
 
   // =========================================================
   // ACADEMIC SESSION + ACTIVE TERM
@@ -637,7 +640,6 @@ export default function StudentAttendance() {
             "student_attendance"
           )
           .select(`
-            id,
             student_id,
             enrollment_id,
             class_id,
@@ -869,8 +871,10 @@ export default function StudentAttendance() {
         setWeeklyRecords(
           records
         );
-        setWeeklyAttendanceDays
-         (expectedDays);
+
+        setWeeklyExpectedDays(
+          expectedDays
+        );
 
       } catch (err) {
         console.error(
@@ -1214,7 +1218,13 @@ export default function StudentAttendance() {
           .from(
             "student_attendance"
           )
-          .insert(records);
+          .upsert(
+            records,
+            {
+              onConflict:
+                "student_id,session_id,term_id,attendance_date",
+            }
+          );
 
         if (error) {
           throw error;
@@ -1248,21 +1258,37 @@ export default function StudentAttendance() {
       }
     };
 
+  // =========================================================
+  // ADMIN ATTENDANCE OVERRIDE
+  // =========================================================
+
   const openOverride = (student) => {
     const attendanceId = attendanceRecordIds[student.id];
 
     if (!attendanceId) {
-      setError("Unable to locate the saved attendance record for override.");
+      setError(
+        "Unable to locate the saved attendance record for override."
+      );
       return;
     }
 
     setOverrideTarget({
       attendanceId,
-      studentName: student.fullName || student.studentNumber || "this student",
+      studentName:
+        student.fullName ||
+        student.studentNumber ||
+        "this student",
       currentStatus: attendance[student.id],
     });
-    setOverrideStatus(attendance[student.id] === "Present" ? "Absent" : "Present");
+
+    setOverrideStatus(
+      attendance[student.id] === "Present"
+        ? "Absent"
+        : "Present"
+    );
+
     setOverrideReason("");
+    setError("");
   };
 
   const handleOverrideAttendance = async () => {
@@ -1270,6 +1296,11 @@ export default function StudentAttendance() {
 
     if (!overrideReason.trim()) {
       setError("An override reason is required.");
+      return;
+    }
+
+    if (overrideStatus === overrideTarget.currentStatus) {
+      setError("Choose a different attendance status.");
       return;
     }
 
@@ -1284,19 +1315,29 @@ export default function StudentAttendance() {
       setError("");
       setSuccess("");
 
-      const { error: overrideError } = await supabase.rpc(
-        "override_student_attendance",
-        {
-          p_attendance_id: overrideTarget.attendanceId,
-          p_new_status: overrideStatus,
-          p_reason: overrideReason.trim(),
-        }
-      );
+      const { error: overrideError } =
+        await supabase.rpc(
+          "override_student_attendance",
+          {
+            p_attendance_id:
+              overrideTarget.attendanceId,
+            p_new_status:
+              overrideStatus,
+            p_reason:
+              overrideReason.trim(),
+          }
+        );
 
-      if (overrideError) throw overrideError;
+      if (overrideError) {
+        throw overrideError;
+      }
 
       setOverrideTarget(null);
-      setSuccess("Attendance override saved and recorded in the audit log.");
+      setOverrideReason("");
+
+      setSuccess(
+        "Attendance override saved and recorded in the audit log."
+      );
 
       await Promise.all([
         fetchDailyAttendance(),
@@ -1304,8 +1345,15 @@ export default function StudentAttendance() {
         fetchTermAttendance(),
       ]);
     } catch (err) {
-      console.error("ATTENDANCE OVERRIDE ERROR:", err);
-      setError(err.message || "Unable to save the attendance override.");
+      console.error(
+        "ATTENDANCE OVERRIDE ERROR:",
+        err
+      );
+
+      setError(
+        err.message ||
+          "Unable to save the attendance override."
+      );
     } finally {
       setOverriding(false);
     }
@@ -1444,7 +1492,7 @@ export default function StudentAttendance() {
 
   if (loading) {
     return (
-      <div className="page">
+      <div className="page" style={{ width: "100%", maxWidth: "100%", overflowX: "hidden" }}>
         <h1>
           Student Attendance
         </h1>
@@ -1917,209 +1965,221 @@ export default function StudentAttendance() {
             </div>
           </div>
 
-          {classStudents.length >
-          0 ? (
-            <table>
-              <thead>
-                <tr>
-                  <th>
-                    Student Number
-                  </th>
+          {classStudents.length > 0 ? (
+            <>
+              <div
+                style={{
+                  marginBottom: "10px",
+                  fontSize: "12px",
+                  color: "#64748b",
+                }}
+              >
+                Swipe left on the attendance table to reach Absent.
+              </div>
 
-                  <th>
-                    Student Name
-                  </th>
-
-                  <th>
-                    Attendance
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {classStudents.map(
-                  (student) => (
-                    <tr
-                      key={
-                        student.id
-                      }
-                    >
-                      <td>
-                        {
-                          student.studentNumber ||
-                          "—"
-                        }
-                      </td>
-
-                      <td>
-                        {
-                          student.fullName ||
-                          "—"
-                        }
-                      </td>
-
-                      <td>
-                        <div
+              <div
+                style={{
+                  width: "100%",
+                  maxWidth: "100%",
+                  overflowX: "auto",
+                  overflowY: "hidden",
+                  WebkitOverflowScrolling: "touch",
+                  touchAction: "pan-x",
+                  overscrollBehaviorX: "contain",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "10px",
+                }}
+              >
+                <div style={{ minWidth: "760px" }}>
+                  <table
+                    style={{
+                      width: "100%",
+                      minWidth: "760px",
+                      tableLayout: "auto",
+                    }}
+                  >
+                    <thead>
+                      <tr>
+                        <th
                           style={{
-                            display:
-                              "flex",
-                            gap: "10px",
+                            minWidth: "160px",
+                            whiteSpace: "nowrap",
                           }}
                         >
-                          <button
-                            type="button"
-                            onClick={() =>
-                              markAttendance(
-                                student.id,
-                                "Present"
-                              )
-                            }
-                            disabled={
-                              !!lockedAttendance[
-                                student.id
-                              ]
-                            }
-                            title={
-                              lockedAttendance[
-                                student.id
-                              ]
-                                ? "Attendance already saved for this date"
-                                : "Mark Present"
-                            }
-                            style={{
-                              padding:
-                                "8px 14px",
-                              borderRadius:
-                                "6px",
-                              cursor:
-                                lockedAttendance[
-                                  student.id
-                                ]
-                                  ? "not-allowed"
-                                  : "pointer",
-                              opacity:
-                                lockedAttendance[
-                                  student.id
-                                ]
-                                  ? 0.65
-                                  : 1,
-                              border:
-                                attendance[
-                                  student.id
-                                ] ===
-                                "Present"
-                                  ? "2px solid #166534"
-                                  : "1px solid #d1d5db",
-                              background:
-                                attendance[
-                                  student.id
-                                ] ===
-                                "Present"
-                                  ? "#dcfce7"
-                                  : "#fff",
-                              color:
-                                "#166534",
-                            }}
-                          >
-                            Present
-                          </button>
+                          Student Number
+                        </th>
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              markAttendance(
-                                student.id,
-                                "Absent"
-                              )
-                            }
-                            disabled={
-                              !!lockedAttendance[
-                                student.id
-                              ]
-                            }
-                            title={
-                              lockedAttendance[
-                                student.id
-                              ]
-                                ? "Attendance already saved for this date"
-                                : "Mark Absent"
-                            }
-                            style={{
-                              padding:
-                                "8px 14px",
-                              borderRadius:
-                                "6px",
-                              cursor:
-                                lockedAttendance[
-                                  student.id
-                                ]
-                                  ? "not-allowed"
-                                  : "pointer",
-                              opacity:
-                                lockedAttendance[
-                                  student.id
-                                ]
-                                  ? 0.65
-                                  : 1,
-                              border:
-                                attendance[
-                                  student.id
-                                ] ===
-                                "Absent"
-                                  ? "2px solid #991b1b"
-                                  : "1px solid #d1d5db",
-                              background:
-                                attendance[
-                                  student.id
-                                ] ===
-                                "Absent"
-                                  ? "#fee2e2"
-                                  : "#fff",
-                              color:
-                                "#991b1b",
-                            }}
-                          >
-                            Absent
-                          </button>
-                          {lockedAttendance[
-                            student.id
-                          ] && (
-                            <div
-                              style={{
-                                fontSize: "11px",
-                                color: "#64748b",
-                                marginTop: "6px",
-                              }}
-                            >
-                              Saved
-                              {isAdmin && (
+                        <th
+                          style={{
+                            minWidth: "240px",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          Student Name
+                        </th>
+
+                        <th
+                          style={{
+                            minWidth: "330px",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          Attendance
+                        </th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {classStudents.map((student) => {
+                        const isLocked =
+                          !!lockedAttendance[student.id];
+
+                        return (
+                          <tr key={student.id}>
+                            <td style={{ whiteSpace: "nowrap" }}>
+                              {student.studentNumber || "—"}
+                            </td>
+
+                            <td style={{ minWidth: "240px" }}>
+                              {student.fullName || "—"}
+                            </td>
+
+                            <td style={{ minWidth: "330px" }}>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "10px",
+                                  flexWrap: "nowrap",
+                                  whiteSpace: "nowrap",
+                                  minWidth: "fit-content",
+                                }}
+                              >
                                 <button
                                   type="button"
-                                  onClick={() => openOverride(student)}
+                                  onClick={() =>
+                                    markAttendance(
+                                      student.id,
+                                      "Present"
+                                    )
+                                  }
+                                  disabled={isLocked}
+                                  title={
+                                    isLocked
+                                      ? "Attendance already saved for this date"
+                                      : "Mark Present"
+                                  }
                                   style={{
-                                    display: "block",
-                                    marginTop: "6px",
-                                    padding: "4px 8px",
-                                    border: "1px solid #94a3b8",
-                                    borderRadius: "4px",
-                                    background: "#fff",
-                                    color: "#334155",
-                                    cursor: "pointer",
-                                    fontSize: "11px",
+                                    flexShrink: 0,
+                                    minWidth: "95px",
+                                    padding: "10px 14px",
+                                    borderRadius: "6px",
+                                    cursor: isLocked
+                                      ? "not-allowed"
+                                      : "pointer",
+                                    opacity: isLocked ? 0.65 : 1,
+                                    border:
+                                      attendance[student.id] ===
+                                      "Present"
+                                        ? "2px solid #166534"
+                                        : "1px solid #d1d5db",
+                                    background:
+                                      attendance[student.id] ===
+                                      "Present"
+                                        ? "#dcfce7"
+                                        : "#fff",
+                                    color: "#166534",
+                                    fontWeight: "600",
                                   }}
                                 >
-                                  Override
+                                  Present
                                 </button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                )}
-              </tbody>
-            </table>
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    markAttendance(
+                                      student.id,
+                                      "Absent"
+                                    )
+                                  }
+                                  disabled={isLocked}
+                                  title={
+                                    isLocked
+                                      ? "Attendance already saved for this date"
+                                      : "Mark Absent"
+                                  }
+                                  style={{
+                                    flexShrink: 0,
+                                    minWidth: "95px",
+                                    padding: "10px 14px",
+                                    borderRadius: "6px",
+                                    cursor: isLocked
+                                      ? "not-allowed"
+                                      : "pointer",
+                                    opacity: isLocked ? 0.65 : 1,
+                                    border:
+                                      attendance[student.id] ===
+                                      "Absent"
+                                        ? "2px solid #991b1b"
+                                        : "1px solid #d1d5db",
+                                    background:
+                                      attendance[student.id] ===
+                                      "Absent"
+                                        ? "#fee2e2"
+                                        : "#fff",
+                                    color: "#991b1b",
+                                    fontWeight: "600",
+                                  }}
+                                >
+                                  Absent
+                                </button>
+
+                                {isLocked && (
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "7px",
+                                      flexShrink: 0,
+                                      fontSize: "11px",
+                                      color: "#64748b",
+                                    }}
+                                  >
+                                    <span>Saved</span>
+
+                                    {isAdmin && (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          openOverride(student)
+                                        }
+                                        style={{
+                                          padding: "4px 8px",
+                                          border:
+                                            "1px solid #94a3b8",
+                                          borderRadius: "4px",
+                                          background: "#fff",
+                                          color: "#334155",
+                                          cursor: "pointer",
+                                          fontSize: "11px",
+                                        }}
+                                      >
+                                        Override
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
           ) : (
             <div
               style={{
@@ -2690,7 +2750,6 @@ export default function StudentAttendance() {
           attendance.
         </div>
       )}
-
       {overrideTarget && (
         <div
           role="dialog"
@@ -2699,7 +2758,7 @@ export default function StudentAttendance() {
           style={{
             position: "fixed",
             inset: 0,
-            zIndex: 20,
+            zIndex: 1000,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -2707,49 +2766,121 @@ export default function StudentAttendance() {
             background: "rgba(15, 23, 42, 0.45)",
           }}
         >
-          <div className="page-card" style={{ width: "min(100%, 460px)" }}>
-            <h2 id="attendance-override-title">Override saved attendance</h2>
-            <p style={{ margin: "10px 0 18px", color: "#475569" }}>
-              {overrideTarget.studentName}: {overrideTarget.currentStatus} → {overrideStatus}
+          <div
+            className="page-card"
+            style={{
+              width: "min(100%, 460px)",
+              maxHeight: "90vh",
+              overflowY: "auto",
+            }}
+          >
+            <h2 id="attendance-override-title">
+              Override saved attendance
+            </h2>
+
+            <p
+              style={{
+                margin: "10px 0 18px",
+                color: "#475569",
+              }}
+            >
+              {overrideTarget.studentName}:{" "}
+              {overrideTarget.currentStatus} →{" "}
+              {overrideStatus}
             </p>
 
-            <label style={{ display: "block", marginBottom: "7px", fontWeight: 600 }}>
+            <label
+              style={{
+                display: "block",
+                marginBottom: "7px",
+                fontWeight: 600,
+              }}
+            >
               New status
             </label>
+
             <select
               className="filter-select"
               value={overrideStatus}
-              onChange={(event) => setOverrideStatus(event.target.value)}
-              style={{ width: "100%", marginBottom: "16px" }}
+              onChange={(event) =>
+                setOverrideStatus(event.target.value)
+              }
+              style={{
+                width: "100%",
+                marginBottom: "16px",
+              }}
             >
               <option value="Present">Present</option>
               <option value="Absent">Absent</option>
             </select>
 
-            <label htmlFor="attendance-override-reason" style={{ display: "block", marginBottom: "7px", fontWeight: 600 }}>
+            <label
+              htmlFor="attendance-override-reason"
+              style={{
+                display: "block",
+                marginBottom: "7px",
+                fontWeight: 600,
+              }}
+            >
               Override reason
             </label>
+
             <textarea
               id="attendance-override-reason"
               value={overrideReason}
-              onChange={(event) => setOverrideReason(event.target.value)}
+              onChange={(event) =>
+                setOverrideReason(event.target.value)
+              }
               required
               rows="4"
-              style={{ width: "100%", padding: "10px", border: "1px solid #d1d5db", borderRadius: "8px", marginBottom: "18px" }}
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                padding: "10px",
+                border: "1px solid #d1d5db",
+                borderRadius: "8px",
+                marginBottom: "18px",
+              }}
               placeholder="Explain why this saved record is being changed."
             />
 
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-              <button type="button" className="secondary-btn" disabled={overriding} onClick={() => setOverrideTarget(null)}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "10px",
+                flexWrap: "wrap",
+              }}
+            >
+              <button
+                type="button"
+                className="secondary-btn"
+                disabled={overriding}
+                onClick={() => setOverrideTarget(null)}
+              >
                 Cancel
               </button>
-              <button type="button" className="primary-btn" disabled={overriding || !overrideReason.trim() || overrideStatus === overrideTarget.currentStatus} onClick={handleOverrideAttendance}>
-                {overriding ? "Saving override..." : "Confirm override"}
+
+              <button
+                type="button"
+                className="primary-btn"
+                disabled={
+                  overriding ||
+                  !overrideReason.trim() ||
+                  overrideStatus ===
+                    overrideTarget.currentStatus
+                }
+                onClick={handleOverrideAttendance}
+              >
+                {overriding
+                  ? "Saving override..."
+                  : "Confirm override"}
               </button>
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 }

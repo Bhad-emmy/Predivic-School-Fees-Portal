@@ -1512,3 +1512,298 @@ tr:hover {
     width: 100%;
   }
 }
+/* =========================================================
+   FINAL MOBILE RESPONSIVE OVERRIDES
+   Optimized for 360px–430px phones.
+========================================================= */
+
+html,
+body,
+#root {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+@media (max-width: 700px) {
+  .app {
+    display: block;
+    min-height: 100vh;
+    width: 100%;
+  }
+
+  /* Compact mobile navigation */
+  .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    width: 100%;
+    height: auto;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sidebar h2 {
+    width: auto;
+    flex: 0 0 auto;
+    margin: 0 10px 0 0;
+    font-size: 18px;
+  }
+
+  .sidebar-user {
+    flex: 0 0 auto;
+    padding: 7px 9px;
+    font-size: 11px;
+    min-width: max-content;
+  }
+
+  .sidebar-signout {
+    margin-top: 0;
+  }
+
+  .sidebar button {
+    flex: 0 0 auto;
+    padding: 9px 11px;
+    font-size: 13px;
+    min-height: 40px;
+    white-space: nowrap;
+  }
+
+  .content {
+    width: 100%;
+    min-width: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  .page,
+  .dashboard-page,
+  .attendance-page,
+  .reports-page,
+  .settings-page {
+    width: 100%;
+    padding: 14px;
+  }
+
+  .page h1,
+  .dashboard-page h1 {
+    font-size: 24px;
+    line-height: 1.2;
+    margin-bottom: 16px;
+  }
+
+  .page-card,
+  .table-section,
+  .settings-section,
+  .stat-card {
+    border-radius: 10px;
+    padding: 15px;
+  }
+
+  .page-header,
+  .dashboard-page .page-header,
+  .attendance-header,
+  .reports-header,
+  .settings-section-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .page-header button,
+  .dashboard-page .page-header button,
+  .attendance-header button,
+  .reports-actions button {
+    width: 100%;
+    min-height: 42px;
+  }
+
+  .reports-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .stats-grid,
+  .dashboard-section-grid,
+  .report-summary-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .stat-card {
+    padding: 16px;
+  }
+
+  .stat-card h2 {
+    font-size: 24px;
+    overflow-wrap: anywhere;
+  }
+
+  .attendance-summary {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .table-controls,
+  .attendance-controls {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin: 16px 0;
+  }
+
+  .search-input,
+  .filter-select {
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+  }
+
+  .report-filters,
+  .settings-grid,
+  .settings-form-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .report-filter select,
+  .report-filter input,
+  .settings-field input {
+    min-height: 42px;
+  }
+
+  /* Keep wide data tables scrollable inside their cards */
+  .table-section,
+  .attendance-table,
+  .report-table-wrapper {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table-section table {
+    min-width: 650px;
+  }
+
+  .attendance-table table {
+    min-width: 700px;
+  }
+
+  .report-table-wrapper table {
+    min-width: 650px;
+  }
+
+  th,
+  td {
+    padding: 10px 11px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .settings-section {
+    padding: 15px;
+  }
+
+  .settings-editor {
+    padding: 15px;
+  }
+
+  .auth-page {
+    min-height: 100dvh;
+    padding: 14px;
+  }
+
+  .auth-card {
+    width: 100%;
+    padding: 22px 16px;
+    border-radius: 12px;
+  }
+
+  .auth-card h1 {
+    font-size: 26px;
+  }
+
+  .auth-card input,
+  .auth-card button {
+    min-height: 44px;
+  }
+
+  .receipt-screen {
+    width: 100%;
+    padding: 0;
+  }
+
+  .receipt-actions {
+    width: 100%;
+    flex-direction: column;
+    padding: 0 14px;
+  }
+
+  .receipt-actions button {
+    width: 100%;
+    min-height: 42px;
+  }
+
+  .thermal-receipt {
+    width: min(80mm, calc(100vw - 28px));
+    padding: 6mm 4mm;
+    margin: 0 auto;
+  }
+
+  .settings-small-value,
+  .receipt-meta strong,
+  .receipt-info strong,
+  .receipt-received strong {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+}
+
+@media (max-width: 380px) {
+  .sidebar {
+    padding: 8px 10px;
+  }
+
+  .sidebar h2 {
+    font-size: 16px;
+  }
+
+  .sidebar button {
+    font-size: 12px;
+    padding: 8px 9px;
+  }
+
+  .page,
+  .dashboard-page,
+  .attendance-page,
+  .reports-page,
+  .settings-page {
+    padding: 11px;
+  }
+
+  .page h1,
+  .dashboard-page h1 {
+    font-size: 22px;
+  }
+
+  .page-card,
+  .table-section,
+  .settings-section,
+  .stat-card {
+    padding: 12px;
+  }
+
+  th,
+  td {
+    padding: 9px 10px;
+    font-size: 12px;
+  }
+}
