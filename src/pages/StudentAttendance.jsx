@@ -872,7 +872,7 @@ export default function StudentAttendance() {
           records
         );
 
-        setWeeklyExpectedDays(
+        setWeeklyAttendanceDays(
           expectedDays
         );
 
