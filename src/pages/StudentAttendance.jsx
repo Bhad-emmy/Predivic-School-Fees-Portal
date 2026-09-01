@@ -640,6 +640,7 @@ export default function StudentAttendance() {
             "student_attendance"
           )
           .select(`
+            id,
             student_id,
             enrollment_id,
             class_id,
