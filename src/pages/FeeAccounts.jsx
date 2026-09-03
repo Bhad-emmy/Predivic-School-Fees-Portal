@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const API_URL = "https://predivic-school-fees-portal.onrender.com";
 
@@ -134,6 +134,45 @@ export default function FeeAccounts() {
   const requiresDepartment =
     structureForm.className === "SS 2" ||
     structureForm.className === "SS 3";
+
+  // KG 1 and KG 2 are intentionally reserved until the
+  // official prospectus is supplied. These are display-only
+  // placeholders and are never sent to the API or assignable.
+  const displayFeeStructures = useMemo(() => {
+    const reservedClasses = ["KG 1", "KG 2"];
+
+    const reservedRows = reservedClasses
+      .filter(
+        (className) =>
+          !feeStructures.some(
+            (structure) =>
+              structure.className === className
+          )
+      )
+      .map((className) => ({
+        id: `reserved-${className.replace(/\s+/g, "-").toLowerCase()}`,
+        className,
+        session: "2026/2027",
+        term: "First Term",
+        department: null,
+        studentType: "—",
+        feeItems: [],
+        total: 0,
+        isActive: false,
+        isReserved: true,
+      }));
+
+    return [...feeStructures, ...reservedRows].sort(
+      (a, b) => {
+        const orderA = CLASS_ORDER.indexOf(a.className);
+        const orderB = CLASS_ORDER.indexOf(b.className);
+        return (
+          (orderA === -1 ? 999 : orderA) -
+          (orderB === -1 ? 999 : orderB)
+        );
+      }
+    );
+  }, [feeStructures]);
 
   // =====================================================
   // HELPERS
@@ -2166,7 +2205,7 @@ export default function FeeAccounts() {
                 Loading fee
                 structures...
               </div>
-            ) : feeStructures.length ===
+            ) : displayFeeStructures.length ===
               0 ? (
               <div
                 style={{
@@ -2219,13 +2258,18 @@ export default function FeeAccounts() {
                   </thead>
 
                   <tbody>
-                    {feeStructures.map(
+                    {displayFeeStructures.map(
                       (
                         structure
                       ) => (
                         <tr
                           key={
                             structure.id
+                          }
+                          className={
+                            structure.isReserved
+                              ? "fee-structure-reserved"
+                              : undefined
                           }
                         >
                           <td>
@@ -2259,91 +2303,109 @@ export default function FeeAccounts() {
                           </td>
 
                           <td>
-                            {structure.feeItems.map(
-                              (
-                                item
-                              ) => (
-                                <div
-                                  key={
-                                    item.id ||
-                                    item.name
-                                  }
-                                  style={{
-                                    display:
-                                      "flex",
-                                    justifyContent:
-                                      "space-between",
-                                    gap:
-                                      "20px",
-                                    minWidth:
-                                      "180px",
-                                    marginBottom:
-                                      "4px",
-                                  }}
-                                >
-                                  <span>
-                                    {
+                            {structure.isReserved ? (
+                              <span className="fee-structure-reserved-label">
+                                Awaiting official prospectus
+                              </span>
+                            ) : (
+                              structure.feeItems.map(
+                                (
+                                  item
+                                ) => (
+                                  <div
+                                    key={
+                                      item.id ||
                                       item.name
                                     }
-                                  </span>
+                                    style={{
+                                      display:
+                                        "flex",
+                                      justifyContent:
+                                        "space-between",
+                                      gap:
+                                        "20px",
+                                      minWidth:
+                                        "180px",
+                                      marginBottom:
+                                        "4px",
+                                    }}
+                                  >
+                                    <span>
+                                      {
+                                        item.name
+                                      }
+                                    </span>
 
-                                  <span>
-                                    {"\u20A6"}
-                                    {formatMoney(
-                                      item.amount
-                                    )}
-                                  </span>
-                                </div>
+                                    <span>
+                                      {"\u20A6"}
+                                      {formatMoney(
+                                        item.amount
+                                      )}
+                                    </span>
+                                  </div>
+                                )
                               )
                             )}
                           </td>
 
                           <td>
-                            <strong>
-                              {"\u20A6"}
-                              {formatMoney(
-                                structure.total
-                              )}
-                            </strong>
+                            {structure.isReserved ? (
+                              <span className="fee-structure-reserved-status">
+                                Reserved
+                              </span>
+                            ) : (
+                              <strong>
+                                {"\u20A6"}
+                                {formatMoney(
+                                  structure.total
+                                )}
+                              </strong>
+                            )}
                           </td>
 
                           <td>
-                            <div
-                              style={{
-                                display:
-                                  "flex",
-                                gap:
-                                  "8px",
-                              }}
-                            >
-                              <button
-                                type="button"
-                                className="secondary-btn"
-                                onClick={() =>
-                                  handleEditStructure(
-                                    structure
-                                  )
-                                }
-                              >
-                                Edit
-                              </button>
-
-                              <button
-                                type="button"
-                                className="secondary-btn"
-                                onClick={() =>
-                                  handleDeleteStructure(
-                                    structure.id
-                                  )
-                                }
+                            {structure.isReserved ? (
+                              <span className="fee-structure-reserved-status">
+                                Prospectus pending
+                              </span>
+                            ) : (
+                              <div
                                 style={{
-                                  color:
-                                    "#991b1b",
+                                  display:
+                                    "flex",
+                                  gap:
+                                    "8px",
                                 }}
                               >
-                                Delete
-                              </button>
-                            </div>
+                                <button
+                                  type="button"
+                                  className="secondary-btn"
+                                  onClick={() =>
+                                    handleEditStructure(
+                                      structure
+                                    )
+                                  }
+                                >
+                                  Edit
+                                </button>
+
+                                <button
+                                  type="button"
+                                  className="secondary-btn"
+                                  onClick={() =>
+                                    handleDeleteStructure(
+                                      structure.id
+                                    )
+                                  }
+                                  style={{
+                                    color:
+                                      "#991b1b",
+                                  }}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            )}
                           </td>
                         </tr>
                       )

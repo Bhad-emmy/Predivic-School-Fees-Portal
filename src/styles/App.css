@@ -1527,6 +1527,9 @@ body,
 @media (max-width: 700px) {
   .app {
     display: block;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
     min-height: 100vh;
     width: 100%;
   }
@@ -1579,8 +1582,10 @@ body,
   .content {
     width: 100%;
     min-width: 0;
+    height: auto;
     padding: 0;
     overflow-x: hidden;
+    overflow-y: visible;
   }
 
   .page,
@@ -1838,34 +1843,59 @@ body,
    ATTENDANCE TEXT VISIBILITY
 ========================================================= */
 
-.attendance-page {
-  color: #1f2937 !important;
-  opacity: 1 !important;
-}
-
-.attendance-page .page-card {
-  opacity: 1 !important;
-}
-
 .attendance-page .page-card h2,
-.attendance-page .page-card h3,
+.attendance-page .page-card h3 {
+  color: #1f2a44 !important;
+  opacity: 1 !important;
+}
+
+.attendance-page .page-card p,
+.attendance-page .page-card label,
+.attendance-page .page-card strong {
+  opacity: 1 !important;
+}
+
+/* =========================================================
+   STUDENT ATTENDANCE TEXT VISIBILITY
+========================================================= */
+
 .attendance-page h2,
 .attendance-page h3 {
   color: #1f2a44 !important;
   opacity: 1 !important;
   visibility: visible !important;
-  text-shadow: none !important;
 }
 
-.attendance-page .page-card p,
-.attendance-page .page-card label,
-.attendance-page .page-card strong,
-.attendance-page .page-card span,
 .attendance-page p,
 .attendance-page label,
 .attendance-page strong,
 .attendance-page span {
   opacity: 1 !important;
-  visibility: visible !important;
 }
 
+/* =========================================================
+   MOBILE PAGE SCROLL FIX
+========================================================= */
+
+@media (max-width: 700px) {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+    height: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .app {
+    height: auto !important;
+    min-height: 100vh;
+    overflow: visible !important;
+  }
+
+  .content {
+    height: auto !important;
+    min-height: 0;
+    overflow-y: visible !important;
+  }
+}
