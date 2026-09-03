@@ -1,6 +1,25 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 
 const API_URL = "https://predivic-school-fees-portal.onrender.com";
+
+const SCHOOL_CLASS_ORDER = [
+  "Creche",
+  "KG 1",
+  "KG 2",
+  "Nursery 1",
+  "Nursery 2",
+  "Primary 1",
+  "Primary 2",
+  "Primary 3",
+  "Primary 4",
+  "Primary 5",
+  "JSS 1",
+  "JSS 2",
+  "JSS 3",
+  "SS 1",
+  "SS 2",
+  "SS 3",
+];
 
 const EMPTY_NEW_STUDENT = {
   firstName: "",
@@ -159,7 +178,23 @@ export default function Students() {
         );
       }
 
-      setClasses(data);
+      const sortedClasses = [...data].sort((a, b) => {
+        const orderA = SCHOOL_CLASS_ORDER.indexOf(a.name);
+        const orderB = SCHOOL_CLASS_ORDER.indexOf(b.name);
+
+        if (orderA === -1 && orderB === -1) {
+          return String(a.name || "").localeCompare(
+            String(b.name || "")
+          );
+        }
+
+        if (orderA === -1) return 1;
+        if (orderB === -1) return -1;
+
+        return orderA - orderB;
+      });
+
+      setClasses(sortedClasses);
     } catch (err) {
       console.error(err);
 
@@ -2055,7 +2090,7 @@ export default function Students() {
                               Parent:{" "}
                               {
                                 student.parent_name ||
-                                "â€”"
+                                "-"
                               }
                             </small>
 
@@ -2065,7 +2100,7 @@ export default function Students() {
                               Phone:{" "}
                               {
                                 student.parent_phone ||
-                                "â€”"
+                                "-"
                               }
                             </small>
 
@@ -2078,7 +2113,7 @@ export default function Students() {
                                     "600",
                                 }}
                               >
-                                âœ“ Student selected
+                                Student selected
                               </div>
                             )}
 
@@ -2266,7 +2301,7 @@ export default function Students() {
 
         <input
           type="text"
-          placeholder="ðŸ” Search by name or admission number..."
+          placeholder="Search by name or admission number..."
           value={search}
           onChange={(event) =>
             setSearch(
@@ -2364,14 +2399,14 @@ export default function Students() {
                     <td>
                       {
                         student.className ||
-                        "â€”"
+                        "-"
                       }
                     </td>
 
                     <td>
                       {
                         student.studentType ||
-                        "â€”"
+                        "-"
                       }
                     </td>
 
@@ -2403,4 +2438,3 @@ export default function Students() {
     </div>
   );
 }
-

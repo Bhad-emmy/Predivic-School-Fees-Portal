@@ -46,7 +46,7 @@ export default function Login() {
             {(formError || error) && <p className="auth-error">{formError || error}</p>}
 
             <button type="submit" className="primary-btn" disabled={submitting}>
-              {submitting ? "Signing in…" : "Sign in"}
+              {submitting ? "Signing in..." : "Sign in"}
             </button>
           </form>
         )}

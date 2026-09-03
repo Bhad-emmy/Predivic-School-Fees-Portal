@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 
 const API_URL = "https://predivic-school-fees-portal.onrender.com";
 
@@ -15,6 +15,8 @@ const SESSION_OPTIONS = [
 
 const CLASS_ORDER = [
   "Creche",
+  "KG 1",
+  "KG 2",
   "Nursery 1",
   "Nursery 2",
   "Primary 1",
@@ -1077,8 +1079,7 @@ export default function FeeAccounts() {
           structure.className,
 
         department:
-          structure.department ||
-          "",
+          structure.department || "",
 
         studentType:
           structure.studentType,
@@ -1514,21 +1515,21 @@ export default function FeeAccounts() {
                           </td>
 
                           <td>
-                            Ã¢â€šÂ¦
+                            {"\u20A6"}
                             {formatMoney(
                               account.totalAmount
                             )}
                           </td>
 
                           <td>
-                            Ã¢â€šÂ¦
+                            {"\u20A6"}
                             {formatMoney(
                               account.totalPaid
                             )}
                           </td>
 
                           <td>
-                            Ã¢â€šÂ¦
+                            {"\u20A6"}
                             {formatMoney(
                               account.balance
                             )}
@@ -2097,7 +2098,7 @@ export default function FeeAccounts() {
                         "#1f2a44",
                     }}
                   >
-                    Ã¢â€šÂ¦
+                    {"\u20A6"}
                     {formatMoney(
                       structureTotal
                     )}
@@ -2248,8 +2249,7 @@ export default function FeeAccounts() {
                           </td>
 
                           <td>
-                            {structure.department ||
-                              "Ã¢â‚¬â€"}
+                            {structure.department || ""}
                           </td>
 
                           <td>
@@ -2288,7 +2288,7 @@ export default function FeeAccounts() {
                                   </span>
 
                                   <span>
-                                    Ã¢â€šÂ¦
+                                    {"\u20A6"}
                                     {formatMoney(
                                       item.amount
                                     )}
@@ -2300,7 +2300,7 @@ export default function FeeAccounts() {
 
                           <td>
                             <strong>
-                              Ã¢â€šÂ¦
+                              {"\u20A6"}
                               {formatMoney(
                                 structure.total
                               )}
@@ -2410,7 +2410,7 @@ export default function FeeAccounts() {
                   assigning
                 }
               >
-                Ãƒâ€”
+                {"\u20A6"}
               </button>
             </div>
 
@@ -2466,7 +2466,7 @@ export default function FeeAccounts() {
                             ) ||
                           "Unnamed Student"}
                         {student.className
-                          ? ` Ã¢â‚¬â€ ${student.className}`
+                         ? ` - ${student.className}`
                           : ""}
                       </option>
                     )
@@ -2676,20 +2676,20 @@ export default function FeeAccounts() {
                         }
                       >
                         {structure.className}
-                        {" Ã¢â‚¬â€ "}
+                        {"Search by name or admission number..."}
                         {structure.studentType}
                         {structure.department
-                          ? ` Ã¢â‚¬â€ ${structure.department}`
+                          ? ` - ${structure.department}`
                           : ""}
-                        {" Ã¢â‚¬â€ "}
+                        {" - "}
                         {structure.session}
-                        {" Ã¢â‚¬â€ "}
+                        {" - "}
                         {
                           displayTermName(
                             structure.term
                           )
                         }
-                        {" Ã¢â‚¬â€ Ã¢â€šÂ¦"}
+                        {" - "}
                         {formatMoney(
                           structure.total
                         )}
@@ -2749,13 +2749,13 @@ export default function FeeAccounts() {
                           selectedFeeStructure.studentType
                         }
 
-                        {" Ã¢â‚¬Â¢ "}
+                        {" - "}
 
                         {
                           selectedFeeStructure.session
                         }
 
-                        {" Ã¢â‚¬Â¢ "}
+                        {" - "}
 
                         {displayTermName(
                           selectedFeeStructure.term
@@ -2771,7 +2771,7 @@ export default function FeeAccounts() {
                           "#1f2a44",
                       }}
                     >
-                      Ã¢â€šÂ¦
+                      {"\u20A6"}
                       {formatMoney(
                         selectedFeeStructure.total
                       )}
@@ -2806,7 +2806,7 @@ export default function FeeAccounts() {
                           </span>
 
                           <span>
-                            Ã¢â€šÂ¦
+                            {"\u20A6"}
                             {formatMoney(
                               item.amount
                             )}
@@ -2880,6 +2880,4 @@ export default function FeeAccounts() {
     </div>
   );
 }
-
-
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 
 const DEFAULT_SETTINGS = {
@@ -12,7 +12,7 @@ const DEFAULT_SETTINGS = {
 
 export default function Settings() {
   const [user, setUser] = useState(null);
-  const [role, setRole] = useState("—");
+  const [role, setRole] = useState("-");
 
   const [settings, setSettings] =
     useState(DEFAULT_SETTINGS);
@@ -499,7 +499,7 @@ export default function Settings() {
             <span>Email</span>
 
             <strong>
-              {user?.email || "—"}
+              {user?.email || "-"}
             </strong>
           </div>
 
@@ -515,7 +515,7 @@ export default function Settings() {
             <span>Account ID</span>
 
             <strong className="settings-small-value">
-              {user?.id || "—"}
+              {user?.id || "-"}
             </strong>
           </div>
 

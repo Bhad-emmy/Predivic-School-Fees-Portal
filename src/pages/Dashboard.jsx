@@ -3,10 +3,10 @@ import { supabase } from "../lib/supabase";
 
 const API_URL = "https://predivic-school-fees-portal.onrender.com";
 const formatMoney = (amount) =>
-  `â‚¦${Number(amount || 0).toLocaleString("en-NG")}`;
+  `\u20A6${Number(amount || 0).toLocaleString("en-NG")}`;
 
 const formatDate = (date) => {
-  if (!date) return "â€”";
+  if (!date) return "-";
 
   return new Date(date).toLocaleDateString("en-NG", {
     day: "2-digit",
@@ -16,7 +16,7 @@ const formatDate = (date) => {
 };
 
 const isToday = (date) => {
-  if (!date) return false;
+  if (!date) return "-";
 
   const today = new Date();
   const value = new Date(date);
@@ -511,7 +511,7 @@ export default function Dashboard() {
 
                       <td>
                         {payment.className ||
-                          "â€”"}
+                          "-"}
                       </td>
 
                       <td>
@@ -522,7 +522,7 @@ export default function Dashboard() {
 
                       <td>
                         {payment.method ||
-                          "â€”"}
+                          ""-""}
                       </td>
 
                       <td>
@@ -533,7 +533,7 @@ export default function Dashboard() {
 
                       <td>
                         {payment.status ||
-                          "â€”"}
+                          "-"}
                       </td>
                     </tr>
                   )
@@ -577,4 +577,3 @@ export default function Dashboard() {
     </div>
   );
 }
-

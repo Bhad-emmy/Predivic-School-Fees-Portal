@@ -1807,3 +1807,65 @@ body,
     font-size: 12px;
   }
 }
+
+/* =========================================================
+   FEE STRUCTURE RESERVED CLASS ROWS
+========================================================= */
+
+.fee-structure-reserved {
+  background: #fffbeb;
+}
+
+.fee-structure-reserved td {
+  color: #92400e !important;
+}
+
+.fee-structure-reserved-label,
+.fee-structure-reserved-status {
+  font-weight: 600;
+}
+
+.fee-structure-reserved-status {
+  display: inline-block;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e !important;
+}
+
+
+/* =========================================================
+   ATTENDANCE TEXT VISIBILITY
+========================================================= */
+
+.attendance-page {
+  color: #1f2937 !important;
+  opacity: 1 !important;
+}
+
+.attendance-page .page-card {
+  opacity: 1 !important;
+}
+
+.attendance-page .page-card h2,
+.attendance-page .page-card h3,
+.attendance-page h2,
+.attendance-page h3 {
+  color: #1f2a44 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  text-shadow: none !important;
+}
+
+.attendance-page .page-card p,
+.attendance-page .page-card label,
+.attendance-page .page-card strong,
+.attendance-page .page-card span,
+.attendance-page p,
+.attendance-page label,
+.attendance-page strong,
+.attendance-page span {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+

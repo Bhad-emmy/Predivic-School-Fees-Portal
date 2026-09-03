@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
 
 const SCHOOL_CLASS_ORDER = [
   "Creche",
+  "KG 1",
+  "KG 2",
   "Nursery 1",
   "Nursery 2",
   "Primary 1",
@@ -1493,7 +1495,7 @@ export default function StudentAttendance() {
 
   if (loading) {
     return (
-      <div className="page" style={{ width: "100%", maxWidth: "100%", overflowX: "hidden" }}>
+      <div className="page attendance-page" style={{ width: "100%", maxWidth: "100%", overflowX: "hidden" }}>
         <h1>
           Student Attendance
         </h1>
@@ -1510,7 +1512,7 @@ export default function StudentAttendance() {
   // =========================================================
 
   return (
-    <div className="page">
+    <div className="page attendance-page">
 
       {/* HEADER */}
 
@@ -2038,11 +2040,11 @@ export default function StudentAttendance() {
                         return (
                           <tr key={student.id}>
                             <td style={{ whiteSpace: "nowrap" }}>
-                              {student.studentNumber || "—"}
+                              {student.studentNumber || "-"}
                             </td>
 
                             <td style={{ minWidth: "240px" }}>
-                              {student.fullName || "—"}
+                              {student.fullName || "-"}
                             </td>
 
                             <td style={{ minWidth: "330px" }}>
@@ -2327,7 +2329,7 @@ export default function StudentAttendance() {
             {formatDate(
               weekDates[0]
             )}{" "}
-            –{" "}
+            -{" "}
             {formatDate(
               weekDates[4]
             )}
@@ -2435,7 +2437,7 @@ export default function StudentAttendance() {
                           <td>
                             {
                               student.studentNumber ||
-                              "—"
+                              "-"
                             }
                           </td>
 
@@ -2477,7 +2479,7 @@ export default function StudentAttendance() {
                                     : status ===
                                       "Absent"
                                     ? "A"
-                                    : "—"}
+                                    : "-"}
                                 </td>
                               );
                             }
@@ -2591,7 +2593,7 @@ export default function StudentAttendance() {
 
               <strong>
                 {activeTerm?.name ||
-                  "—"}
+                  "-"}
               </strong>
             </div>
 
@@ -2682,7 +2684,7 @@ export default function StudentAttendance() {
                           <td>
                             {
                               student.studentNumber ||
-                              "—"
+                              "-"
                             }
                           </td>
 
@@ -2786,7 +2788,7 @@ export default function StudentAttendance() {
               }}
             >
               {overrideTarget.studentName}:{" "}
-              {overrideTarget.currentStatus} →{" "}
+              {overrideTarget.currentStatus} {"->"}{" "}
               {overrideStatus}
             </p>
 

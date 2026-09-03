@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 
 import Dashboard from "./pages/Dashboard";
 import Students from "./pages/Students";
@@ -27,7 +27,7 @@ function ProtectedApp() {
   const [page, setPage] = useState("dashboard");
 
   if (loading) {
-    return <main className="auth-page">Loading secure session…</main>;
+    return <main className="auth-page">Loading secure session...</main>;
   }
 
   if (!user || !staff) {

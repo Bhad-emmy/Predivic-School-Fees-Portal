@@ -4,14 +4,14 @@ import { supabase } from "../lib/supabase";
 const API_URL = "https://predivic-school-fees-portal.onrender.com";
 
 const formatMoney = (amount) =>
-  `â‚¦${Number(amount || 0).toLocaleString("en-NG")}`;
+  `\u20A6${Number(amount || 0).toLocaleString("en-NG")}`;
 
 const formatDate = (date) => {
-  if (!date) return "â€”";
+  if (!date) return "-";
 
   const value = new Date(date);
 
-  if (Number.isNaN(value.getTime())) return "â€”";
+  if (Number.isNaN(value.getTime())) return "-";
 
   return value.toLocaleDateString("en-NG", {
     day: "2-digit",
@@ -629,64 +629,35 @@ export default function Reports() {
                 </thead>
 
                 <tbody>
-                  {filteredPayments.length >
-                  0 ? (
-                    filteredPayments.map(
-                      (payment) => (
-                        <tr key={payment.id}>
-                          <td>
-                            {payment.receiptNumber ||
-                              "â€”"}
-                          </td>
-
-                          <td>
-                            {payment.studentName ||
-                              "â€”"}
-                          </td>
-
-                          <td>
-                            {payment.className ||
-                              payment.class_name ||
-                              "â€”"}
-                          </td>
-
-                          <td>
-                            {formatMoney(
-                              payment.amount
-                            )}
-                          </td>
-
-                          <td>
-                            {payment.method ||
-                              "â€”"}
-                          </td>
-
-                          <td>
-                            {formatDate(
-                              payment.paymentDate
-                            )}
-                          </td>
-
-                          <td>
-                            {payment.status ||
-                              "â€”"}
-                          </td>
-                        </tr>
-                      )
-                    )
-                  ) : (
-                    <tr>
-                      <td
-                        colSpan="7"
-                        className="empty-report"
-                      >
-                        No payments match
-                        the selected
-                        filters.
+                {filteredPayments.length > 0 ? (
+                  filteredPayments.map((payment) => (
+                    <tr key={payment.id}>
+                      <td>{payment.receiptNumber || "-"}</td>
+                      <td>{payment.studentName || "-"}</td>
+                      <td>
+                        {payment.className ||
+                          payment.class_name ||
+                          "-"}
                       </td>
+                      <td>{formatMoney(payment.amount)}</td>
+                      <td>{payment.method || "-"}</td>
+                      <td>{formatDate(payment.paymentDate)}</td>
+                      <td>{payment.status || "-"}</td>
                     </tr>
-                  )}
-                </tbody>
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      colSpan="7"
+                      className="empty-report"
+                    >
+                      No payments match
+                      the selected
+                      filters.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
               </table>
             </div>
           </div>
@@ -865,33 +836,27 @@ export default function Reports() {
                   </tr>
                 </thead>
 
-                <tbody>
-                  {filteredStudents.length >
-                  0 ? (
-                    filteredStudents.map(
-                      (student) => (
-                        <tr key={student.id}>
-                          <td>
-                            {student.name ||
-                              student.fullName ||
-                              student.full_name ||
-                              "â€”"}
-                          </td>
+                                <tbody>
+                  {filteredStudents.length > 0 ? (
+                    filteredStudents.map((student) => (
+                      <tr key={student.id}>
+                        <td>
+                          {student.name ||
+                            student.fullName ||
+                            student.full_name ||
+                            "-"}
+                        </td>
 
-                          <td>
-                            {student.className ||
-                              student.class_name ||
-                              student.class ||
-                              "â€”"}
-                          </td>
+                        <td>
+                          {student.className ||
+                            student.class_name ||
+                            student.class ||
+                            "-"}
+                        </td>
 
-                          <td>
-                            {student.status ||
-                              "â€”"}
-                          </td>
-                        </tr>
-                      )
-                    )
+                        <td>{student.status || "-"}</td>
+                      </tr>
+                    ))
                   ) : (
                     <tr>
                       <td

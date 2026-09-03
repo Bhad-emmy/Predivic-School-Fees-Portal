@@ -1,6 +1,26 @@
 import { useEffect, useMemo, useState } from "react";
 
 const API_URL = "https://predivic-school-fees-portal.onrender.com";
+
+const SCHOOL_CLASS_ORDER = [
+  "Creche",
+  "KG 1",
+  "KG 2",
+  "Nursery 1",
+  "Nursery 2",
+  "Primary 1",
+  "Primary 2",
+  "Primary 3",
+  "Primary 4",
+  "Primary 5",
+  "JSS 1",
+  "JSS 2",
+  "JSS 3",
+  "SS 1",
+  "SS 2",
+  "SS 3",
+];
+
 const EMPTY_PAYMENT = {
   studentFeeAccountId: "",
   amount: "",
@@ -11,7 +31,7 @@ const EMPTY_PAYMENT = {
 };
 
 const formatAmount = (amount) =>
-  "â‚¦" + Number(amount || 0).toLocaleString();
+  "\u20A6" + Number(amount || 0).toLocaleString();
 
 export default function Payments() {
   const [payments, setPayments] = useState([]);
@@ -62,7 +82,23 @@ export default function Payments() {
 
       setPayments(data[0]);
       setStudentFeeAccounts(data[1]);
-      setClasses(data[2]);
+      const sortedClasses = [...data[2]].sort((a, b) => {
+        const orderA = SCHOOL_CLASS_ORDER.indexOf(a.name);
+        const orderB = SCHOOL_CLASS_ORDER.indexOf(b.name);
+
+        if (orderA === -1 && orderB === -1) {
+          return String(a.name || "").localeCompare(
+            String(b.name || "")
+          );
+        }
+
+        if (orderA === -1) return 1;
+        if (orderB === -1) return -1;
+
+        return orderA - orderB;
+      });
+
+      setClasses(sortedClasses);
     } catch (err) {
       console.error(err);
       setError(
@@ -301,7 +337,7 @@ export default function Payments() {
                   >
                     {account.student?.fullName ||
                       "Unknown Student"}{" "}
-                    â€” {account.className} â€”{" "}
+                    Search by name or admission number...
                     {account.term} (
                     {formatAmount(account.balance)} due)
                   </option>
@@ -466,7 +502,7 @@ export default function Payments() {
                 filteredPayments.map((payment) => (
                   <tr key={payment.id}>
                     <td>
-                      {payment.receiptNumber || "â€”"}
+                      {payment.receiptNumber || "-"}
                     </td>
                     <td>{payment.studentName}</td>
                     <td>{payment.className}</td>
@@ -503,5 +539,3 @@ export default function Payments() {
     </div>
   );
 }
-
-

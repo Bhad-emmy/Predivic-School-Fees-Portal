@@ -39,6 +39,8 @@ const supabase = createClient(
 
 const CLASS_ORDER = [
   "Creche",
+  "KG 1",
+  "KG 2",
   "Nursery 1",
   "Nursery 2",
   "Primary 1",

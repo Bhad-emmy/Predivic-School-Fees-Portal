@@ -1,4 +1,4 @@
-export default function TeacherAttendance() {
+﻿export default function TeacherAttendance() {
   return (
     <div className="page">
       <div className="page-header">
