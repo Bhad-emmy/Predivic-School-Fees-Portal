@@ -621,6 +621,42 @@ tr:hover {
   }
 }
 /* =========================================================
+   RECEIPT LIST
+========================================================= */
+
+.receipts-page {
+  min-width: 0;
+}
+
+.receipt-list-card {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.receipt-list-wrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.receipt-list-wrapper table {
+  width: 100%;
+  min-width: 900px;
+}
+
+.receipt-list-wrapper th,
+.receipt-list-wrapper td {
+  white-space: nowrap;
+}
+
+.receipt-list-wrapper td:last-child {
+  min-width: 145px;
+}
+
+/* =========================================================
    THERMAL RECEIPT
 ========================================================= */
 
@@ -1739,6 +1775,22 @@ body,
   .auth-card input,
   .auth-card button {
     min-height: 44px;
+  }
+
+  .receipt-list-card {
+    overflow: hidden;
+  }
+
+  .receipt-list-wrapper {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .receipt-list-wrapper table {
+    min-width: 900px;
   }
 
   .receipt-screen {

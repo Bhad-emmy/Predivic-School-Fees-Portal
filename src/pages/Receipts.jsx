@@ -61,7 +61,8 @@ export default function Receipts() {
             {loading ? (
               <p>Loading receipts...</p>
             ) : (
-              <table>
+              <div className="receipt-list-wrapper">
+                <table>
                 <thead>
                   <tr>
                     <th>Receipt No.</th>
@@ -128,7 +129,8 @@ export default function Receipts() {
                     </tr>
                   )}
                 </tbody>
-              </table>
+                </table>
+              </div>
             )}
           </div>
         </>
