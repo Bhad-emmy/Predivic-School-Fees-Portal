@@ -4712,6 +4712,463 @@ app.post(
   }
 );
 
+
+// ======================================================
+// AUTHENTICATION / ADMIN HELPERS
+// ======================================================
+
+async function getAuthenticatedStaff(req) {
+  const authHeader = String(
+    req.headers.authorization || ""
+  );
+
+  if (!authHeader.startsWith("Bearer ")) {
+    return null;
+  }
+
+  const accessToken = authHeader.slice(7).trim();
+
+  if (!accessToken) {
+    return null;
+  }
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser(accessToken);
+
+  if (userError || !user) {
+    return null;
+  }
+
+  const {
+    data: staff,
+    error: staffError,
+  } = await supabase
+    .from("teachers")
+    .select("id, employee_no, first_name, middle_name, last_name, email, role, status, auth_user_id")
+    .eq("auth_user_id", user.id)
+    .maybeSingle();
+
+  if (staffError || !staff) {
+    return null;
+  }
+
+  return { user, staff };
+}
+
+async function requireAdmin(req, res) {
+  const authenticated = await getAuthenticatedStaff(req);
+
+  if (!authenticated) {
+    res.status(401).json({
+      error: "Authentication required.",
+    });
+    return null;
+  }
+
+  if (
+    String(authenticated.staff.role || "").toLowerCase() !==
+    "admin"
+  ) {
+    res.status(403).json({
+      error: "Only an Admin can manage staff accounts.",
+    });
+    return null;
+  }
+
+  if (
+    String(authenticated.staff.status || "").toLowerCase() !==
+    "active"
+  ) {
+    res.status(403).json({
+      error: "This staff account is not active.",
+    });
+    return null;
+  }
+
+  return authenticated;
+}
+
+// ======================================================
+// STAFF ACCOUNTS
+// ======================================================
+
+app.get("/api/staff-accounts", async (req, res) => {
+  try {
+    const authenticated = await requireAdmin(req, res);
+
+    if (!authenticated) return;
+
+    const {
+      data: staff,
+      error,
+    } = await supabase
+      .from("teachers")
+      .select(`
+        id,
+        employee_no,
+        first_name,
+        middle_name,
+        last_name,
+        email,
+        role,
+        status,
+        auth_user_id,
+        created_at,
+        updated_at
+      `)
+      .order("created_at", { ascending: true });
+
+    if (error) throw error;
+
+    const teacherIds = (staff || [])
+      .filter((item) => String(item.role).toLowerCase() === "teacher")
+      .map((item) => item.id);
+
+    let assignments = [];
+
+    if (teacherIds.length > 0) {
+      const {
+        data,
+        error: assignmentError,
+      } = await supabase
+        .from("teacher_class_assignments")
+        .select("teacher_id, class_id")
+        .in("teacher_id", teacherIds);
+
+      if (assignmentError) throw assignmentError;
+      assignments = data || [];
+    }
+
+    const classIds = [
+      ...new Set(
+        assignments
+          .map((item) => item.class_id)
+          .filter(Boolean)
+      ),
+    ];
+
+    let classes = [];
+
+    if (classIds.length > 0) {
+      const {
+        data,
+        error: classError,
+      } = await supabase
+        .from("classes")
+        .select("id, name")
+        .in("id", classIds);
+
+      if (classError) throw classError;
+      classes = data || [];
+    }
+
+    const classMap = new Map(
+      classes.map((item) => [item.id, item.name])
+    );
+
+    const assignmentsMap = new Map();
+
+    assignments.forEach((item) => {
+      if (!assignmentsMap.has(item.teacher_id)) {
+        assignmentsMap.set(item.teacher_id, []);
+      }
+
+      assignmentsMap.get(item.teacher_id).push({
+        id: item.class_id,
+        name: classMap.get(item.class_id) || "Unknown Class",
+      });
+    });
+
+    res.json(
+      (staff || []).map((item) => ({
+        id: item.id,
+        employeeNo: item.employee_no,
+        firstName: item.first_name,
+        middleName: item.middle_name,
+        lastName: item.last_name,
+        fullName: [
+          item.first_name,
+          item.middle_name,
+          item.last_name,
+        ].filter(Boolean).join(" "),
+        email: item.email,
+        role: item.role,
+        status: item.status,
+        hasAuthAccount: Boolean(item.auth_user_id),
+        classes: assignmentsMap.get(item.id) || [],
+        createdAt: item.created_at,
+        updatedAt: item.updated_at,
+      }))
+    );
+  } catch (error) {
+    console.error("GET STAFF ACCOUNTS ERROR:", error);
+
+    res.status(500).json({
+      error: error.message || "Unable to load staff accounts.",
+    });
+  }
+});
+
+app.post("/api/staff-accounts", async (req, res) => {
+  try {
+    const authenticated = await requireAdmin(req, res);
+
+    if (!authenticated) return;
+
+    const {
+      employeeNo,
+      firstName,
+      middleName,
+      lastName,
+      email,
+      password,
+      role,
+      classIds,
+    } = req.body;
+
+    const cleanEmployeeNo = String(employeeNo || "").trim();
+    const cleanFirstName = String(firstName || "").trim();
+    const cleanMiddleName = String(middleName || "").trim();
+    const cleanLastName = String(lastName || "").trim();
+    const cleanEmail = String(email || "").trim().toLowerCase();
+    const cleanPassword = String(password || "");
+    const cleanRole = String(role || "").trim();
+
+    if (!cleanEmployeeNo) {
+      return res.status(400).json({
+        error: "Employee number is required.",
+      });
+    }
+
+    if (!cleanFirstName || !cleanLastName) {
+      return res.status(400).json({
+        error: "First name and last name are required.",
+      });
+    }
+
+    if (!cleanEmail) {
+      return res.status(400).json({
+        error: "Email is required.",
+      });
+    }
+
+    if (cleanPassword.length < 8) {
+      return res.status(400).json({
+        error: "Password must contain at least 8 characters.",
+      });
+    }
+
+    if (!["Admin", "Secretary", "Teacher"].includes(cleanRole)) {
+      return res.status(400).json({
+        error: "Role must be Admin, Secretary, or Teacher.",
+      });
+    }
+
+    const requestedClassIds = Array.isArray(classIds)
+      ? [...new Set(classIds.filter(Boolean))]
+      : [];
+
+    if (cleanRole === "Teacher" && requestedClassIds.length === 0) {
+      return res.status(400).json({
+        error: "At least one class must be assigned to a Teacher.",
+      });
+    }
+
+    if (cleanRole !== "Teacher" && requestedClassIds.length > 0) {
+      return res.status(400).json({
+        error: "Classes can only be assigned to Teacher accounts.",
+      });
+    }
+
+    const {
+      data: existingStaff,
+      error: existingStaffError,
+    } = await supabase
+      .from("teachers")
+      .select("id, employee_no, email, auth_user_id")
+      .or(`employee_no.eq.${cleanEmployeeNo},email.ilike.${cleanEmail}`)
+      .limit(10);
+
+    if (existingStaffError) throw existingStaffError;
+
+    const duplicateEmployee = (existingStaff || []).find(
+      (item) =>
+        String(item.employee_no || "").toLowerCase() ===
+        cleanEmployeeNo.toLowerCase()
+    );
+
+    const duplicateEmail = (existingStaff || []).find(
+      (item) =>
+        String(item.email || "").toLowerCase() ===
+        cleanEmail
+    );
+
+    const existingAccount =
+      duplicateEmployee &&
+      duplicateEmail &&
+      duplicateEmployee.id === duplicateEmail.id
+        ? duplicateEmployee
+        : null;
+
+    if (
+      (duplicateEmployee || duplicateEmail) &&
+      !existingAccount
+    ) {
+      return res.status(409).json({
+        error:
+          "The employee number or email is already used by another staff record.",
+      });
+    }
+
+    if (
+      existingAccount &&
+      existingAccount.auth_user_id
+    ) {
+      return res.status(409).json({
+        error:
+          `A staff Auth account already exists for "${cleanEmail}".`,
+      });
+    }
+
+    if (cleanRole === "Teacher") {
+      const {
+        data: classRecords,
+        error: classError,
+      } = await supabase
+        .from("classes")
+        .select("id, name")
+        .in("id", requestedClassIds);
+
+      if (classError) throw classError;
+
+      if ((classRecords || []).length !== requestedClassIds.length) {
+        return res.status(400).json({
+          error: "One or more selected classes could not be found.",
+        });
+      }
+    }
+
+    const {
+      data: authResult,
+      error: authError,
+    } = await supabase.auth.admin.createUser({
+      email: cleanEmail,
+      password: cleanPassword,
+      email_confirm: true,
+    });
+
+    if (authError) {
+      return res.status(400).json({
+        error: authError.message,
+      });
+    }
+
+    const authUserId = authResult.user.id;
+
+    let staffRecord;
+    let staffSaveError;
+
+    if (existingAccount) {
+      const {
+        data,
+        error: staffUpdateError,
+      } = await supabase
+        .from("teachers")
+        .update({
+          first_name: cleanFirstName,
+          middle_name: cleanMiddleName || null,
+          last_name: cleanLastName,
+          email: cleanEmail,
+          role: cleanRole,
+          status: "Active",
+          auth_user_id: authUserId,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingAccount.id)
+        .select()
+        .single();
+
+      staffRecord = data;
+      staffSaveError = staffUpdateError;
+    } else {
+      const {
+        data,
+        error: staffInsertError,
+      } = await supabase
+        .from("teachers")
+        .insert({
+          employee_no: cleanEmployeeNo,
+          first_name: cleanFirstName,
+          middle_name: cleanMiddleName || null,
+          last_name: cleanLastName,
+          email: cleanEmail,
+          role: cleanRole,
+          status: "Active",
+          auth_user_id: authUserId,
+        })
+        .select()
+        .single();
+
+      staffRecord = data;
+      staffSaveError = staffInsertError;
+    }
+
+    if (staffSaveError) {
+      await supabase.auth.admin.deleteUser(authUserId);
+
+      throw staffSaveError;
+    }
+
+    if (cleanRole === "Teacher") {
+      const {
+        error: assignmentError,
+      } = await supabase
+        .from("teacher_class_assignments")
+        .insert(
+          requestedClassIds.map((classId) => ({
+            teacher_id: staffRecord.id,
+            class_id: classId,
+          }))
+        );
+
+      if (assignmentError) {
+        await supabase
+          .from("teachers")
+          .delete()
+          .eq("id", staffRecord.id);
+
+        await supabase.auth.admin.deleteUser(authUserId);
+
+        throw assignmentError;
+      }
+    }
+
+    res.status(201).json({
+      message: "Staff account created successfully.",
+      staff: {
+        id: staffRecord.id,
+        employeeNo: staffRecord.employee_no,
+        firstName: staffRecord.first_name,
+        middleName: staffRecord.middle_name,
+        lastName: staffRecord.last_name,
+        email: staffRecord.email,
+        role: staffRecord.role,
+        status: staffRecord.status,
+        authUserId: staffRecord.auth_user_id,
+        classIds: requestedClassIds,
+      },
+    });
+  } catch (error) {
+    console.error("CREATE STAFF ACCOUNT ERROR:", error);
+
+    res.status(500).json({
+      error: error.message || "Unable to create staff account.",
+    });
+  }
+});
+
 // ======================================================
 // SERVER START
 // ======================================================

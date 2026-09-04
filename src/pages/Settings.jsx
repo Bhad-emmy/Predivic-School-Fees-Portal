@@ -1,5 +1,7 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+
+const API_URL = "https://predivic-school-fees-portal.onrender.com";
 
 const DEFAULT_SETTINGS = {
   school_name: "Predivic Schools",
@@ -46,6 +48,30 @@ export default function Settings() {
 
   const [message, setMessage] =
     useState("");
+
+  const [staffAccounts, setStaffAccounts] =
+    useState([]);
+
+  const [classes, setClasses] =
+    useState([]);
+
+  const [staffLoading, setStaffLoading] =
+    useState(false);
+
+  const [creatingStaff, setCreatingStaff] =
+    useState(false);
+
+  const [staffForm, setStaffForm] =
+    useState({
+      employeeNo: "",
+      firstName: "",
+      middleName: "",
+      lastName: "",
+      email: "",
+      password: "",
+      role: "Secretary",
+      classIds: [],
+    });
 
   const [error, setError] =
     useState("");
@@ -166,6 +192,202 @@ export default function Settings() {
 
     loadSettings();
   }, []);
+
+  /* =====================================================
+     STAFF ACCOUNT MANAGEMENT
+  ===================================================== */
+
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    const loadStaffAccounts = async () => {
+      try {
+        setStaffLoading(true);
+
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session?.access_token) {
+          throw new Error("Your session has expired. Please sign in again.");
+        }
+
+        const [staffResponse, classesResponse] =
+          await Promise.all([
+            fetch(`${API_URL}/api/staff-accounts`, {
+              headers: {
+                Authorization: `Bearer ${session.access_token}`,
+              },
+            }),
+            fetch(`${API_URL}/api/classes`, {
+              headers: {
+                Authorization: `Bearer ${session.access_token}`,
+              },
+            }),
+          ]);
+
+        const staffData = await staffResponse.json();
+        const classesData = await classesResponse.json();
+
+        if (!staffResponse.ok) {
+          throw new Error(
+            staffData.error || "Unable to load staff accounts."
+          );
+        }
+
+        if (!classesResponse.ok) {
+          throw new Error(
+            classesData.error || "Unable to load classes."
+          );
+        }
+
+        setStaffAccounts(
+          Array.isArray(staffData) ? staffData : []
+        );
+
+        setClasses(
+          Array.isArray(classesData) ? classesData : []
+        );
+      } catch (err) {
+        console.error("STAFF ACCOUNTS LOAD ERROR:", err);
+        setError(
+          err.message || "Unable to load staff accounts."
+        );
+      } finally {
+        setStaffLoading(false);
+      }
+    };
+
+    loadStaffAccounts();
+  }, [isAdmin]);
+
+  const handleStaffFormChange = (event) => {
+    const { name, value } = event.target;
+
+    setStaffForm((current) => ({
+      ...current,
+      [name]: value,
+      ...(name === "role" && value !== "Teacher"
+        ? { classIds: [] }
+        : {}),
+    }));
+  };
+
+  const handleStaffClassChange = (classId) => {
+    setStaffForm((current) => ({
+      ...current,
+      classIds: current.classIds.includes(classId)
+        ? current.classIds.filter((id) => id !== classId)
+        : [...current.classIds, classId],
+    }));
+  };
+
+  const resetStaffForm = () => {
+    setStaffForm({
+      employeeNo: "",
+      firstName: "",
+      middleName: "",
+      lastName: "",
+      email: "",
+      password: "",
+      role: "Secretary",
+      classIds: [],
+    });
+  };
+
+  const createStaffAccount = async (event) => {
+    event.preventDefault();
+
+    if (!isAdmin) {
+      setError("Only an Admin can create staff accounts.");
+      return;
+    }
+
+    try {
+      setCreatingStaff(true);
+      setMessage("");
+      setError("");
+
+      if (staffForm.password.length < 8) {
+        throw new Error(
+          "Password must contain at least 8 characters."
+        );
+      }
+
+      if (
+        staffForm.role === "Teacher" &&
+        staffForm.classIds.length === 0
+      ) {
+        throw new Error(
+          "Select at least one class for a Teacher."
+        );
+      }
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        throw new Error(
+          "Your session has expired. Please sign in again."
+        );
+      }
+
+      const response = await fetch(
+        `${API_URL}/api/staff-accounts`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify(staffForm),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || "Unable to create staff account."
+        );
+      }
+
+      setStaffAccounts((current) => [
+        ...current,
+        {
+          ...data.staff,
+          fullName: [
+            data.staff.firstName,
+            data.staff.middleName,
+            data.staff.lastName,
+          ]
+            .filter(Boolean)
+            .join(" "),
+          classes: [],
+          hasAuthAccount: true,
+        },
+      ]);
+
+      resetStaffForm();
+
+      setMessage(
+        "Staff account created successfully."
+      );
+    } catch (err) {
+      console.error(
+        "CREATE STAFF ACCOUNT ERROR:",
+        err
+      );
+
+      setError(
+        err.message ||
+          "Unable to create staff account."
+      );
+    } finally {
+      setCreatingStaff(false);
+    }
+  };
 
   /* =====================================================
      INPUT HANDLER
@@ -1055,6 +1277,297 @@ export default function Settings() {
         )}
 
       </div>
+
+      {/* =================================================
+          STAFF ACCOUNTS
+      ================================================= */}
+
+      {isAdmin && (
+        <div className="settings-section">
+
+          <div className="settings-section-header">
+            <div>
+              <h2>
+                Staff Accounts
+              </h2>
+
+              <p>
+                Create authenticated Admin, Secretary,
+                and Teacher accounts. Teacher accounts can
+                be assigned to any of the 16 classes.
+              </p>
+            </div>
+
+            <span className="settings-badge ready">
+              Admin Only
+            </span>
+          </div>
+
+          <form
+            className="settings-form"
+            onSubmit={createStaffAccount}
+          >
+
+            <div className="settings-form-grid">
+
+              <div className="settings-field">
+                <label>
+                  Employee No.
+                </label>
+
+                <input
+                  type="text"
+                  name="employeeNo"
+                  value={staffForm.employeeNo}
+                  onChange={handleStaffFormChange}
+                  placeholder="e.g. SEC-001"
+                  required
+                />
+              </div>
+
+              <div className="settings-field">
+                <label>
+                  Role
+                </label>
+
+                <select
+                  name="role"
+                  value={staffForm.role}
+                  onChange={handleStaffFormChange}
+                >
+                  <option value="Secretary">
+                    Secretary
+                  </option>
+
+                  <option value="Teacher">
+                    Teacher
+                  </option>
+
+                  <option value="Admin">
+                    Admin
+                  </option>
+                </select>
+              </div>
+
+              <div className="settings-field">
+                <label>
+                  First Name
+                </label>
+
+                <input
+                  type="text"
+                  name="firstName"
+                  value={staffForm.firstName}
+                  onChange={handleStaffFormChange}
+                  placeholder="First name"
+                  required
+                />
+              </div>
+
+              <div className="settings-field">
+                <label>
+                  Middle Name
+                </label>
+
+                <input
+                  type="text"
+                  name="middleName"
+                  value={staffForm.middleName}
+                  onChange={handleStaffFormChange}
+                  placeholder="Optional"
+                />
+              </div>
+
+              <div className="settings-field">
+                <label>
+                  Last Name
+                </label>
+
+                <input
+                  type="text"
+                  name="lastName"
+                  value={staffForm.lastName}
+                  onChange={handleStaffFormChange}
+                  placeholder="Last name"
+                  required
+                />
+              </div>
+
+              <div className="settings-field">
+                <label>
+                  Email
+                </label>
+
+                <input
+                  type="email"
+                  name="email"
+                  value={staffForm.email}
+                  onChange={handleStaffFormChange}
+                  placeholder="staff@example.com"
+                  autoComplete="off"
+                  required
+                />
+              </div>
+
+              <div className="settings-field">
+                <label>
+                  Temporary Password
+                </label>
+
+                <input
+                  type="password"
+                  name="password"
+                  value={staffForm.password}
+                  onChange={handleStaffFormChange}
+                  placeholder="Minimum 8 characters"
+                  autoComplete="new-password"
+                  minLength={8}
+                  required
+                />
+              </div>
+
+            </div>
+
+            {staffForm.role === "Teacher" && (
+              <div className="settings-field" style={{ marginTop: "18px" }}>
+                <label>
+                  Assigned Class(es)
+                </label>
+
+                <div
+                  className="settings-grid"
+                  style={{ marginTop: "10px" }}
+                >
+                  {classes.map((classItem) => (
+                    <label
+                      key={classItem.id}
+                      className="settings-item settings-clickable"
+                      style={{
+                        cursor: "pointer",
+                        display: "flex",
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: "10px",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={staffForm.classIds.includes(
+                          classItem.id
+                        )}
+                        onChange={() =>
+                          handleStaffClassChange(
+                            classItem.id
+                          )
+                        }
+                      />
+
+                      <span>
+                        {classItem.name}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="settings-editor-actions">
+
+              <button
+                type="button"
+                className="secondary-btn"
+                onClick={resetStaffForm}
+                disabled={creatingStaff}
+              >
+                Clear
+              </button>
+
+              <button
+                type="submit"
+                className="primary-btn"
+                disabled={creatingStaff}
+              >
+                {creatingStaff
+                  ? "Creating..."
+                  : "Create Staff Account"}
+              </button>
+
+            </div>
+
+          </form>
+
+          <div style={{ marginTop: "28px" }}>
+
+            <div className="settings-section-header">
+              <div>
+                <h3>
+                  Existing Staff
+                </h3>
+
+                <p>
+                  Passwords are never displayed here.
+                </p>
+              </div>
+            </div>
+
+            {staffLoading ? (
+              <p>
+                Loading staff accounts...
+              </p>
+            ) : staffAccounts.length === 0 ? (
+              <p>
+                No staff accounts found.
+              </p>
+            ) : (
+              <div className="settings-security-list">
+                {staffAccounts.map((staff) => (
+                  <div
+                    className="security-row"
+                    key={staff.id}
+                  >
+                    <div>
+                      <strong>
+                        {staff.fullName || "-"}
+                      </strong>
+
+                      <small
+                        style={{
+                          display: "block",
+                          marginTop: "4px",
+                        }}
+                      >
+                        {staff.employeeNo} • {staff.email}
+                      </small>
+
+                      {staff.role === "Teacher" && (
+                        <small
+                          style={{
+                            display: "block",
+                            marginTop: "4px",
+                          }}
+                        >
+                          Classes:{" "}
+                          {staff.classes?.length
+                            ? staff.classes
+                                .map((item) => item.name)
+                                .join(", ")
+                            : "None assigned"}
+                        </small>
+                      )}
+                    </div>
+
+                    <span className="settings-badge ready">
+                      {staff.role}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+          </div>
+
+        </div>
+      )}
 
       {/* =================================================
           SECURITY
