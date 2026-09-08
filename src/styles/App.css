@@ -821,6 +821,14 @@ tr:hover {
     background: #ffffff !important;
   }
 
+  .app {
+    display: block;
+    width: 80mm;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
   body {
     color: #000000 !important;
   }
@@ -840,11 +848,23 @@ tr:hover {
     top: 0;
     width: 80mm;
     max-width: 80mm;
+    height: auto;
+    min-height: 0;
     margin: 0;
-    padding: 5mm 4mm;
+    padding: 3mm;
     border: none;
     box-shadow: none;
     color: #000000;
+    background: #ffffff;
+  }
+
+  .content {
+    width: 80mm;
+    min-width: 0;
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    overflow: visible;
     background: #ffffff;
   }
 
@@ -856,7 +876,6 @@ tr:hover {
 
   .receipt-actions,
   .sidebar,
-  .content,
   .page-header,
   .receipt-list-card {
     display: none !important;
@@ -1949,5 +1968,27 @@ body,
     height: auto !important;
     min-height: 0;
     overflow-y: visible !important;
+  }
+}
+
+@media print {
+  html,
+  body,
+  #root,
+  .app,
+  .content,
+  .receipt-screen {
+    width: 80mm;
+    min-width: 0;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  .thermal-receipt {
+    width: 80mm;
+    max-width: 80mm;
+    margin: 0;
+    padding: 3mm;
   }
 }

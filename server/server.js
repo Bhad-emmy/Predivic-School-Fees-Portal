@@ -2845,6 +2845,71 @@ app.post(
   "/api/payments",
   async (req, res) => {
     try {
+      const authHeader = String(
+        req.headers.authorization || ""
+      );
+
+      if (!authHeader.startsWith("Bearer ")) {
+        return res.status(401).json({
+          error: "Authentication required.",
+        });
+      }
+
+      const accessToken = authHeader.slice(7).trim();
+
+      if (!accessToken) {
+        return res.status(401).json({
+          error: "Authentication required.",
+        });
+      }
+
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser(accessToken);
+
+      if (userError || !user) {
+        return res.status(401).json({
+          error: "Authentication required.",
+        });
+      }
+
+      const {
+        data: staff,
+        error: staffError,
+      } = await supabase
+        .from("teachers")
+        .select("auth_user_id, role, status")
+        .eq("auth_user_id", user.id)
+        .maybeSingle();
+
+      if (staffError) {
+        throw staffError;
+      }
+
+      if (
+        !staff ||
+        String(staff.status || "").toLowerCase() !==
+          "active"
+      ) {
+        return res.status(403).json({
+          error: "Only active Admin or Secretary staff can record payments.",
+        });
+      }
+
+      const staffRole = String(
+        staff.role || ""
+      ).toLowerCase();
+
+      if (
+        staffRole !== "admin" &&
+        staffRole !== "secretary"
+      ) {
+        return res.status(403).json({
+          error: "Only active Admin or Secretary staff can record payments.",
+        });
+      }
+
       const {
         studentId,
         studentFeeAccountId,
@@ -2887,10 +2952,22 @@ app.post(
         });
       }
 
+      const userSupabase = createClient(
+        SUPABASE_URL,
+        SUPABASE_SERVICE_ROLE_KEY,
+        {
+          global: {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          },
+        }
+      );
+
       const {
         data,
         error,
-      } = await supabase.rpc(
+      } = await userSupabase.rpc(
         "record_payment",
         {
           p_student_id: studentId,
