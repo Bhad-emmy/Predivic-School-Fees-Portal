@@ -124,6 +124,52 @@ function validateDepartment(
   };
 }
 
+async function resolveActiveSessionAndTerm() {
+  const {
+    data: session,
+    error: sessionError,
+  } = await supabase
+    .from("academic_sessions")
+    .select("id, name, is_active")
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (sessionError) {
+    throw sessionError;
+  }
+
+  if (!session) {
+    return {
+      session: null,
+      term: null,
+    };
+  }
+
+  const {
+    data: term,
+    error: termError,
+  } = await supabase
+    .from("terms")
+    .select(`
+      id,
+      name,
+      academic_session_id,
+      status
+    `)
+    .eq("academic_session_id", session.id)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (termError) {
+    throw termError;
+  }
+
+  return {
+    session,
+    term: term || null,
+  };
+}
+
 function cleanFeeItems(items) {
   if (
     !Array.isArray(items) ||
@@ -834,6 +880,8 @@ app.get(
 app.post(
   "/api/students",
   async (req, res) => {
+    let createdStudentId = null;
+
     try {
       const {
         admissionNo,
@@ -885,6 +933,45 @@ app.post(
         return res.status(400).json({
           error:
             "Class is required.",
+        });
+      }
+
+      const {
+        session,
+        term,
+      } = await resolveActiveSessionAndTerm();
+
+      if (!session) {
+        return res.status(400).json({
+          error:
+            "No active academic session exists.",
+        });
+      }
+
+      if (!term) {
+        return res.status(400).json({
+          error:
+            "No active term exists for the current academic session.",
+        });
+      }
+
+      const {
+        data: classRecord,
+        error: classError,
+      } = await supabase
+        .from("classes")
+        .select("id")
+        .eq("id", classId)
+        .maybeSingle();
+
+      if (classError) {
+        throw classError;
+      }
+
+      if (!classRecord) {
+        return res.status(404).json({
+          error:
+            "Selected class was not found.",
         });
       }
 
@@ -1042,84 +1129,36 @@ app.post(
         throw error;
       }
 
-      // Get the active academic session.
+      createdStudentId = student.id;
+
       const {
-        data: session,
         error:
-          sessionError,
+          enrollmentInsertError,
       } = await supabase
         .from(
-          "academic_sessions"
+          "student_enrollments"
         )
-        .select("id")
-        .eq(
-          "is_active",
-          true
-        )
-        .maybeSingle();
+        .insert({
+          student_id:
+            student.id,
 
-      if (sessionError) {
-        throw sessionError;
-      }
+          session_id:
+            session.id,
 
-      // Create an enrollment for the active
-      // session and selected class.
-      if (session) {
-        const {
-          data: existingEnrollment,
-          error:
-            enrollmentCheckError,
-        } = await supabase
-          .from(
-            "student_enrollments"
-          )
-          .select("id")
-          .eq(
-            "student_id",
-            student.id
-          )
-          .eq(
-            "session_id",
-            session.id
-          )
-          .eq(
-            "class_id",
-            classId
-          )
-          .maybeSingle();
+          term_id:
+            term.id,
 
-        if (enrollmentCheckError) {
-          throw enrollmentCheckError;
-        }
+          class_id:
+            classId,
 
-        if (!existingEnrollment) {
-          const {
-            error:
-              enrollmentInsertError,
-          } = await supabase
-            .from(
-              "student_enrollments"
-            )
-            .insert({
-              student_id:
-                student.id,
+          status:
+            "active",
+        });
 
-              session_id:
-                session.id,
-
-              class_id:
-                classId,
-
-              status:
-                "active",
-            });
-
-          if (
-            enrollmentInsertError
-          ) {
-            throw enrollmentInsertError;
-          }
-        }
+      if (
+        enrollmentInsertError
+      ) {
+        throw enrollmentInsertError;
       }
 
       res.status(201).json({
@@ -1134,9 +1173,30 @@ app.post(
         error
       );
 
+      if (createdStudentId) {
+        const {
+          error:
+            rollbackError,
+        } = await supabase
+          .from("students")
+          .delete()
+          .eq(
+            "id",
+            createdStudentId
+          );
+
+        if (rollbackError) {
+          console.error(
+            "ROLLBACK STUDENT ERROR:",
+            rollbackError
+          );
+        }
+      }
+
       res.status(500).json({
         error:
-          error.message,
+          error.message ||
+          "Unable to create student and enrollment.",
       });
     }
   }
@@ -4476,29 +4536,13 @@ app.post(
       }
 
       // --------------------------------------------------
-      // FIND ACTIVE SESSION
+      // FIND ACTIVE SESSION AND TERM
       // --------------------------------------------------
 
       const {
-        data: session,
-        error:
-          sessionError,
-      } = await supabase
-        .from(
-          "academic_sessions"
-        )
-        .select(
-          "id, name, is_active"
-        )
-        .eq(
-          "is_active",
-          true
-        )
-        .maybeSingle();
-
-      if (sessionError) {
-        throw sessionError;
-      }
+        session,
+        term,
+      } = await resolveActiveSessionAndTerm();
 
       if (!session) {
         return res.status(400).json({
@@ -4549,36 +4593,6 @@ app.post(
           enrollment:
             existingEnrollment,
         });
-      }
-
-      // --------------------------------------------------
-      // FIND ACTIVE TERM
-      // --------------------------------------------------
-
-      const {
-        data: term,
-        error:
-          termError,
-      } = await supabase
-        .from("terms")
-        .select(`
-          id,
-          name,
-          academic_session_id,
-          status
-        `)
-        .eq(
-          "academic_session_id",
-          session.id
-        )
-        .eq(
-          "status",
-          "active"
-        )
-        .maybeSingle();
-
-      if (termError) {
-        throw termError;
       }
 
       if (!term) {
