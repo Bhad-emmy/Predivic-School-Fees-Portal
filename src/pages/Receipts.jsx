@@ -15,11 +15,296 @@ const formatDate = (date) => {
   });
 };
 
+const escapeHtml = (value) =>
+  String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+
+const getReceiptPrintMarkup = (payment) => `
+  <div class="thermal-receipt">
+    <div class="receipt-header">
+      <h1>Predivic Schools</h1>
+      <p>OFFICIAL PAYMENT RECEIPT</p>
+    </div>
+
+    <div class="receipt-divider"></div>
+
+    <div class="receipt-meta">
+      <div>
+        <span>Receipt No.</span>
+        <strong>${escapeHtml(payment.receiptNumber || "-")}</strong>
+      </div>
+      <div>
+        <span>Date</span>
+        <strong>${escapeHtml(formatDate(payment.paymentDate))}</strong>
+      </div>
+    </div>
+
+    <div class="receipt-divider"></div>
+
+    <div class="receipt-info">
+      <div>
+        <span>Student</span>
+        <strong>${escapeHtml(payment.studentName || "-")}</strong>
+      </div>
+      <div>
+        <span>Class</span>
+        <strong>${escapeHtml(payment.className || "-")}</strong>
+      </div>
+      ${
+        payment.admissionNumber
+          ? `
+            <div>
+              <span>Admission No.</span>
+              <strong>${escapeHtml(payment.admissionNumber)}</strong>
+            </div>
+          `
+          : ""
+      }
+      <div>
+        <span>Payment Method</span>
+        <strong>${escapeHtml(payment.method || "-")}</strong>
+      </div>
+      ${
+        payment.reference
+          ? `
+            <div>
+              <span>Reference</span>
+              <strong>${escapeHtml(payment.reference)}</strong>
+            </div>
+          `
+          : ""
+      }
+    </div>
+
+    <div class="receipt-divider"></div>
+
+    <div class="receipt-items">
+      <div class="receipt-item receipt-item-heading">
+        <span>Description</span>
+        <span>Amount</span>
+      </div>
+      <div class="receipt-item">
+        <span>School Fee</span>
+        <span>${escapeHtml(formatCurrency(payment.amount))}</span>
+      </div>
+    </div>
+
+    <div class="receipt-divider"></div>
+
+    <div class="receipt-total">
+      <span>TOTAL PAID</span>
+      <strong>${escapeHtml(formatCurrency(payment.amount))}</strong>
+    </div>
+
+    <div class="receipt-status">
+      STATUS: ${escapeHtml(payment.status || "Paid")}
+    </div>
+
+    <div class="receipt-divider"></div>
+
+    <div class="receipt-received">
+      <span>Received by</span>
+      <strong>Secretary</strong>
+    </div>
+
+    <div class="receipt-thanks">Thank you for your payment!</div>
+
+    <div class="receipt-footer">
+      <p>Please keep this receipt for your records.</p>
+      <p>Predivic Schools</p>
+    </div>
+  </div>
+`;
+
+const printReceipt = (payment) => {
+  const printWindow = window.open(
+    "",
+    "_blank",
+    "noopener,noreferrer,width=302,height=800"
+  );
+
+  if (!printWindow) {
+    throw new Error(
+      "Unable to open the print window. Please allow pop-ups and try again."
+    );
+  }
+
+  printWindow.addEventListener("afterprint", () => {
+    printWindow.close();
+  });
+
+  printWindow.addEventListener("load", () => {
+    printWindow.focus();
+    printWindow.print();
+  });
+
+  printWindow.document.write(`
+    <!doctype html>
+    <html>
+      <head>
+        <meta charset="UTF-8" />
+        <title>${escapeHtml(
+          payment.receiptNumber || "Payment Receipt"
+        )}</title>
+        <style>
+          @page {
+            size: 80mm auto;
+            margin: 0;
+          }
+
+          * {
+            box-sizing: border-box;
+          }
+
+          html,
+          body {
+            width: 80mm;
+            margin: 0;
+            padding: 0;
+            background: #ffffff;
+            color: #000000;
+          }
+
+          body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            line-height: 1.35;
+          }
+
+          .thermal-receipt {
+            width: 80mm;
+            padding: 3mm;
+          }
+
+          .receipt-header {
+            text-align: center;
+          }
+
+          .receipt-header h1 {
+            margin: 0 0 4px;
+            font-size: 20px;
+          }
+
+          .receipt-header p {
+            margin: 0;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+          }
+
+          .receipt-divider {
+            border-top: 1px dashed #000000;
+            margin: 10px 0;
+          }
+
+          .receipt-meta,
+          .receipt-info {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+          }
+
+          .receipt-meta > div,
+          .receipt-info > div,
+          .receipt-received {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+          }
+
+          .receipt-meta strong,
+          .receipt-info strong,
+          .receipt-received strong {
+            text-align: right;
+          }
+
+          .receipt-items {
+            width: 100%;
+          }
+
+          .receipt-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 4px 0;
+          }
+
+          .receipt-item span:last-child {
+            text-align: right;
+            white-space: nowrap;
+          }
+
+          .receipt-item-heading {
+            font-weight: 700;
+            border-bottom: 1px solid #000000;
+            padding-bottom: 5px;
+          }
+
+          .receipt-total {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 15px;
+            font-weight: 700;
+          }
+
+          .receipt-total strong {
+            font-size: 17px;
+          }
+
+          .receipt-status {
+            text-align: center;
+            margin-top: 8px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+          }
+
+          .receipt-received {
+            margin-top: 8px;
+          }
+
+          .receipt-thanks {
+            text-align: center;
+            margin-top: 18px;
+            font-weight: 700;
+            font-size: 13px;
+          }
+
+          .receipt-footer {
+            text-align: center;
+            margin-top: 14px;
+            font-size: 9px;
+          }
+
+          .receipt-footer p {
+            margin: 3px 0;
+          }
+        </style>
+      </head>
+      <body>${getReceiptPrintMarkup(payment)}</body>
+    </html>
+  `);
+  printWindow.document.close();
+};
+
 export default function Receipts() {
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const handlePrint = (payment) => {
+    try {
+      printReceipt(payment);
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "Unable to open the print window.");
+    }
+  };
 
   useEffect(() => {
     const loadPayments = async () => {
@@ -139,7 +424,7 @@ export default function Receipts() {
           <div className="receipt-actions">
             <button
               className="primary-btn"
-              onClick={() => window.print()}
+              onClick={() => handlePrint(selectedPayment)}
             >
               Print Receipt
             </button>
