@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { supabase } from "../lib/supabase";
 
 const API_URL = "https://predivic-school-fees-portal.onrender.com";
 
@@ -219,12 +220,24 @@ export default function Payments() {
 
     try {
       setSaving(true);
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        setError(
+          "Your session has expired. Please sign in again."
+        );
+        return;
+      }
+
       const response = await fetch(
         API_URL + "/api/payments",
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({
             studentId: selectedAccount.studentId,
