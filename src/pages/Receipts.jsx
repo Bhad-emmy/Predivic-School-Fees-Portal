@@ -124,7 +124,7 @@ const printReceipt = (payment) => {
   const printWindow = window.open(
     "",
     "_blank",
-    "noopener,noreferrer,width=302,height=800"
+    "width=302,height=800"
   );
 
   if (!printWindow) {
