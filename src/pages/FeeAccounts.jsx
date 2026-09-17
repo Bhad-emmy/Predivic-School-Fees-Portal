@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import StudentSearchSelect from "../components/StudentSearchSelect";
 
 const API_URL = "https://predivic-school-fees-portal.onrender.com";
 
@@ -516,6 +517,24 @@ export default function FeeAccounts() {
     students,
     assignForm.studentId,
   ]);
+
+  const studentSearchOptions = useMemo(
+    () =>
+      students.map((student) => ({
+        ...student,
+        fullName:
+          student.fullName ||
+          [
+            student.firstName,
+            student.middleName,
+            student.lastName,
+          ]
+            .filter(Boolean)
+            .join(" ") ||
+          "Unnamed Student",
+      })),
+    [students]
+  );
 
   // =====================================================
   // STUDENT CLASS
@@ -2488,52 +2507,67 @@ export default function FeeAccounts() {
                   Student *
                 </label>
 
-                <select
-                  name="studentId"
-                  value={
-                    assignForm.studentId
+                <StudentSearchSelect
+                  options={studentSearchOptions}
+                  value={assignForm.studentId}
+                  onChange={(studentId) =>
+                    setAssignForm((previous) => ({
+                      ...previous,
+                      studentId: studentId || "",
+                      feeAccountId: "",
+                    }))
                   }
-                  onChange={
-                    handleAssignChange
+                  placeholder="Search student by name, admission number, or class..."
+                  getSearchText={(student) =>
+                    [
+                      student.fullName,
+                      student.firstName,
+                      student.middleName,
+                      student.lastName,
+                      student.admissionNo,
+                      student.className,
+                    ]
+                      .filter(Boolean)
+                      .join(" ")
                   }
-                  required
-                >
-                  <option value="">
-                    Select Student
-                  </option>
-
-                  {students.map(
-                    (
-                      student
-                    ) => (
-                      <option
-                        key={
-                          student.id
-                        }
-                        value={
-                          student.id
-                        }
+                  getLabel={(student) =>
+                    [
+                      student.fullName ||
+                        "Unnamed Student",
+                      student.admissionNo,
+                      student.className,
+                    ]
+                      .filter(Boolean)
+                      .join(" — ")
+                  }
+                  renderOption={(student) => (
+                    <div>
+                      <div
+                        style={{
+                          fontWeight: "600",
+                          color: "#0f172a",
+                        }}
                       >
                         {student.fullName ||
-                          [
-                            student.firstName,
-                            student.middleName,
-                            student.lastName,
-                          ]
-                            .filter(
-                              Boolean
-                            )
-                            .join(
-                              " "
-                            ) ||
                           "Unnamed Student"}
-                        {student.className
-                         ? ` - ${student.className}`
-                          : ""}
-                      </option>
-                    )
+                      </div>
+
+                      <div
+                        style={{
+                          marginTop: "3px",
+                          fontSize: "13px",
+                          color: "#64748b",
+                        }}
+                      >
+                        {[student.admissionNo, student.className]
+                          .filter(Boolean)
+                          .join(" — ") ||
+                          "No admission number or class"}
+                      </div>
+                    </div>
                   )}
-                </select>
+                  disabled={assigning}
+                />
               </div>
 
               {/* STUDENT INFO */}
