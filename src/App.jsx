@@ -68,102 +68,34 @@ function ProtectedApp() {
 
   return (
     <div className="app">
-
       {/* SIDEBAR */}
-
       <aside className="sidebar">
-
-        <h2>Predivic Schools</h2>
+        <h2>MEKA School</h2>
 
         <div className="sidebar-user">
           <strong>{[staff.first_name, staff.last_name].filter(Boolean).join(" ") || "Staff"}</strong>
           <span>{staff.role}</span>
         </div>
 
-        <button
-          onClick={() =>
-            setPage("dashboard")
-          }
-        >
-          Dashboard
-        </button>
-
-        <button
-          onClick={() =>
-            setPage("students")
-          }
-        >
-          Students
-        </button>
-
-        <button
-          onClick={() =>
-            setPage("student-attendance")
-          }
-        >
-          Student Attendance
-        </button>
-
-        <button
-          onClick={() =>
-            setPage("teacher-attendance")
-          }
-        >
-          Teacher Attendance
-        </button>
-
-        <button
-          onClick={() =>
-            setPage("fees")
-          }
-        >
-          Fee Accounts
-        </button>
-
-        <button
-          onClick={() =>
-            setPage("payments")
-          }
-        >
-          Payments
-        </button>
-
-        <button
-          onClick={() =>
-            setPage("receipts")
-          }
-        >
-          Receipts
-        </button>
-
-        <button
-          onClick={() =>
-            setPage("reports")
-          }
-        >
-          Reports
-        </button>
-
-        <button
-          onClick={() =>
-            setPage("settings")
-          }
-        >
-          Settings
-        </button>
+        <button onClick={() => setPage("dashboard")}>Dashboard</button>
+        <button onClick={() => setPage("students")}>Students</button>
+        <button onClick={() => setPage("student-attendance")}>Student Attendance</button>
+        <button onClick={() => setPage("teacher-attendance")}>Teacher Attendance</button>
+        <button onClick={() => setPage("fees")}>Fee Accounts</button>
+        <button onClick={() => setPage("payments")}>Payments</button>
+        <button onClick={() => setPage("receipts")}>Receipts</button>
+        <button onClick={() => setPage("reports")}>Reports</button>
+        <button onClick={() => setPage("settings")}>Settings</button>
 
         <button className="sidebar-signout" onClick={signOut}>
           Sign out
         </button>
-
       </aside>
 
       {/* MAIN CONTENT */}
-
       <main className="content">
         {renderPage()}
       </main>
-
     </div>
   );
 }
