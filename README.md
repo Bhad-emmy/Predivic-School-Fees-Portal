@@ -1,6 +1,6 @@
-# Predivic Schools
+# MEKA School
 
-A web-based school management system being developed for Predivic Schools.
+A web-based school management system by MEKA.
 
 The system is designed to centralize student records, school fee management, payments, receipts, reporting, and student/staff attendance in one application.
 
@@ -123,3 +123,4 @@ Airtable
       |
       v
     Reports
+```
