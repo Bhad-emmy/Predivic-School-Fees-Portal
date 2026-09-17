@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
+import StudentSearchSelect from "../components/StudentSearchSelect";
 
 const API_URL = "https://predivic-school-fees-portal.onrender.com";
 
@@ -133,6 +134,30 @@ export default function Payments() {
       form.studentFeeAccountId,
       studentFeeAccounts,
     ]
+  );
+
+  const paymentStudentOptions = useMemo(
+    () =>
+      payableAccounts.map((account) => ({
+        ...account,
+        id: account.id,
+        fullName:
+          account.student?.fullName ||
+          [
+            account.student?.firstName,
+            account.student?.middleName,
+            account.student?.lastName,
+          ]
+            .filter(Boolean)
+            .join(" "),
+        firstName: account.student?.firstName,
+        middleName: account.student?.middleName,
+        lastName: account.student?.lastName,
+        admissionNo: account.student?.admissionNo,
+        className:
+          account.className || account.student?.className,
+      })),
+    [payableAccounts]
   );
 
   const availableClasses = useMemo(
@@ -333,29 +358,61 @@ export default function Payments() {
                 gap: "15px",
               }}
             >
-              <select
-                name="studentFeeAccountId"
+              <StudentSearchSelect
+                options={paymentStudentOptions}
                 value={form.studentFeeAccountId}
-                onChange={handleChange}
-                className="filter-select"
-                required
-              >
-                <option value="">
-                  Select student fee account
-                </option>
-                {payableAccounts.map((account) => (
-                  <option
-                    key={account.id}
-                    value={account.id}
-                  >
-                    {account.student?.fullName ||
-                      "Unknown Student"}{" "}
-                    Search by name or admission number...
-                    {account.term} (
-                    {formatAmount(account.balance)} due)
-                  </option>
-                ))}
-              </select>
+                onChange={(id) =>
+                  setForm((current) => ({
+                    ...current,
+                    studentFeeAccountId: id,
+                    amount: "",
+                  }))
+                }
+                placeholder="Search student by name, admission number, or class..."
+                getSearchText={(option) =>
+                  [
+                    option.fullName,
+                    option.firstName,
+                    option.lastName,
+                    option.admissionNo,
+                    option.className,
+                  ]
+                    .filter(Boolean)
+                    .join(" ")
+                }
+                getLabel={(option) =>
+                  [
+                    option.fullName || "Unknown Student",
+                    option.admissionNo,
+                    option.className,
+                  ]
+                    .filter(Boolean)
+                    .join(" — ")
+                }
+                renderOption={(option) => (
+                  <div>
+                    <strong>
+                      {option.fullName || "Unknown Student"}
+                    </strong>
+                    <div
+                      style={{
+                        color: "#64748b",
+                        fontSize: "13px",
+                        marginTop: "3px",
+                      }}
+                    >
+                      {[option.admissionNo, option.className]
+                        .filter(Boolean)
+                        .join(" — ") || "No admission/class data"}
+                      {option.term
+                        ? ` — ${option.term}`
+                        : ""}
+                      {` — ${formatAmount(option.balance)} due`}
+                    </div>
+                  </div>
+                )}
+                disabled={saving}
+              />
 
               <input
                 type="number"
