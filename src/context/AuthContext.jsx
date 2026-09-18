@@ -6,7 +6,7 @@ const AuthContext = createContext(null);
 const getStaffRecord = async (userId) => {
   const { data, error } = await supabase
     .from("teachers")
-    .select("id, auth_user_id, first_name, middle_name, last_name, role, status")
+    .select("id, auth_user_id, first_name, middle_name, last_name, role, status, school_id")
     .eq("auth_user_id", userId)
     .maybeSingle();
 
