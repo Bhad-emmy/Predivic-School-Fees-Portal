@@ -4848,6 +4848,40 @@ async function getAuthenticatedStaff(req) {
   return { user, staff };
 }
 
+async function getTenantContext(req) {
+  const authenticated = await getAuthenticatedStaff(req);
+
+  if (!authenticated) {
+    return null;
+  }
+
+  const schoolId = authenticated.staff.school_id;
+
+  if (!schoolId) {
+    return null;
+  }
+
+  return {
+    schoolId,
+    user: authenticated.user,
+    staff: authenticated.staff,
+  };
+}
+
+async function requireTenant(req, res) {
+  const tenant = await getTenantContext(req);
+
+  if (!tenant) {
+    res.status(401).json({
+      error: "Authenticated staff account with a school is required.",
+    });
+    return null;
+  }
+
+  req.tenant = tenant;
+  return tenant;
+}
+
 async function requireAdmin(req, res) {
   const authenticated = await getAuthenticatedStaff(req);
 
