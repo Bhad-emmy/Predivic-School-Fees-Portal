@@ -522,7 +522,7 @@ export default function Dashboard() {
 
                       <td>
                         {payment.method ||
-                          ""-""}
+                          "-"}
                       </td>
 
                       <td>
