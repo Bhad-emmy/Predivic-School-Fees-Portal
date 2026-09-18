@@ -1,5 +1,32 @@
 
 /* =========================================================
+   MOBILE BROWSER CHROME / VIEWPORT SAFE AREA
+========================================================= */
+
+/* Keep the app background light behind mobile browser/system UI. */
+html {
+  background: #F5F7FB;
+}
+
+@media (max-width: 700px) {
+  html,
+  body {
+    min-height: 100%;
+    background: #F5F7FB;
+  }
+
+  body {
+    margin: 0;
+  }
+
+  #root {
+    min-height: 100vh;
+    background: #F5F7FB;
+  }
+}
+
+
+/* =========================================================
    MOBILE NAVIGATION
 ========================================================= */
 
