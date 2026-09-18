@@ -70,8 +70,43 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font-family: inherit;
+  color-scheme: light;
+}
+
+input,
+select,
+textarea {
+  background: #ffffff;
+  color: #1f2937;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #64748b;
+  opacity: 1;
+}
+
+.form-group {
+  display: grid;
+  gap: 8px;
+}
+
+.form-group label {
+  color: #334155;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 /* =========================================================
@@ -1023,5 +1058,71 @@ tr:hover {
     bottom: 0;
     padding-top: 12px;
     background: #ffffff;
+  }
+}
+
+
+@media (max-width: 700px) {
+  .page {
+    padding: 18px 0;
+  }
+
+  .page-header {
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .page-header > div {
+    min-width: 0;
+    flex: 1 1 220px;
+  }
+
+  .page-header > button {
+    flex: 0 0 auto;
+  }
+
+  .table-section {
+    overflow: hidden;
+  }
+
+  .table-section > table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .fee-accounts-table-wrapper,
+  .fee-structures-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  .fee-accounts-table-wrapper table,
+  .fee-structures-table-wrapper table {
+    min-width: 900px;
+  }
+
+  .fee-structures-table-wrapper td:last-child,
+  .fee-structures-table-wrapper th:last-child {
+    min-width: 130px;
+  }
+
+  .fee-items-editor {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .fee-item-row {
+    min-width: 520px;
+  }
+
+  .assign-fee-modal-content {
+    width: 100%;
+    max-width: none;
+    margin: 0;
   }
 }
