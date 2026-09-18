@@ -1,3 +1,30 @@
+
+/* =========================================================
+   MOBILE NAVIGATION
+========================================================= */
+
+.mobile-header {
+  display: none;
+}
+
+.mobile-menu-button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.mobile-menu-button:hover,
+.mobile-menu-button:focus-visible {
+  background: rgba(15, 23, 42, 0.08);
+  outline: none;
+}
+
 /* =========================================================
    GLOBAL RESET
 ========================================================= */
@@ -481,30 +508,92 @@ tr:hover {
 }
 
 @media (max-width: 700px) {
+  body {
+    overflow-x: hidden;
+  }
+
   .app {
+    height: 100vh;
     flex-direction: column;
   }
 
+  .mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    min-height: 64px;
+    padding: 10px 15px;
+    background: #123B7A;
+    color: #ffffff;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.12);
+  }
+
+  .mobile-header strong {
+    font-size: 20px;
+    letter-spacing: 0.1px;
+  }
+
+  .mobile-menu-button {
+    color: #ffffff;
+  }
+
+  .mobile-menu-button:hover,
+  .mobile-menu-button:focus-visible {
+    background: rgba(255, 255, 255, 0.12);
+  }
+
   .sidebar {
+    display: none;
     width: 100%;
     height: auto;
-    position: relative;
-    flex-direction: row;
-    flex-wrap: wrap;
-    padding: 15px;
+    max-height: calc(100vh - 64px);
+    position: absolute;
+    top: 64px;
+    left: 0;
+    z-index: 90;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 14px;
+    overflow-y: auto;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+  }
+
+  .sidebar.mobile-open {
+    display: flex;
   }
 
   .sidebar h2 {
+    width: auto;
+    margin-bottom: 2px;
+    font-size: 22px;
+  }
+
+  .sidebar-user {
     width: 100%;
-    margin-bottom: 5px;
+    margin-bottom: 4px;
   }
 
   .sidebar button {
-    font-size: 14px;
+    width: 100%;
+    font-size: 15px;
+    padding: 12px 13px;
+  }
+
+  .sidebar-signout {
+    margin-top: 4px;
   }
 
   .content {
+    width: 100%;
+    min-height: 0;
     padding: 15px;
+    overflow-x: hidden;
   }
 
   .stats-grid {
@@ -513,7 +602,7 @@ tr:hover {
 
   .page,
   .dashboard-page {
-    padding: 15px;
+    padding: 15px 0;
   }
 
   .table-controls {
