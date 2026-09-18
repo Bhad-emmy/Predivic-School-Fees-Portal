@@ -554,6 +554,31 @@ export default function FeeAccounts() {
     selectedStudent?.className ||
     "";
 
+  const normalizeDepartment = (department) => {
+    const value = String(department || "")
+      .trim()
+      .toLowerCase();
+
+    if (value === "arts" || value === "art") {
+      return "Art";
+    }
+
+    if (value === "science") {
+      return "Science";
+    }
+
+    if (value === "commercial") {
+      return "Commercial";
+    }
+
+    return "";
+  };
+
+  const selectedStudentDepartment =
+    normalizeDepartment(
+      selectedStudent?.department
+    );
+
   // =====================================================
   // STUDENT TYPE
   // =====================================================
@@ -596,13 +621,15 @@ export default function FeeAccounts() {
             structure.studentType ===
             selectedStudentType;
 
+          const isSeniorSecondary =
+            structure.className === "SS 2" ||
+            structure.className === "SS 3";
+
           const departmentMatches =
-            structure.className ===
-              "SS 2" ||
-            structure.className ===
-              "SS 3"
-              ? true
-              : true;
+            !isSeniorSecondary ||
+            normalizeDepartment(
+              structure.department
+            ) === selectedStudentDepartment;
 
           return (
             sessionMatches &&
@@ -619,6 +646,7 @@ export default function FeeAccounts() {
       selectedStudent,
       selectedStudentClass,
       selectedStudentType,
+      selectedStudentDepartment,
       assignForm.session,
       assignForm.term,
     ]);
@@ -2733,7 +2761,7 @@ export default function FeeAccounts() {
                         }
                       >
                         {structure.className}
-                        {"Search by name or admission number..."}
+                        {" - "}
                         {structure.studentType}
                         {structure.department
                           ? ` - ${structure.department}`
