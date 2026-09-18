@@ -840,3 +840,104 @@ tr:hover {
     box-shadow: none;
   }
 }
+
+
+/* =========================================================
+   MOBILE FEE ACCOUNT LAYOUT
+========================================================= */
+
+/* Fee-account controls stay reachable at the top on phones. */
+.fee-account-page {
+  min-width: 0;
+}
+
+.fee-account-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
+.fee-account-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.assign-fee-modal-content {
+  max-height: min(82vh, 760px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 700px) {
+  .fee-account-page {
+    padding-top: 6px;
+  }
+
+  .fee-account-header {
+    position: sticky;
+    top: 0;
+    z-index: 80;
+    background: #F5F7FB;
+    padding: 8px 0 12px;
+    margin-bottom: 8px;
+  }
+
+  .fee-account-header .page-header {
+    margin-bottom: 10px;
+  }
+
+  .fee-account-header .page-header > div {
+    min-width: 0;
+  }
+
+  .fee-account-header .page-header h1 {
+    font-size: 26px;
+  }
+
+  .fee-account-header .page-header > button {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .fee-account-tabs {
+    position: sticky;
+    top: 72px;
+    z-index: 79;
+    background: #F5F7FB;
+    padding-bottom: 4px;
+    margin-bottom: 14px !important;
+  }
+
+  .fee-account-tabs button {
+    padding: 10px 14px !important;
+    font-size: 14px !important;
+  }
+
+  .fee-account-table-wrapper table {
+    min-width: 900px;
+  }
+
+  .assign-fee-modal-content {
+    width: calc(100vw - 24px) !important;
+    max-width: none !important;
+    max-height: 86vh;
+    margin: 12px;
+  }
+
+  .assign-fee-modal-content form {
+    padding-bottom: 8px;
+  }
+
+  .assign-fee-modal-content .form-row {
+    grid-template-columns: 1fr !important;
+    gap: 0 !important;
+  }
+
+  .assign-fee-modal-content .modal-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #ffffff;
+  }
+}
