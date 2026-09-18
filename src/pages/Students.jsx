@@ -38,6 +38,7 @@ const EMPTY_NEW_STUDENT = {
 
   classId: "",
   className: "",
+  department: "",
 
   studentType: "new",
   admissionDate: "",
@@ -365,6 +366,13 @@ export default function Students() {
       return;
     }
 
+    const selectedClassName = String(form.className || "").trim().toUpperCase();
+    const isSeniorSecondary = selectedClassName === "SS 2" || selectedClassName === "SS 3";
+    if (isSeniorSecondary && !form.department) {
+      setError("Please select a department for SS2/SS3.");
+      return;
+    }
+
     try {
       setSaving(true);
       setError("");
@@ -426,6 +434,9 @@ export default function Students() {
 
             className:
               form.className,
+
+            department:
+              form.department || null,
 
             studentType:
               "new",
@@ -1328,6 +1339,21 @@ export default function Students() {
                       )
                     )}
                   </select>
+
+                  {(newStudent.className === "SS 2" ||
+                    newStudent.className === "SS 3") && (
+                    <select
+                      name="department"
+                      value={newStudent.department}
+                      onChange={handleNewStudentChange}
+                      className="filter-select"
+                    >
+                      <option value="">Select Department *</option>
+                      <option value="Science">Science</option>
+                      <option value="Commercial">Commercial</option>
+                      <option value="Art">Arts</option>
+                    </select>
+                  )}
 
                   <input
                     type="date"
