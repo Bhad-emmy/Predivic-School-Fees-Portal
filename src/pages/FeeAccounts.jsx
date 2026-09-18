@@ -2384,6 +2384,7 @@ export default function FeeAccounts() {
                                   )}
                                 </div>
                               </div>
+                              </div>
                             )}
                           </td>
                         </tr>
