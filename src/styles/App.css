@@ -1292,3 +1292,76 @@ tr:hover {
     padding: 14px;
   }
 }
+
+
+/* =========================================================
+   FEE STRUCTURE COLLAPSIBLE ROWS
+========================================================= */
+.fee-structure-details {
+  width: 100%;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.fee-structure-summary {
+  list-style: none;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 16px;
+  border: 0;
+  background: #fff;
+  color: #1f2937;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 10px;
+}
+
+.fee-structure-summary::-webkit-details-marker {
+  display: none;
+}
+
+.fee-structure-summary:hover {
+  background: #F8FAFC;
+}
+
+.fee-structure-summary > span:first-child {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.fee-structure-summary strong {
+  font-size: 17px;
+  color: #0f172a;
+}
+
+.fee-structure-summary small {
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.fee-structure-details-panel {
+  padding: 0 16px 18px;
+}
+
+.fee-structure-details[open] .fee-structure-chevron {
+  font-size: 0;
+}
+
+.fee-structure-details[open] .fee-structure-chevron::after {
+  content: "−";
+  font-size: 22px;
+}
+
+@media (max-width: 700px) {
+  .fee-structure-summary {
+    padding: 18px 4px;
+  }
+
+  .fee-structure-details-panel {
+    padding: 0 4px 18px;
+  }
+}
