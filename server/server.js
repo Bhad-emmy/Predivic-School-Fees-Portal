@@ -883,6 +883,11 @@ app.post(
     let createdStudentId = null;
 
     try {
+      const tenant = await requireTenant(req, res);
+      if (!tenant) return;
+
+      const { schoolId } = tenant;
+
       const {
         admissionNo,
         firstName,
@@ -891,6 +896,7 @@ app.post(
         gender,
         classId,
         studentType,
+        department,
         dateOfBirth,
         parentName,
         parentRelationship,
@@ -915,281 +921,222 @@ app.post(
         notes,
       } = req.body;
 
-      if (!firstName) {
-        return res.status(400).json({
-          error:
-            "First name is required.",
-        });
+      if (!firstName?.trim()) {
+        return res.status(400).json({ error: "First name is required." });
       }
 
-      if (!lastName) {
-        return res.status(400).json({
-          error:
-            "Last name is required.",
-        });
+      if (!lastName?.trim()) {
+        return res.status(400).json({ error: "Last name is required." });
       }
 
       if (!classId) {
-        return res.status(400).json({
-          error:
-            "Class is required.",
-        });
+        return res.status(400).json({ error: "Class is required." });
       }
 
-      const {
-        session,
-        term,
-      } = await resolveActiveSessionAndTerm();
+      const { session, term } = await resolveActiveSessionAndTerm();
 
       if (!session) {
-        return res.status(400).json({
-          error:
-            "No active academic session exists.",
-        });
+        return res.status(400).json({ error: "No active academic session exists." });
       }
 
       if (!term) {
         return res.status(400).json({
-          error:
-            "No active term exists for the current academic session.",
+          error: "No active term exists for the current academic session.",
         });
       }
 
-      const {
-        data: classRecord,
-        error: classError,
-      } = await supabase
+      const { data: classRecord, error: classError } = await supabase
         .from("classes")
-        .select("id")
+        .select("id, name")
         .eq("id", classId)
+        .eq("school_id", schoolId)
         .maybeSingle();
 
-      if (classError) {
-        throw classError;
-      }
+      if (classError) throw classError;
 
       if (!classRecord) {
-        return res.status(404).json({
-          error:
-            "Selected class was not found.",
+        return res.status(404).json({ error: "Selected class was not found." });
+      }
+
+      const normalizedStudentType =
+        String(studentType || "new").trim().toLowerCase() === "returning"
+          ? "returning"
+          : "new";
+
+      const normalizedClassName = String(classRecord.name || "").trim().toUpperCase();
+      const isSeniorSecondary =
+        normalizedClassName === "SS 2" || normalizedClassName === "SS 3";
+
+      const normalizedDepartment =
+        department == null ? null : String(department).trim();
+
+      if (isSeniorSecondary && !normalizedDepartment) {
+        return res.status(400).json({
+          error: "Department is required for SS2/SS3 students.",
         });
       }
 
-      const {
-        data: existingAdmission,
-        error:
-          admissionCheckError,
-      } = await supabase
-        .from("students")
-        .select("id")
-        .eq(
-          "admission_no",
-          admissionNo
-        )
-        .maybeSingle();
-
-      if (admissionCheckError) {
-        throw admissionCheckError;
+      if (!isSeniorSecondary && normalizedDepartment) {
+        return res.status(400).json({
+          error: "Department should only be selected for SS2/SS3 students.",
+        });
       }
+
+      const allowedDepartments = ["Science", "Commercial", "Art"];
 
       if (
-        admissionNo &&
-        existingAdmission
+        isSeniorSecondary &&
+        !allowedDepartments.includes(normalizedDepartment)
       ) {
-        return res.status(409).json({
-          error:
-            "Admission number already exists.",
+        return res.status(400).json({
+          error: "Invalid department. Choose Science, Commercial, or Arts.",
         });
       }
 
-      const {
-        data: student,
-        error,
-      } = await supabase
+      // Find the exact fee structure BEFORE creating the student.
+      // This prevents incomplete registrations when a fee structure is missing.
+      let feeQuery = supabase
+        .from("fee_accounts")
+        .select("id, total_amount, student_type, department")
+        .eq("school_id", schoolId)
+        .eq("class_id", classId)
+        .eq("academic_session_id", session.id)
+        .eq("term_id", term.id)
+        .eq("student_type", normalizedStudentType)
+        .eq("is_active", true);
+
+      feeQuery = isSeniorSecondary
+        ? feeQuery.eq("department", normalizedDepartment)
+        : feeQuery.is("department", null);
+
+      const { data: feeStructure, error: feeStructureError } =
+        await feeQuery.maybeSingle();
+
+      if (feeStructureError) throw feeStructureError;
+
+      if (!feeStructure) {
+        return res.status(400).json({
+          error: isSeniorSecondary
+            ? `No active fee structure exists for ${classRecord.name} - ${normalizedStudentType} - ${normalizedDepartment}.`
+            : `No active fee structure exists for ${classRecord.name} - ${normalizedStudentType}.`,
+        });
+      }
+
+      if (admissionNo?.trim()) {
+        const { data: existingAdmission, error: admissionCheckError } =
+          await supabase
+            .from("students")
+            .select("id")
+            .eq("school_id", schoolId)
+            .eq("admission_no", admissionNo.trim())
+            .maybeSingle();
+
+        if (admissionCheckError) throw admissionCheckError;
+
+        if (existingAdmission) {
+          return res.status(409).json({
+            error: "Admission number already exists.",
+          });
+        }
+      }
+
+      const { data: student, error } = await supabase
         .from("students")
         .insert({
-          admission_no:
-            admissionNo ||
-            null,
-
-          first_name:
-            firstName.trim(),
-
-          middle_name:
-            middleName?.trim() ||
-            null,
-
-          last_name:
-            lastName.trim(),
-
-          gender:
-            gender || null,
-
-          status:
-            "Active",
-
-          student_type:
-            studentType ||
-            "returning",
-
-          date_of_birth:
-            dateOfBirth ||
-            null,
-
-          parent_name:
-            parentName?.trim() ||
-            null,
-
-          parent_relationship:
-            parentRelationship?.trim() ||
-            null,
-
-          parent_phone:
-            parentPhone?.trim() ||
-            null,
-
-          parent_email:
-            parentEmail?.trim() ||
-            null,
-
-          address:
-            address?.trim() ||
-            null,
-
-          admission_date:
-            admissionDate ||
-            null,
-
-          age:
-            age === "" ||
-            age === undefined
-              ? null
-              : Number(age),
-
-          place_of_birth:
-            placeOfBirth?.trim() ||
-            null,
-
-          nationality:
-            nationality?.trim() ||
-            null,
-
-          state_of_origin:
-            stateOfOrigin?.trim() ||
-            null,
-
-          hometown:
-            hometown?.trim() ||
-            null,
-
-          lga:
-            lga?.trim() ||
-            null,
-
-          religion:
-            religion?.trim() ||
-            null,
-
-          denomination:
-            denomination?.trim() ||
-            null,
-
-          secondary_parent_name:
-            secondaryParentName?.trim() ||
-            null,
-
-          secondary_parent_phone:
-            secondaryParentPhone?.trim() ||
-            null,
-
-          emergency_contact_name:
-            emergencyContactName?.trim() ||
-            null,
-
-          emergency_contact_phone:
-            emergencyContactPhone?.trim() ||
-            null,
-
-          previous_school:
-            previousSchool?.trim() ||
-            null,
-
-          medical_information:
-            medicalInformation?.trim() ||
-            null,
-
-          notes:
-            notes?.trim() ||
-            null,
+          school_id: schoolId,
+          admission_no: admissionNo?.trim() || null,
+          first_name: firstName.trim(),
+          middle_name: middleName?.trim() || null,
+          last_name: lastName.trim(),
+          gender: gender || null,
+          status: "Active",
+          student_type: normalizedStudentType,
+          department: isSeniorSecondary ? normalizedDepartment : null,
+          date_of_birth: dateOfBirth || null,
+          parent_name: parentName?.trim() || null,
+          parent_relationship: parentRelationship?.trim() || null,
+          parent_phone: parentPhone?.trim() || null,
+          parent_email: parentEmail?.trim() || null,
+          address: address?.trim() || null,
+          admission_date: admissionDate || null,
+          age: age === "" || age === undefined ? null : Number(age),
+          place_of_birth: placeOfBirth?.trim() || null,
+          nationality: nationality?.trim() || null,
+          state_of_origin: stateOfOrigin?.trim() || null,
+          hometown: hometown?.trim() || null,
+          lga: lga?.trim() || null,
+          religion: religion?.trim() || null,
+          denomination: denomination?.trim() || null,
+          secondary_parent_name: secondaryParentName?.trim() || null,
+          secondary_parent_phone: secondaryParentPhone?.trim() || null,
+          emergency_contact_name: emergencyContactName?.trim() || null,
+          emergency_contact_phone: emergencyContactPhone?.trim() || null,
+          previous_school: previousSchool?.trim() || null,
+          medical_information: medicalInformation?.trim() || null,
+          notes: notes?.trim() || null,
         })
         .select()
         .single();
 
-      if (error) {
-        throw error;
-      }
-
+      if (error) throw error;
       createdStudentId = student.id;
 
+      const { data: enrollment, error: enrollmentInsertError } =
+        await supabase
+          .from("student_enrollments")
+          .insert({
+            school_id: schoolId,
+            student_id: student.id,
+            session_id: session.id,
+            term_id: term.id,
+            class_id: classId,
+            status: "active",
+          })
+          .select()
+          .single();
+
+      if (enrollmentInsertError) throw enrollmentInsertError;
+
       const {
-        error:
-          enrollmentInsertError,
+        data: studentFeeAccount,
+        error: studentFeeAccountError,
       } = await supabase
-        .from(
-          "student_enrollments"
-        )
+        .from("student_fee_accounts")
         .insert({
-          student_id:
-            student.id,
+          school_id: schoolId,
+          student_id: student.id,
+          enrollment_id: enrollment.id,
+          fee_account_id: feeStructure.id,
+          total_amount: Number(feeStructure.total_amount) || 0,
+          status: "outstanding",
+        })
+        .select()
+        .single();
 
-          session_id:
-            session.id,
-
-          term_id:
-            term.id,
-
-          class_id:
-            classId,
-
-          status:
-            "active",
-        });
-
-      if (
-        enrollmentInsertError
-      ) {
-        throw enrollmentInsertError;
-      }
+      if (studentFeeAccountError) throw studentFeeAccountError;
 
       res.status(201).json({
-        message:
-          "Student created successfully.",
-
+        message: "Student created successfully.",
         student,
+        studentFeeAccount,
+        feeAllocation: {
+          feeAccountId: feeStructure.id,
+          amount: Number(feeStructure.total_amount) || 0,
+          studentType: normalizedStudentType,
+          department: normalizedDepartment,
+        },
       });
     } catch (error) {
-      console.error(
-        "CREATE STUDENT ERROR:",
-        error
-      );
+      console.error("CREATE STUDENT ERROR:", error);
 
       if (createdStudentId) {
-        const {
-          error:
-            rollbackError,
-        } = await supabase
+        const { error: rollbackError } = await supabase
           .from("students")
           .delete()
-          .eq(
-            "id",
-            createdStudentId
-          );
+          .eq("id", createdStudentId);
 
         if (rollbackError) {
-          console.error(
-            "ROLLBACK STUDENT ERROR:",
-            rollbackError
-          );
+          console.error("ROLLBACK STUDENT ERROR:", rollbackError);
         }
       }
 
@@ -4837,7 +4784,7 @@ async function getAuthenticatedStaff(req) {
     error: staffError,
   } = await supabase
     .from("teachers")
-    .select("id, employee_no, first_name, middle_name, last_name, email, role, status, auth_user_id")
+    .select("id, employee_no, first_name, middle_name, last_name, email, role, status, auth_user_id, school_id")
     .eq("auth_user_id", user.id)
     .maybeSingle();
 
