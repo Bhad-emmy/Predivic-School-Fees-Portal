@@ -571,11 +571,13 @@ tr:hover {
 
 @media (max-width: 700px) {
   body {
-    overflow-x: hidden;
+    overflow-x: visible;
   }
 
   .app {
-    height: 100vh;
+    min-height: 100dvh;
+    height: auto;
+    overflow: visible;
     flex-direction: column;
   }
 
@@ -655,7 +657,8 @@ tr:hover {
     width: 100%;
     min-height: 0;
     padding: 15px;
-    overflow-x: hidden;
+    overflow-x: visible;
+    overflow-y: visible;
   }
 
   .stats-grid {
