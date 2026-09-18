@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 
 import Dashboard from "./pages/Dashboard";
 import Students from "./pages/Students";
@@ -25,6 +25,12 @@ function App() {
 function ProtectedApp() {
   const { user, staff, loading, signOut } = useAuth();
   const [page, setPage] = useState("dashboard");
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  const navigateTo = (nextPage) => {
+    setPage(nextPage);
+    setMobileNavOpen(false);
+  };
 
   if (loading) {
     return <main className="auth-page">Loading secure session...</main>;
@@ -68,8 +74,22 @@ function ProtectedApp() {
 
   return (
     <div className="app">
+      {/* MOBILE HEADER */}
+      <header className="mobile-header">
+        <strong>MEKA School</strong>
+        <button
+          className="mobile-menu-button"
+          type="button"
+          aria-label={mobileNavOpen ? "Close menu" : "Open menu"}
+          aria-expanded={mobileNavOpen}
+          onClick={() => setMobileNavOpen((open) => !open)}
+        >
+          <span aria-hidden="true">{mobileNavOpen ? "×" : "☰"}</span>
+        </button>
+      </header>
+
       {/* SIDEBAR */}
-      <aside className="sidebar">
+      <aside className={`sidebar${mobileNavOpen ? " mobile-open" : ""}`}>
         <h2>MEKA School</h2>
 
         <div className="sidebar-user">
@@ -77,15 +97,15 @@ function ProtectedApp() {
           <span>{staff.role}</span>
         </div>
 
-        <button onClick={() => setPage("dashboard")}>Dashboard</button>
-        <button onClick={() => setPage("students")}>Students</button>
-        <button onClick={() => setPage("student-attendance")}>Student Attendance</button>
-        <button onClick={() => setPage("teacher-attendance")}>Teacher Attendance</button>
-        <button onClick={() => setPage("fees")}>Fee Accounts</button>
-        <button onClick={() => setPage("payments")}>Payments</button>
-        <button onClick={() => setPage("receipts")}>Receipts</button>
-        <button onClick={() => setPage("reports")}>Reports</button>
-        <button onClick={() => setPage("settings")}>Settings</button>
+        <button className={page === "dashboard" ? "active" : ""} onClick={() => navigateTo("dashboard")}>Dashboard</button>
+        <button className={page === "students" ? "active" : ""} onClick={() => navigateTo("students")}>Students</button>
+        <button className={page === "student-attendance" ? "active" : ""} onClick={() => navigateTo("student-attendance")}>Student Attendance</button>
+        <button className={page === "teacher-attendance" ? "active" : ""} onClick={() => navigateTo("teacher-attendance")}>Teacher Attendance</button>
+        <button className={page === "fees" ? "active" : ""} onClick={() => navigateTo("fees")}>Fee Accounts</button>
+        <button className={page === "payments" ? "active" : ""} onClick={() => navigateTo("payments")}>Payments</button>
+        <button className={page === "receipts" ? "active" : ""} onClick={() => navigateTo("receipts")}>Receipts</button>
+        <button className={page === "reports" ? "active" : ""} onClick={() => navigateTo("reports")}>Reports</button>
+        <button className={page === "settings" ? "active" : ""} onClick={() => navigateTo("settings")}>Settings</button>
 
         <button className="sidebar-signout" onClick={signOut}>
           Sign out
