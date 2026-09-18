@@ -1489,8 +1489,9 @@ export default function FeeAccounts() {
                 accounts...
               </p>
             ) : (
-              <table>
-                <thead>
+              <div className="fee-accounts-table-wrapper">
+                <table>
+                  <thead>
                   <tr>
                     <th>
                       Fee Account
@@ -1973,6 +1974,7 @@ export default function FeeAccounts() {
                 </div>
 
                 <div
+                  className="fee-items-editor"
                   style={{
                     border:
                       "1px solid #e2e8f0",
@@ -1991,6 +1993,7 @@ export default function FeeAccounts() {
                         key={
                           item.id
                         }
+                        className="fee-item-row"
                         style={{
                           display:
                             "grid",
@@ -2240,12 +2243,7 @@ export default function FeeAccounts() {
                 structures yet.
               </div>
             ) : (
-              <div
-                style={{
-                  overflowX:
-                    "auto",
-                }}
-              >
+              <div className="fee-structures-table-wrapper">
                 <table>
                   <thead>
                     <tr>
@@ -2449,7 +2447,7 @@ export default function FeeAccounts() {
           }
         >
           <div
-            className="modal-card"
+            className="modal-card assign-fee-modal-content"
             onClick={(event) =>
               event.stopPropagation()
             }
