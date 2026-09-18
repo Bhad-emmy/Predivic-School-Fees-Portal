@@ -2484,6 +2484,7 @@ export default function FeeAccounts() {
               <button
                 type="button"
                 className="modal-close"
+                aria-label="Close"
                 onClick={
                   closeAssignModal
                 }
@@ -2491,7 +2492,7 @@ export default function FeeAccounts() {
                   assigning
                 }
               >
-                {"\u20A6"}
+                ×
               </button>
             </div>
 
