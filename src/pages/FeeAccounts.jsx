@@ -62,6 +62,16 @@ export default function FeeAccounts() {
   const [activeTab, setActiveTab] =
     useState("accounts");
 
+  const [expandedStructures, setExpandedStructures] =
+    useState({});
+
+  const toggleStructure = (id) => {
+    setExpandedStructures((current) => ({
+      ...current,
+      [id]: !current[id],
+    }));
+  };
+
   // =====================================================
   // STUDENT FEE ACCOUNTS
   // =====================================================
@@ -2289,138 +2299,90 @@ export default function FeeAccounts() {
                               : undefined
                           }
                         >
-                          <td>
-                            <strong>
-                              {
-                                structure.className
-                              }
-                            </strong>
-                          </td>
-
-                          <td>
-                            {
-                              structure.session
-                            }
-                          </td>
-
-                          <td>
-                            {displayTermName(
-                              structure.term
-                            )}
-                          </td>
-
-                          <td>
-                            {structure.department || ""}
-                          </td>
-
-                          <td>
-                            {
-                              structure.studentType
-                            }
-                          </td>
-
-                          <td>
-                            {structure.isReserved ? (
-                              <span className="fee-structure-reserved-label">
-                                Awaiting official prospectus
+                          <td
+                            colSpan="8"
+                            className="fee-structure-mobile-cell"
+                          >
+                            <button
+                              type="button"
+                              className="fee-structure-mobile-summary"
+                              onClick={() => toggleStructure(structure.id)}
+                              aria-expanded={Boolean(expandedStructures[structure.id])}
+                            >
+                              <span>
+                                <strong>{structure.className}</strong>
+                                <small>
+                                  {structure.session} • {displayTermName(structure.term)}
+                                  {structure.department ? ` • ${structure.department}` : ""}
+                                  {structure.studentType ? ` • ${structure.studentType}` : ""}
+                                </small>
                               </span>
-                            ) : (
-                              structure.feeItems.map(
-                                (
-                                  item
-                                ) => (
-                                  <div
-                                    key={
-                                      item.id ||
-                                      item.name
-                                    }
-                                    style={{
-                                      display:
-                                        "flex",
-                                      justifyContent:
-                                        "space-between",
-                                      gap:
-                                        "20px",
-                                      minWidth:
-                                        "180px",
-                                      marginBottom:
-                                        "4px",
-                                    }}
-                                  >
-                                    <span>
-                                      {
-                                        item.name
-                                      }
+                              <span className="fee-structure-chevron" aria-hidden="true">
+                                {expandedStructures[structure.id] ? "−" : "+"}
+                              </span>
+                            </button>
+
+                            {expandedStructures[structure.id] && (
+                              <div className="fee-structure-mobile-details">
+                              <div className="fee-structure-mobile-grid">
+                                <div>
+                                  <span>Session</span>
+                                  <strong>{structure.session}</strong>
+                                </div>
+                                <div>
+                                  <span>Term</span>
+                                  <strong>{displayTermName(structure.term)}</strong>
+                                </div>
+                                <div>
+                                  <span>Department</span>
+                                  <strong>{structure.department || "—"}</strong>
+                                </div>
+                                <div>
+                                  <span>Student Type</span>
+                                  <strong>{structure.studentType || "—"}</strong>
+                                </div>
+                                <div className="fee-structure-mobile-items">
+                                  <span>Fee Items</span>
+                                  {structure.isReserved ? (
+                                    <strong>Awaiting official prospectus</strong>
+                                  ) : (
+                                    structure.feeItems.map((item) => (
+                                      <div key={item.id || item.name}>
+                                        <span>{item.name}</span>
+                                        <strong>{"\u20A6"}{formatMoney(item.amount)}</strong>
+                                      </div>
+                                    ))
+                                  )}
+                                </div>
+                                <div>
+                                  <span>Total</span>
+                                  <strong>{"\u20A6"}{formatMoney(structure.total)}</strong>
+                                </div>
+                                <div className="fee-structure-mobile-actions">
+                                  {structure.isReserved ? (
+                                    <span className="fee-structure-reserved-status">
+                                      Prospectus pending
                                     </span>
-
-                                    <span>
-                                      {"\u20A6"}
-                                      {formatMoney(
-                                        item.amount
-                                      )}
-                                    </span>
-                                  </div>
-                                )
-                              )
-                            )}
-                          </td>
-
-                          <td>
-                            {structure.isReserved ? (
-                              <span className="fee-structure-reserved-status">
-                                Reserved
-                              </span>
-                            ) : (
-                              <strong>
-                                {"\u20A6"}
-                                {formatMoney(
-                                  structure.total
-                                )}
-                              </strong>
-                            )}
-                          </td>
-
-                          <td>
-                            {structure.isReserved ? (
-                              <span className="fee-structure-reserved-status">
-                                Prospectus pending
-                              </span>
-                            ) : (
-                              <div
-                                style={{
-                                  display:
-                                    "flex",
-                                  gap:
-                                    "8px",
-                                }}
-                              >
-                                <button
-                                  type="button"
-                                  className="secondary-btn"
-                                  onClick={() =>
-                                    handleEditStructure(
-                                      structure
-                                    )
-                                  }
-                                >
-                                  Edit
-                                </button>
-
-                                <button
-                                  type="button"
-                                  className="secondary-btn"
-                                  onClick={() =>
-                                    handleDeleteStructure(
-                                      structure.id
-                                    )
-                                  }
-                                  style={{
-                                    color:
-                                      "#991b1b",
-                                  }}
-                                >
-                                  Delete
-                                </button>
+                                  ) : (
+                                    <>
+                                      <button
+                                        type="button"
+                                        className="secondary-btn"
+                                        onClick={() => handleEditStructure(structure)}
+                                      >
+                                        Edit
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="secondary-btn"
+                                        onClick={() => handleDeleteStructure(structure.id)}
+                                        style={{ color: "#991b1b" }}
+                                      >
+                                        Delete
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
                               </div>
                             )}
                           </td>
