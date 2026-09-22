@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 
+const AUTH_REDIRECT_URL = "https://mekaschool.vercel.app";
+
 const AuthContext = createContext(null);
 
 const getStaffRecord = async (userId) => {
@@ -91,6 +93,7 @@ export function AuthProvider({ children }) {
       email,
       password,
       options: {
+        emailRedirectTo: AUTH_REDIRECT_URL,
         data: {
           school_name: schoolName,
           first_name: firstName,
