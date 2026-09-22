@@ -1365,3 +1365,27 @@ tr:hover {
     padding: 0 4px 18px;
   }
 }
+
+.auth-switch {
+  margin-top: 18px !important;
+  margin-bottom: 0 !important;
+  text-align: center;
+}
+
+.link-btn {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #123B7A;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.link-btn:hover {
+  color: #1D4ED8;
+}
+
+.auth-success {
+  color: #15803D !important;
+}
