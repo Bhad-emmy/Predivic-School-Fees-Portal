@@ -84,6 +84,29 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const signUp = async ({ email, password, schoolName, firstName, lastName }) => {
+    setError("");
+
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          school_name: schoolName,
+          first_name: firstName,
+          last_name: lastName,
+        },
+      },
+    });
+
+    if (signUpError) {
+      setError(signUpError.message);
+      throw signUpError;
+    }
+
+    return data;
+  };
+
   const signOut = async () => {
     const { error: signOutError } = await supabase.auth.signOut();
     if (signOutError) throw signOutError;
@@ -97,6 +120,7 @@ export function AuthProvider({ children }) {
       loading,
       error,
       signIn,
+      signUp,
       signOut,
       isAdmin: staff?.role?.toLowerCase() === "admin",
     }),
