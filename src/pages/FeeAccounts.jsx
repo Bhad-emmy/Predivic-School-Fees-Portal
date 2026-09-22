@@ -1661,6 +1661,7 @@ export default function FeeAccounts() {
                   )}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         </>
