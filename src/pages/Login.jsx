@@ -1,8 +1,10 @@
 import { useState } from "react";
+import Signup from "./Signup";
 import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
   const { user, staff, error, signIn, signOut } = useAuth();
+  const [showSignup, setShowSignup] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -22,12 +24,16 @@ export default function Login() {
     }
   };
 
+  if (showSignup) {
+    return <Signup onBack={() => setShowSignup(false)} />;
+  }
+
   const isUnmappedStaff = user && !staff;
 
   return (
     <main className="auth-page">
       <section className="auth-card">
-        <h1>Predivic Schools</h1>
+        <h1>MEKA School</h1>
         <p>{isUnmappedStaff ? "Your account is signed in but has not been mapped to an active staff record." : "Sign in to access the school portal."}</p>
 
         {isUnmappedStaff ? (
@@ -36,19 +42,28 @@ export default function Login() {
             <button type="button" className="secondary-btn" onClick={signOut}>Sign out</button>
           </>
         ) : (
-          <form onSubmit={handleSubmit}>
-            <label htmlFor="email">Email</label>
-            <input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required autoComplete="email" />
+          <>
+            <form onSubmit={handleSubmit}>
+              <label htmlFor="email">Email</label>
+              <input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required autoComplete="email" />
 
-            <label htmlFor="password">Password</label>
-            <input id="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required autoComplete="current-password" />
+              <label htmlFor="password">Password</label>
+              <input id="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required autoComplete="current-password" />
 
-            {(formError || error) && <p className="auth-error">{formError || error}</p>}
+              {(formError || error) && <p className="auth-error">{formError || error}</p>}
 
-            <button type="submit" className="primary-btn" disabled={submitting}>
-              {submitting ? "Signing in..." : "Sign in"}
-            </button>
-          </form>
+              <button type="submit" className="primary-btn" disabled={submitting}>
+                {submitting ? "Signing in..." : "Sign in"}
+              </button>
+            </form>
+
+            <p className="auth-switch">
+              New school?{" "}
+              <button type="button" className="link-btn" onClick={() => setShowSignup(true)}>
+                Create an account
+              </button>
+            </p>
+          </>
         )}
       </section>
     </main>
