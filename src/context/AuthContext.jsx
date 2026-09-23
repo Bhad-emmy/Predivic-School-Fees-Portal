@@ -75,6 +75,7 @@ export function AuthProvider({ children }) {
 
   const signIn = async (email, password) => {
     setError("");
+
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -115,6 +116,9 @@ export function AuthProvider({ children }) {
     if (signOutError) throw signOutError;
   };
 
+  const isAdmin = staff?.role?.toLowerCase() === "admin";
+  const isAttendanceOnly = staff?.role?.toLowerCase() === "attendance";
+
   const value = useMemo(
     () => ({
       session,
@@ -125,9 +129,10 @@ export function AuthProvider({ children }) {
       signIn,
       signUp,
       signOut,
-      isAdmin: staff?.role?.toLowerCase() === "admin",
+      isAdmin,
+      isAttendanceOnly,
     }),
-    [session, staff, loading, error]
+    [session, staff, loading, error, isAdmin, isAttendanceOnly]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
