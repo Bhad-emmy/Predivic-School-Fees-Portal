@@ -94,6 +94,33 @@ const EMPTY_RETURNING_STUDENT = {
   className: "",
 };
 
+const STUDENT_FORM_DRAFT_KEY = "meka_school_student_form_draft_v1";
+
+const getInitialStudentDraft = () => {
+  try {
+    const saved = localStorage.getItem(STUDENT_FORM_DRAFT_KEY);
+    if (!saved) return EMPTY_NEW_STUDENT;
+
+    const parsed = JSON.parse(saved);
+
+    return {
+      ...EMPTY_NEW_STUDENT,
+      ...parsed,
+      guardian: {
+        ...EMPTY_NEW_STUDENT.guardian,
+        ...(parsed.guardian || {}),
+      },
+      admission: {
+        ...EMPTY_NEW_STUDENT.admission,
+        ...(parsed.admission || {}),
+      },
+    };
+  } catch (error) {
+    console.warn("Unable to restore student form draft.", error);
+    return EMPTY_NEW_STUDENT;
+  }
+};
+
 export default function Students() {
   const [students, setStudents] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -112,7 +139,7 @@ export default function Students() {
   const [success, setSuccess] = useState("");
 
   const [newStudent, setNewStudent] =
-    useState(EMPTY_NEW_STUDENT);
+    useState(() => getInitialStudentDraft());
 
   const [returningStudent, setReturningStudent] =
     useState(EMPTY_RETURNING_STUDENT);
@@ -210,6 +237,28 @@ export default function Students() {
     fetchStudents();
     fetchClasses();
   }, []);
+
+  // Autosave the student registration form so closing/reopening
+  // the app does not erase work that has not been submitted yet.
+  useEffect(() => {
+    const isBlank =
+      JSON.stringify(newStudent) ===
+      JSON.stringify(EMPTY_NEW_STUDENT);
+
+    if (isBlank) {
+      localStorage.removeItem(STUDENT_FORM_DRAFT_KEY);
+      return;
+    }
+
+    try {
+      localStorage.setItem(
+        STUDENT_FORM_DRAFT_KEY,
+        JSON.stringify(newStudent)
+      );
+    } catch (error) {
+      console.warn("Unable to save student form draft.", error);
+    }
+  }, [newStudent]);
 
   // ==================================================
   // NEW STUDENT CHANGE
@@ -579,6 +628,12 @@ export default function Students() {
       setNewStudent(
         EMPTY_NEW_STUDENT
       );
+
+      try {
+        localStorage.removeItem(STUDENT_FORM_DRAFT_KEY);
+      } catch (error) {
+        console.warn("Unable to clear student form draft.", error);
+      }
 
       setShowForm(false);
 
