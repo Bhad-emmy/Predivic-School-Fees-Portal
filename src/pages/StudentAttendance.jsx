@@ -405,6 +405,7 @@ export default function StudentAttendance() {
           term_id,
           class_id,
           status,
+          school_id,
           students (
             id,
             admission_no,
@@ -484,6 +485,9 @@ export default function StudentAttendance() {
 
               classId:
                 enrollment.class_id,
+
+              schoolId:
+                enrollment.school_id,
 
               className:
                 enrollment
@@ -1204,6 +1208,9 @@ export default function StudentAttendance() {
 
               term_id:
                 activeTerm.id,
+
+              school_id:
+                student.schoolId,
 
               attendance_date:
                 attendanceDate,
