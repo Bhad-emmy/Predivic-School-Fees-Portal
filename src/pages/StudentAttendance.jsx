@@ -2000,14 +2000,13 @@ export default function StudentAttendance() {
                   borderRadius: "10px",
                 }}
               >
-                <div style={{ minWidth: "760px" }}>
-                  <table
-                    style={{
-                      width: "100%",
-                      minWidth: "760px",
-                      tableLayout: "auto",
-                    }}
-                  >
+                <table
+                  style={{
+                    width: "max-content",
+                    minWidth: "760px",
+                    tableLayout: "auto",
+                  }}
+                >
                     <thead>
                       <tr>
                         <th
@@ -2186,8 +2185,7 @@ export default function StudentAttendance() {
                         );
                       })}
                     </tbody>
-                  </table>
-                </div>
+                </table>
               </div>
             </>
           ) : (
