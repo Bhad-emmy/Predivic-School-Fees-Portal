@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "../lib/supabase";
+import { getClasses, getPayments, getStudentFeeAccounts, recordPayment } from "../lib/schoolData";
 import StudentSearchSelect from "../components/StudentSearchSelect";
-
-const API_URL = "https://predivic-school-fees-portal.onrender.com";
 
 const SCHOOL_CLASS_ORDER = [
   "Creche",
@@ -56,57 +54,33 @@ export default function Payments() {
     try {
       setLoading(true);
       setError("");
-      const responses = await Promise.all([
-        fetch(API_URL + "/api/payments"),
-        fetch(API_URL + "/api/student-fee-accounts"),
-        fetch(API_URL + "/api/classes"),
-      ]);
-      const data = await Promise.all(
-        responses.map((response) => response.json())
-      );
 
-      if (!responses[0].ok) {
-        throw new Error(
-          data[0].error || "Unable to load payments."
-        );
-      }
-      if (!responses[1].ok) {
-        throw new Error(
-          data[1].error ||
-            "Unable to load fee accounts."
-        );
-      }
-      if (!responses[2].ok) {
-        throw new Error(
-          data[2].error || "Unable to load classes."
-        );
-      }
+      const [paymentsData, feeAccountsData, classesData] =
+        await Promise.all([
+          getPayments(),
+          getStudentFeeAccounts(),
+          getClasses(),
+        ]);
 
-      setPayments(data[0]);
-      setStudentFeeAccounts(data[1]);
-      const sortedClasses = [...data[2]].sort((a, b) => {
+      setPayments(paymentsData || []);
+      setStudentFeeAccounts(feeAccountsData || []);
+
+      const sortedClasses = [...(classesData || [])].sort((a, b) => {
         const orderA = SCHOOL_CLASS_ORDER.indexOf(a.name);
         const orderB = SCHOOL_CLASS_ORDER.indexOf(b.name);
 
         if (orderA === -1 && orderB === -1) {
-          return String(a.name || "").localeCompare(
-            String(b.name || "")
-          );
+          return String(a.name || "").localeCompare(String(b.name || ""));
         }
-
         if (orderA === -1) return 1;
         if (orderB === -1) return -1;
-
         return orderA - orderB;
       });
 
       setClasses(sortedClasses);
     } catch (err) {
       console.error(err);
-      setError(
-        err.message ||
-          "Unable to load payment data."
-      );
+      setError(err.message || "Unable to load payment data.");
     } finally {
       setLoading(false);
     }
@@ -245,49 +219,21 @@ export default function Payments() {
 
     try {
       setSaving(true);
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session) {
-        setError(
-          "Your session has expired. Please sign in again."
-        );
-        return;
-      }
-
-      const response = await fetch(
-        API_URL + "/api/payments",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            studentId: selectedAccount.studentId,
-            studentFeeAccountId: selectedAccount.id,
-            amount,
-            method: form.method,
-            paymentDate: form.paymentDate,
-            notes: form.notes,
-            reference: form.reference,
-          }),
-        }
-      );
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.error || "Unable to record payment."
-        );
-      }
+      const result = await recordPayment({
+        studentId: selectedAccount.studentId,
+        studentFeeAccountId: selectedAccount.id,
+        amount,
+        method: form.method,
+        paymentDate: form.paymentDate,
+        notes: form.notes,
+        reference: form.reference,
+      });
 
       setSuccess(
         "Payment recorded. Receipt number: " +
-          data.receiptNumber +
+          result.receiptNumber +
           ". Remaining balance: " +
-          formatAmount(data.balance) +
+          formatAmount(result.balance) +
           "."
       );
       setShowForm(false);
