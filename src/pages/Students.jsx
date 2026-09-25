@@ -1,6 +1,5 @@
 ﻿import { useEffect, useState } from "react";
-
-const API_URL = "https://predivic-school-fees-portal.onrender.com";
+import { getClasses, getStudents } from "../lib/schoolData";
 
 const SCHOOL_CLASS_ORDER = [
   "Creche",
@@ -160,28 +159,11 @@ export default function Students() {
   const fetchStudents = async () => {
     try {
       setLoading(true);
-
-      const response = await fetch(
-        `${API_URL}/api/students`
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.error ||
-            "Unable to load students."
-        );
-      }
-
-      setStudents(data);
+      const data = await getStudents();
+      setStudents(data || []);
     } catch (err) {
       console.error(err);
-
-      setError(
-        err.message ||
-          "Unable to load students."
-      );
+      setError(err.message || "Unable to load students.");
     } finally {
       setLoading(false);
     }
@@ -193,43 +175,21 @@ export default function Students() {
 
   const fetchClasses = async () => {
     try {
-      const response = await fetch(
-        `${API_URL}/api/classes`
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.error ||
-            "Unable to load classes."
-        );
-      }
-
-      const sortedClasses = [...data].sort((a, b) => {
+      const data = await getClasses();
+      const sortedClasses = [...(data || [])].sort((a, b) => {
         const orderA = SCHOOL_CLASS_ORDER.indexOf(a.name);
         const orderB = SCHOOL_CLASS_ORDER.indexOf(b.name);
-
         if (orderA === -1 && orderB === -1) {
-          return String(a.name || "").localeCompare(
-            String(b.name || "")
-          );
+          return String(a.name || "").localeCompare(String(b.name || ""));
         }
-
         if (orderA === -1) return 1;
         if (orderB === -1) return -1;
-
         return orderA - orderB;
       });
-
       setClasses(sortedClasses);
     } catch (err) {
       console.error(err);
-
-      setError(
-        err.message ||
-          "Unable to load classes."
-      );
+      setError(err.message || "Unable to load classes.");
     }
   };
 
