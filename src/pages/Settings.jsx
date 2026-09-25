@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { getClasses } from "../lib/schoolData";
 
 const API_URL = "https://predivic-school-fees-portal.onrender.com";
 
@@ -219,25 +220,15 @@ export default function Settings() {
                 Authorization: `Bearer ${session.access_token}`,
               },
             }),
-            fetch(`${API_URL}/api/classes`, {
-              headers: {
-                Authorization: `Bearer ${session.access_token}`,
-              },
-            }),
+            getClasses(),
           ]);
 
         const staffData = await staffResponse.json();
-        const classesData = await classesResponse.json();
+        const classesData = await classesResponse;
 
         if (!staffResponse.ok) {
           throw new Error(
             staffData.error || "Unable to load staff accounts."
-          );
-        }
-
-        if (!classesResponse.ok) {
-          throw new Error(
-            classesData.error || "Unable to load classes."
           );
         }
 
