@@ -227,7 +227,7 @@ export async function getStudentFeeAccounts() {
 export async function getPayments() {
   const { data: payments, error } = await supabase
     .from("payments")
-    .select("id, student_id, student_fee_account_id, amount, payment_date, method, reference, status, notes, created_at")
+    .select("id, student_id, student_fee_account_id, fee_account_id, amount, payment_date, method, reference, status, notes, created_at")
     .order("payment_date", { ascending: false })
     .order("created_at", { ascending: false });
 
@@ -301,13 +301,13 @@ export async function recordPayment({
   reference,
 }) {
   const { data, error } = await supabase.rpc("record_payment", {
-    p_student_id: studentId,
-    p_student_fee_account_id: studentFeeAccountId,
     p_amount: Number(amount),
     p_method: String(method || "").trim(),
-    p_payment_date: paymentDate || null,
     p_notes: notes || null,
+    p_payment_date: paymentDate || null,
     p_reference: reference || null,
+    p_student_fee_account_id: studentFeeAccountId,
+    p_student_id: studentId,
   });
 
   if (error) throw error;
@@ -317,6 +317,6 @@ export async function recordPayment({
     receiptNumber: result.receipt_number,
     totalPaid: Number(result.total_paid),
     balance: Number(result.balance),
-    status: result.account_status,
+    status: Number(result.balance) <= 0 ? "Paid" : Number(result.total_paid) > 0 ? "Part Payment" : "Unpaid",
   };
 }
