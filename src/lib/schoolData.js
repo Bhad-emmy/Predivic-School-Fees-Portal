@@ -291,6 +291,65 @@ export async function getPayments() {
   });
 }
 
+export async function getFeeStructures() {
+  const { data: feeAccounts, error } = await supabase
+    .from("fee_accounts")
+    .select("id, class_id, academic_session_id, term_id, student_type, department, total_amount, notes, is_active, created_at, updated_at")
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  if (!feeAccounts?.length) return [];
+
+  const feeAccountIds = feeAccounts.map((item) => item.id);
+  const classIds = [...new Set(feeAccounts.map((item) => item.class_id).filter(Boolean))];
+  const sessionIds = [...new Set(feeAccounts.map((item) => item.academic_session_id).filter(Boolean))];
+  const termIds = [...new Set(feeAccounts.map((item) => item.term_id).filter(Boolean))];
+
+  const [itemsResult, classesResult, sessionsResult, termsResult] = await Promise.all([
+    supabase.from("fee_items").select("id, fee_account_id, name, amount, sort_order").in("fee_account_id", feeAccountIds).order("sort_order", { ascending: true }),
+    supabase.from("classes").select("id, name").in("id", classIds),
+    supabase.from("academic_sessions").select("id, name").in("id", sessionIds),
+    supabase.from("terms").select("id, name").in("id", termIds),
+  ]);
+
+  for (const result of [itemsResult, classesResult, sessionsResult, termsResult]) {
+    if (result.error) throw result.error;
+  }
+
+  const classMap = new Map((classesResult.data || []).map((x) => [x.id, x.name]));
+  const sessionMap = new Map((sessionsResult.data || []).map((x) => [x.id, x.name]));
+  const termMap = new Map((termsResult.data || []).map((x) => [x.id, x.name]));
+  const itemsMap = new Map();
+
+  for (const item of itemsResult.data || []) {
+    if (!itemsMap.has(item.fee_account_id)) itemsMap.set(item.fee_account_id, []);
+    itemsMap.get(item.fee_account_id).push({
+      id: item.id,
+      name: item.name,
+      amount: Number(item.amount),
+      sortOrder: item.sort_order,
+    });
+  }
+
+  return feeAccounts.map((account) => ({
+    id: account.id,
+    classId: account.class_id,
+    className: classMap.get(account.class_id) || "Unknown Class",
+    academicSessionId: account.academic_session_id,
+    session: sessionMap.get(account.academic_session_id) || "",
+    termId: account.term_id,
+    term: termMap.get(account.term_id) || "",
+    studentType: account.student_type,
+    department: account.department || null,
+    total: Number(account.total_amount || 0),
+    notes: account.notes || "",
+    isActive: account.is_active,
+    feeItems: itemsMap.get(account.id) || [],
+    createdAt: account.created_at,
+    updatedAt: account.updated_at,
+  }));
+}
+
 export async function recordPayment({
   studentId,
   studentFeeAccountId,
