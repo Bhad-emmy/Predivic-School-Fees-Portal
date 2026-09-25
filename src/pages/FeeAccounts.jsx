@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import StudentSearchSelect from "../components/StudentSearchSelect";
 
-const API_URL = "https://predivic-school-fees-portal.onrender.com";
-
 const TERM_OPTIONS = [
   "First Term",
   "Second Term",
@@ -248,22 +246,7 @@ export default function FeeAccounts() {
   // =====================================================
 
   const loadStudents = async () => {
-    const response = await fetch(
-      `${API_URL}/api/students`
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data.error ||
-          "Unable to load students."
-      );
-    }
-
-    return Array.isArray(data)
-      ? data
-      : data.records || [];
+    return getStudents();
   };
 
   // =====================================================
@@ -271,22 +254,7 @@ export default function FeeAccounts() {
   // =====================================================
 
   const loadFeeAccounts = async () => {
-    const response = await fetch(
-      `${API_URL}/api/student-fee-accounts`
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data.error ||
-          "Unable to load student fee accounts."
-      );
-    }
-
-    return Array.isArray(data)
-      ? data
-      : data.records || [];
+    return getStudentFeeAccounts();
   };
 
   // =====================================================
@@ -296,159 +264,50 @@ export default function FeeAccounts() {
   const loadFeeStructures = async () => {
     try {
       setStructureLoading(true);
+      const records = await getFeeStructures();
 
-      const response = await fetch(
-        `${API_URL}/api/fee-accounts`
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.error ||
-            "Unable to load fee structures."
-        );
-      }
-
-      const records = Array.isArray(data)
-        ? data
-        : data.records || [];
-
-      const structures = records.map(
-        (record) => ({
-          id: record.id,
-
-          classId:
-            record.classId,
-
-          className:
-            record.className ||
-            "Unknown Class",
-
-          academicSessionId:
-            record.academicSessionId,
-
-          session:
-            record.session ||
-            "",
-
-          termId:
-            record.termId,
-
-          term:
-            displayTermName(
-              record.term
-            ),
-
-          studentType:
-            String(
-              record.studentType ||
-                "Returning"
-            ).toLowerCase() === "new"
-              ? "New"
-              : "Returning",
-
-          department:
-            record.department ||
-            null,
-
-          total:
-            Number(
-              record.total || 0
-            ),
-
-          notes:
-            record.notes || "",
-
-          isActive:
-            record.isActive !== false,
-
-          feeItems:
-            Array.isArray(
-              record.feeItems
-            )
-              ? record.feeItems
-              : [],
-
-          createdAt:
-            record.createdAt,
-
-          updatedAt:
-            record.updatedAt,
-        })
-      );
+      const structures = records.map((record) => ({
+        id: record.id,
+        classId: record.classId,
+        className: record.className || "Unknown Class",
+        academicSessionId: record.academicSessionId,
+        session: record.session || "",
+        termId: record.termId,
+        term: displayTermName(record.term),
+        studentType:
+          String(record.studentType || "Returning").toLowerCase() === "new"
+            ? "New"
+            : "Returning",
+        department: record.department || null,
+        total: Number(record.total || 0),
+        notes: record.notes || "",
+        isActive: record.isActive !== false,
+        feeItems: Array.isArray(record.feeItems) ? record.feeItems : [],
+        createdAt: record.createdAt,
+        updatedAt: record.updatedAt,
+      }));
 
       structures.sort((a, b) => {
-        const classA =
-          CLASS_ORDER.indexOf(
-            a.className
-          );
+        const classA = CLASS_ORDER.indexOf(a.className);
+        const classB = CLASS_ORDER.indexOf(b.className);
+        const orderA = classA === -1 ? 999 : classA;
+        const orderB = classB === -1 ? 999 : classB;
+        if (orderA !== orderB) return orderA - orderB;
 
-        const classB =
-          CLASS_ORDER.indexOf(
-            b.className
-          );
+        const departmentA = DEPARTMENT_ORDER[a.department] || 99;
+        const departmentB = DEPARTMENT_ORDER[b.department] || 99;
+        if (departmentA !== departmentB) return departmentA - departmentB;
 
-        const orderA =
-          classA === -1
-            ? 999
-            : classA;
-
-        const orderB =
-          classB === -1
-            ? 999
-            : classB;
-
-        if (orderA !== orderB) {
-          return orderA - orderB;
+        if (a.studentType !== b.studentType) {
+          return a.studentType === "Returning" ? -1 : 1;
         }
-
-        const departmentA =
-          DEPARTMENT_ORDER[
-            a.department
-          ] || 99;
-
-        const departmentB =
-          DEPARTMENT_ORDER[
-            b.department
-          ] || 99;
-
-        if (
-          departmentA !==
-          departmentB
-        ) {
-          return (
-            departmentA -
-            departmentB
-          );
-        }
-
-        if (
-          a.studentType !==
-          b.studentType
-        ) {
-          return a.studentType ===
-            "Returning"
-            ? -1
-            : 1;
-        }
-
         return 0;
       });
 
-      setFeeStructures(
-        structures
-      );
+      setFeeStructures(structures);
     } catch (err) {
-      console.error(
-        "LOAD FEE STRUCTURES ERROR:",
-        err
-      );
-
-      setError(
-        err.message ||
-          "Unable to load fee structures."
-      );
+      console.error("LOAD FEE STRUCTURES ERROR:", err);
+      setError(err.message || "Unable to load fee structures.");
     } finally {
       setStructureLoading(false);
     }
