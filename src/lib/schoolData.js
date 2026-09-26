@@ -10,11 +10,6 @@ const STUDENT_FIELDS = [
   "status",
   "student_type",
   "date_of_birth",
-  "parent_name",
-  "parent_relationship",
-  "parent_phone",
-  "parent_email",
-  "address",
   "admission_date",
   "age",
   "place_of_birth",
@@ -24,10 +19,6 @@ const STUDENT_FIELDS = [
   "lga",
   "religion",
   "denomination",
-  "secondary_parent_name",
-  "secondary_parent_phone",
-  "emergency_contact_name",
-  "emergency_contact_phone",
   "previous_school",
   "medical_information",
   "notes",
@@ -55,11 +46,6 @@ const toStudent = (student, enrollment, classMap) => ({
   studentType: student.student_type || "returning",
   dateOfBirth: student.date_of_birth || null,
   admissionDate: student.admission_date || null,
-  parentName: student.parent_name || "",
-  parentRelationship: student.parent_relationship || "",
-  parentPhone: student.parent_phone || "",
-  parentEmail: student.parent_email || "",
-  address: student.address || "",
   age: student.age ?? "",
   placeOfBirth: student.place_of_birth || "",
   nationality: student.nationality || "",
@@ -68,10 +54,6 @@ const toStudent = (student, enrollment, classMap) => ({
   lga: student.lga || "",
   religion: student.religion || "",
   denomination: student.denomination || "",
-  secondaryParentName: student.secondary_parent_name || "",
-  secondaryParentPhone: student.secondary_parent_phone || "",
-  emergencyContactName: student.emergency_contact_name || "",
-  emergencyContactPhone: student.emergency_contact_phone || "",
   previousSchool: student.previous_school || "",
   medicalInformation: student.medical_information || "",
   notes: student.notes || "",
@@ -120,6 +102,19 @@ export async function getStudents() {
   return (students || []).map((student) =>
     toStudent(student, enrollmentMap.get(student.id), classMap)
   );
+}
+
+export async function getStudentContact(studentId) {
+  if (!studentId) throw new Error("Student ID is required.");
+
+  const { data, error } = await supabase.functions.invoke("student-contact", {
+    body: { studentId },
+  });
+
+  if (error) throw error;
+  if (!data) throw new Error("Student contact details were not found.");
+
+  return data;
 }
 
 export async function getStudentFeeAccounts() {

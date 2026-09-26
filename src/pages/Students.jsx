@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState } from "react";
-import { getClasses, getStudents, createNewStudent, searchReturningStudents as searchReturningStudentsData, registerReturningStudent } from "../lib/schoolData";
+import { useAuth } from "../context/AuthContext";
+import { getClasses, getStudents, getStudentContact, createNewStudent, searchReturningStudents as searchReturningStudentsData, registerReturningStudent } from "../lib/schoolData";
 
 const SCHOOL_CLASS_ORDER = [
   "Creche",
@@ -121,7 +122,9 @@ const getInitialStudentDraft = () => {
 };
 
 export default function Students() {
+  const { isAdmin } = useAuth();
   const [students, setStudents] = useState([]);
+  const [selectedContactStudent, setSelectedContactStudent] = useState(null);
   const [classes, setClasses] = useState([]);
 
   const [loading, setLoading] = useState(true);
@@ -2097,9 +2100,25 @@ export default function Students() {
                     </td>
 
                     <td>
-                      {
+                      {isAdmin ? (
+                        <button
+                          type="button"
+                          className="student-name-link"
+                          onClick={async () => {
+                            try {
+                              const contact = await getStudentContact(student.id);
+                              setSelectedContactStudent(contact);
+                            } catch (error) {
+                              setError(error.message || "Unable to load contact details.");
+                            }
+                          }}
+                          title="View parent and emergency contacts"
+                        >
+                          {student.fullName}
+                        </button>
+                      ) : (
                         student.fullName
-                      }
+                      )}
                     </td>
 
                     <td>
@@ -2140,6 +2159,63 @@ export default function Students() {
         </table>
 
       </div>
+
+      {isAdmin && selectedContactStudent && (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="student-contact-title"
+          onClick={() => setSelectedContactStudent(null)}
+        >
+          <div
+            className="modal-card student-contact-modal"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="modal-header">
+              <div>
+                <h2 id="student-contact-title">Student Contacts</h2>
+                <p>{selectedContactStudent.fullName}</p>
+              </div>
+              <button
+                type="button"
+                className="modal-close"
+                onClick={() => setSelectedContactStudent(null)}
+                aria-label="Close contact details"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="student-contact-section">
+              <h3>Primary Parent / Guardian</h3>
+              <div className="student-contact-grid">
+                <div><span>Name</span><strong>{selectedContactStudent.parentName || "—"}</strong></div>
+                <div><span>Relationship</span><strong>{selectedContactStudent.parentRelationship || "—"}</strong></div>
+                <div><span>Phone</span><strong>{selectedContactStudent.parentPhone || "—"}</strong></div>
+                <div><span>Email</span><strong>{selectedContactStudent.parentEmail || "—"}</strong></div>
+                <div><span>Address</span><strong>{selectedContactStudent.address || "—"}</strong></div>
+              </div>
+            </div>
+
+            <div className="student-contact-section">
+              <h3>Secondary Parent / Guardian</h3>
+              <div className="student-contact-grid">
+                <div><span>Name</span><strong>{selectedContactStudent.secondaryParentName || "—"}</strong></div>
+                <div><span>Phone</span><strong>{selectedContactStudent.secondaryParentPhone || "—"}</strong></div>
+              </div>
+            </div>
+
+            <div className="student-contact-section">
+              <h3>Emergency Contact</h3>
+              <div className="student-contact-grid">
+                <div><span>Name</span><strong>{selectedContactStudent.emergencyContactName || "—"}</strong></div>
+                <div><span>Phone</span><strong>{selectedContactStudent.emergencyContactPhone || "—"}</strong></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

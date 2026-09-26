@@ -1724,3 +1724,85 @@ tr:hover {
     width: 100%;
   }
 }
+
+
+/* =========================================================
+   ADMIN STUDENT CONTACT VIEW
+========================================================= */
+
+.student-name-link {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #123B7A;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.student-name-link:hover,
+.student-name-link:focus-visible {
+  color: #2563EB;
+  text-decoration: underline;
+  outline: none;
+}
+
+.student-contact-modal {
+  max-width: 720px;
+}
+
+.student-contact-modal .modal-header p {
+  margin: 5px 0 0;
+  color: #64748B;
+  font-size: 14px;
+}
+
+.student-contact-section {
+  margin-top: 20px;
+}
+
+.student-contact-section h3 {
+  margin: 0 0 10px;
+  color: #0F172A;
+  font-size: 16px;
+}
+
+.student-contact-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.student-contact-grid > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 13px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 9px;
+}
+
+.student-contact-grid span {
+  color: #64748B;
+  font-size: 12px;
+}
+
+.student-contact-grid strong {
+  color: #0F172A;
+  font-size: 14px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 700px) {
+  .student-contact-modal {
+    width: 100%;
+  }
+
+  .student-contact-grid {
+    grid-template-columns: 1fr;
+  }
+}
