@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from "react";
-import { getClasses, getStudents } from "../lib/schoolData";
+import { getClasses, getStudents, searchReturningStudents } from "../lib/schoolData";
 
 const SCHOOL_CLASS_ORDER = [
   "Creche",
@@ -615,135 +615,26 @@ export default function Students() {
   // ==================================================
 
   const searchReturningStudents = async () => {
-    const form =
-      returningStudent;
-
-    const admissionNo =
-      form.admissionNo.trim();
-
-    const firstName =
-      form.firstName.trim();
-
-    const lastName =
-      form.lastName.trim();
-
-    const parentPhone =
-      form.parentPhone.trim();
-
-    if (
-      !admissionNo &&
-      !firstName &&
-      !lastName &&
-      !form.dateOfBirth &&
-      !parentPhone
-    ) {
-      setError(
-        "Enter an admission number, name, date of birth, or parent phone number."
-      );
+    const form = returningStudent;
+    const admissionNo = form.admissionNo.trim();
+    const firstName = form.firstName.trim();
+    const lastName = form.lastName.trim();
+    const parentPhone = form.parentPhone.trim();
+    if (!admissionNo && !firstName && !lastName && !form.dateOfBirth && !parentPhone) {
+      setError("Enter an admission number, name, date of birth, or parent phone number.");
       return;
     }
-
     try {
       setSearchingReturning(true);
-      setError("");
-      setSuccess("");
-
-      setReturningMatches([]);
-      setSelectedReturningStudent(null);
-
-      const params =
-        new URLSearchParams();
-
-      if (admissionNo) {
-        params.set(
-          "admissionNo",
-          admissionNo
-        );
-      } else {
-        if (firstName) {
-          params.set(
-            "firstName",
-            firstName
-          );
-        }
-
-        if (lastName) {
-          params.set(
-            "lastName",
-            lastName
-          );
-        }
-
-        if (form.dateOfBirth) {
-          params.set(
-            "dateOfBirth",
-            form.dateOfBirth
-          );
-        }
-
-        if (parentPhone) {
-          params.set(
-            "parentPhone",
-            parentPhone
-          );
-        }
-      }
-
-      const response = await fetch(
-        `${API_URL}/api/returning-students/search?${params.toString()}`
-      );
-
-      const data =
-        await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.error ||
-            "Unable to search for student."
-        );
-      }
-
-      const matches =
-        Array.isArray(data)
-          ? data
-          : [];
-
+      setError(""); setSuccess(""); setReturningMatches([]); setSelectedReturningStudent(null);
+      const matches = await searchReturningStudents({ admissionNo, firstName, lastName, dateOfBirth: form.dateOfBirth, parentPhone });
       setReturningMatches(matches);
-
-      if (matches.length === 0) {
-        setError(
-          "No matching existing student found."
-        );
-        return;
-      }
-
-      // IMPORTANT:
-      // If there is exactly one match,
-      // select it automatically.
-      if (matches.length === 1) {
-        setSelectedReturningStudent(
-          matches[0]
-        );
-
-        setSuccess(
-          "Existing student found and selected."
-        );
-      }
+      if (matches.length === 0) { setError("No matching existing student found."); return; }
+      if (matches.length === 1) { setSelectedReturningStudent(matches[0]); setSuccess("Existing student found and selected."); }
     } catch (err) {
-      console.error(err);
-
-      setError(
-        err.message ||
-          "Unable to search for student."
-      );
-    } finally {
-      setSearchingReturning(false);
-    }
+      console.error(err); setError(err.message || "Unable to search for student.");
+    } finally { setSearchingReturning(false); }
   };
-
-  // ==================================================
-  // SELECT RETURNING STUDENT
-  // ==================================================
 
   const selectReturningStudent = (student) => {
     setSelectedReturningStudent(
