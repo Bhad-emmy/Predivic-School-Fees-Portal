@@ -395,3 +395,111 @@ export async function searchReturningStudents({ admissionNo, firstName, lastName
   if (error) throw error;
   return data || [];
 }
+
+
+export async function registerReturningStudent({ studentId, classId }) {
+  if (!studentId) throw new Error("Student ID is required.");
+  if (!classId) throw new Error("Class is required.");
+
+  const { data: student, error: studentError } = await supabase
+    .from("students")
+    .select("id, admission_no, first_name, middle_name, last_name, status, school_id")
+    .eq("id", studentId)
+    .maybeSingle();
+
+  if (studentError) throw studentError;
+  if (!student) throw new Error("Existing student was not found.");
+  if (String(student.status || "").toLowerCase() !== "active") {
+    throw new Error("This student is not active.");
+  }
+
+  const { data: classRecord, error: classError } = await supabase
+    .from("classes")
+    .select("id, name, school_id")
+    .eq("id", classId)
+    .maybeSingle();
+
+  if (classError) throw classError;
+  if (!classRecord) throw new Error("Selected class was not found.");
+
+  const { data: session, error: sessionError } = await supabase
+    .from("academic_sessions")
+    .select("id, name, is_active, school_id")
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (sessionError) throw sessionError;
+  if (!session) throw new Error("No active academic session exists.");
+
+  const { data: term, error: termError } = await supabase
+    .from("terms")
+    .select("id, name, academic_session_id, status, school_id")
+    .eq("academic_session_id", session.id)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (termError) throw termError;
+  if (!term) throw new Error("No active term exists for the current academic session.");
+
+  const { data: existingEnrollment, error: enrollmentCheckError } = await supabase
+    .from("student_enrollments")
+    .select("id, student_id, session_id, term_id, class_id, status")
+    .eq("student_id", studentId)
+    .eq("session_id", session.id)
+    .maybeSingle();
+
+  if (enrollmentCheckError) throw enrollmentCheckError;
+
+  if (existingEnrollment) {
+    const error = new Error("This student is already enrolled for the current academic session.");
+    error.code = "ALREADY_ENROLLED";
+    error.enrollment = existingEnrollment;
+    throw error;
+  }
+
+  const { data: enrollment, error: enrollmentError } = await supabase
+    .from("student_enrollments")
+    .insert({
+      student_id: studentId,
+      session_id: session.id,
+      term_id: term.id,
+      class_id: classId,
+      status: "active",
+      school_id: student.school_id || classRecord.school_id || session.school_id || term.school_id || null,
+    })
+    .select()
+    .single();
+
+  if (enrollmentError) throw enrollmentError;
+
+  const { error: updateStudentError } = await supabase
+    .from("students")
+    .update({ student_type: "returning" })
+    .eq("id", studentId);
+
+  if (updateStudentError) {
+    console.error("UPDATE STUDENT TYPE ERROR:", updateStudentError);
+  }
+
+  return {
+    message: "Returning student registered successfully.",
+    student: {
+      id: student.id,
+      admissionNo: student.admission_no,
+      fullName: [student.first_name, student.middle_name, student.last_name]
+        .filter(Boolean)
+        .join(" "),
+    },
+    enrollment: {
+      id: enrollment.id,
+      studentId: enrollment.student_id,
+      sessionId: enrollment.session_id,
+      termId: enrollment.term_id,
+      classId: enrollment.class_id,
+      className: classRecord.name,
+      sessionName: session.name,
+      termName: term.name,
+      status: enrollment.status,
+    },
+  };
+}
