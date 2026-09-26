@@ -234,7 +234,7 @@ Deno.serve(async (req: Request) => {
         await adminClient.auth.admin.createUser({
           email,
           password,
-          email_confirm: true,
+          email_confirm: false,
         });
 
       if (createAuthError || !authResult.user) {
@@ -346,7 +346,7 @@ Deno.serve(async (req: Request) => {
         }
 
         return json({
-          message: "Staff account created successfully.",
+          message: "Staff account created successfully. The staff member must verify their email before signing in.",
           staff: {
             id: staffRecord.id,
             employeeNo: staffRecord.employee_no,
