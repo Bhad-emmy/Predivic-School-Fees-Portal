@@ -141,6 +141,11 @@ function ProtectedApp() {
         <button className="sidebar-signout" onClick={signOut}>
           Sign out
         </button>
+
+        <div className="sidebar-developer-credit" aria-label="Developer attribution">
+          <span>Powered by</span>
+          <strong>MEKA LOGIC</strong>
+        </div>
       </aside>
 
       <main className="content">{renderPage()}</main>
