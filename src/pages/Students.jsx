@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from "react";
-import { getClasses, getStudents, searchReturningStudents } from "../lib/schoolData";
+import { getClasses, getStudents, searchReturningStudents, registerReturningStudent } from "../lib/schoolData";
 
 const SCHOOL_CLASS_ORDER = [
   "Creche",
@@ -653,16 +653,12 @@ export default function Students() {
 
   const submitReturningStudent = async () => {
     if (!selectedReturningStudent) {
-      setError(
-        "Search for and select the existing student first."
-      );
+      setError("Search for and select the existing student first.");
       return;
     }
 
     if (!returningStudent.classId) {
-      setError(
-        "Please select the student's current class."
-      );
+      setError("Please select the student's current class.");
       return;
     }
 
@@ -671,61 +667,24 @@ export default function Students() {
       setError("");
       setSuccess("");
 
-      const response = await fetch(
-        `${API_URL}/api/students/returning`,
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-
-          body: JSON.stringify({
-            studentId:
-              selectedReturningStudent.id,
-
-            classId:
-              returningStudent.classId,
-          }),
-        }
-      );
-
-      const data =
-        await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.error ||
-            "Unable to register returning student."
-        );
-      }
+      const data = await registerReturningStudent({
+        studentId: selectedReturningStudent.id,
+        classId: returningStudent.classId,
+      });
 
       setSuccess(
-        data.message ||
-          "Returning student registered successfully."
+        data.message || "Returning student registered successfully."
       );
 
-      setReturningStudent(
-        EMPTY_RETURNING_STUDENT
-      );
-
+      setReturningStudent(EMPTY_RETURNING_STUDENT);
       setReturningMatches([]);
-
-      setSelectedReturningStudent(
-        null
-      );
-
+      setSelectedReturningStudent(null);
       setShowForm(false);
 
       await fetchStudents();
     } catch (err) {
       console.error(err);
-
-      setError(
-        err.message ||
-          "Unable to register returning student."
-      );
+      setError(err.message || "Unable to register returning student.");
     } finally {
       setSaving(false);
     }
