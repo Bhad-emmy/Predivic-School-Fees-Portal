@@ -15,6 +15,30 @@ const getStaffRecord = async (userId) => {
   return data;
 };
 
+const validateActiveStaffAndSchool = async (staffRecord) => {
+  if (!staffRecord) {
+    throw new Error("Your account is not authorized as school staff.");
+  }
+
+  if (String(staffRecord.status || "").toLowerCase() !== "active") {
+    throw new Error("Your staff account is inactive. Contact a school administrator.");
+  }
+
+  const { data: school, error } = await supabase
+    .from("schools")
+    .select("id, status")
+    .eq("id", staffRecord.school_id)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  if (!school || String(school.status || "").toLowerCase() !== "active") {
+    throw new Error("This school account is inactive. Contact the school administrator.");
+  }
+
+  return staffRecord;
+};
+
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [staff, setStaff] = useState(null);
@@ -33,12 +57,14 @@ export function AuthProvider({ children }) {
 
     try {
       const record = await getStaffRecord(nextSession.user.id);
-      setStaff(record);
+      const activeRecord = await validateActiveStaffAndSchool(record);
+      setStaff(activeRecord);
       setError("");
     } catch (err) {
       console.error("STAFF PROFILE LOAD ERROR:", err);
       setStaff(null);
       setError(err.message || "Unable to load the staff profile.");
+      await supabase.auth.signOut();
     } finally {
       setLoading(false);
     }
@@ -84,6 +110,7 @@ export function AuthProvider({ children }) {
       throw signInError;
     }
 
+    return data;
   };
 
   const signOut = async () => {
