@@ -2034,11 +2034,47 @@ export default function StudentAttendance() {
                             style={{
                               minWidth: 0,
                               overflowWrap: "anywhere",
+                              verticalAlign: "middle",
                             }}
                           >
                             <strong>
                               {student.fullName || "-"}
                             </strong>
+
+                            {isLocked && (
+                              <div
+                                style={{
+                                  marginTop: "4px",
+                                  fontSize: "11px",
+                                  color: "#64748b",
+                                }}
+                              >
+                                Saved
+                                {isAdmin && (
+                                  <>
+                                    {" "}
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        openOverride(student)
+                                      }
+                                      style={{
+                                        border: 0,
+                                        padding: 0,
+                                        background: "transparent",
+                                        color: "#123B7A",
+                                        fontSize: "11px",
+                                        fontWeight: 600,
+                                        textDecoration: "underline",
+                                        cursor: "pointer",
+                                      }}
+                                    >
+                                      Override
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            )}
                           </td>
 
                           <td style={{ textAlign: "center" }}>
@@ -2051,16 +2087,11 @@ export default function StudentAttendance() {
                                 )
                               }
                               disabled={isLocked}
-                              title={
-                                isLocked
-                                  ? "Attendance already saved for this date"
-                                  : "Mark Present"
-                              }
+                              aria-label={`Mark ${student.fullName} present`}
                               style={{
-                                minWidth: "0",
                                 width: "100%",
-                                maxWidth: "110px",
-                                padding: "10px 8px",
+                                maxWidth: "105px",
+                                padding: "10px 6px",
                                 borderRadius: "6px",
                                 cursor: isLocked
                                   ? "not-allowed"
@@ -2094,16 +2125,11 @@ export default function StudentAttendance() {
                                 )
                               }
                               disabled={isLocked}
-                              title={
-                                isLocked
-                                  ? "Attendance already saved for this date"
-                                  : "Mark Absent"
-                              }
+                              aria-label={`Mark ${student.fullName} absent`}
                               style={{
-                                minWidth: "0",
                                 width: "100%",
-                                maxWidth: "110px",
-                                padding: "10px 8px",
+                                maxWidth: "105px",
+                                padding: "10px 6px",
                                 borderRadius: "6px",
                                 cursor: isLocked
                                   ? "not-allowed"
@@ -2126,181 +2152,41 @@ export default function StudentAttendance() {
                               Absent
                             </button>
                           </td>
-
-                          <td style={{ display: "none" }}>
-                              <div
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: "10px",
-                                  flexWrap: "nowrap",
-                                  whiteSpace: "nowrap",
-                                  minWidth: "fit-content",
-                                }}
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    markAttendance(
-                                      student.id,
-                                      "Present"
-                                    )
-                                  }
-                                  disabled={isLocked}
-                                  title={
-                                    isLocked
-                                      ? "Attendance already saved for this date"
-                                      : "Mark Present"
-                                  }
-                                  style={{
-                                    flexShrink: 0,
-                                    minWidth: "95px",
-                                    padding: "10px 14px",
-                                    borderRadius: "6px",
-                                    cursor: isLocked
-                                      ? "not-allowed"
-                                      : "pointer",
-                                    opacity: isLocked ? 0.65 : 1,
-                                    border:
-                                      attendance[student.id] ===
-                                      "Present"
-                                        ? "2px solid #166534"
-                                        : "1px solid #d1d5db",
-                                    background:
-                                      attendance[student.id] ===
-                                      "Present"
-                                        ? "#dcfce7"
-                                        : "#fff",
-                                    color: "#166534",
-                                    fontWeight: "600",
-                                  }}
-                                >
-                                  Present
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    markAttendance(
-                                      student.id,
-                                      "Absent"
-                                    )
-                                  }
-                                  disabled={isLocked}
-                                  title={
-                                    isLocked
-                                      ? "Attendance already saved for this date"
-                                      : "Mark Absent"
-                                  }
-                                  style={{
-                                    flexShrink: 0,
-                                    minWidth: "95px",
-                                    padding: "10px 14px",
-                                    borderRadius: "6px",
-                                    cursor: isLocked
-                                      ? "not-allowed"
-                                      : "pointer",
-                                    opacity: isLocked ? 0.65 : 1,
-                                    border:
-                                      attendance[student.id] ===
-                                      "Absent"
-                                        ? "2px solid #991b1b"
-                                        : "1px solid #d1d5db",
-                                    background:
-                                      attendance[student.id] ===
-                                      "Absent"
-                                        ? "#fee2e2"
-                                        : "#fff",
-                                    color: "#991b1b",
-                                    fontWeight: "600",
-                                  }}
-                                >
-                                  Absent
-                                </button>
-
-                                {isLocked && (
-                                  <div
-                                    style={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: "7px",
-                                      flexShrink: 0,
-                                      fontSize: "11px",
-                                      color: "#64748b",
-                                    }}
-                                  >
-                                    <span>Saved</span>
-
-                                    {isAdmin && (
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          openOverride(student)
-                                        }
-                                        style={{
-                                          padding: "4px 8px",
-                                          border:
-                                            "1px solid #94a3b8",
-                                          borderRadius: "4px",
-                                          background: "#fff",
-                                          color: "#334155",
-                                          cursor: "pointer",
-                                          fontSize: "11px",
-                                        }}
-                                      >
-                                        Override
-                                      </button>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
                 </table>
               </div>
             </>
           ) : (
             <div
               style={{
-                textAlign:
-                  "center",
-                padding:
-                  "40px",
-                color:
-                  "#64748b",
+                textAlign: "center",
+                padding: "40px",
+                color: "#64748b",
               }}
             >
-              No students are
-              currently enrolled in
-              this class.
+              No students are currently enrolled in this class.
             </div>
           )}
 
-          {classStudents.length >
-            0 && (
+          {classStudents.length > 0 && (
             <div
               style={{
-                marginTop:
-                  "25px",
+                marginTop: "25px",
               }}
             >
               <button
                 type="button"
                 className="primary-btn"
-                onClick={
-                  handleSaveAttendance
-                }
+                onClick={handleSaveAttendance}
                 disabled={
                   saving ||
                   !activeTerm ||
                   classStudents.every(
                     (student) =>
-                      !!lockedAttendance[
-                        student.id
-                      ]
+                      !!lockedAttendance[student.id]
                   )
                 }
               >
