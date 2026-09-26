@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { getClasses, getStudents, getStudentContact, createNewStudent, searchReturningStudents as searchReturningStudentsData, registerReturningStudent } from "../lib/schoolData";
+import { getClasses, getStudents, getStudentContact, updateStudentContact, createNewStudent, searchReturningStudents as searchReturningStudentsData, registerReturningStudent } from "../lib/schoolData";
 
 const SCHOOL_CLASS_ORDER = [
   "Creche",
@@ -125,6 +125,7 @@ export default function Students() {
   const { isAdmin } = useAuth();
   const [students, setStudents] = useState([]);
   const [selectedContactStudent, setSelectedContactStudent] = useState(null);
+  const [savingContact, setSavingContact] = useState(false);
   const [classes, setClasses] = useState([]);
 
   const [loading, setLoading] = useState(true);
@@ -169,6 +170,52 @@ export default function Students() {
       setError(err.message || "Unable to load students.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ==================================================
+  // UPDATE STUDENT CONTACT
+  // ==================================================
+
+  const handleContactChange = (event) => {
+    const { name, value } = event.target;
+
+    setSelectedContactStudent((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  };
+
+  const saveStudentContact = async () => {
+    if (!selectedContactStudent?.id) return;
+
+    try {
+      setSavingContact(true);
+      setError("");
+      setSuccess("");
+
+      const saved = await updateStudentContact(
+        selectedContactStudent.id,
+        {
+          parentName: selectedContactStudent.parentName,
+          parentRelationship: selectedContactStudent.parentRelationship,
+          parentPhone: selectedContactStudent.parentPhone,
+          parentEmail: selectedContactStudent.parentEmail,
+          address: selectedContactStudent.address,
+          secondaryParentName: selectedContactStudent.secondaryParentName,
+          secondaryParentPhone: selectedContactStudent.secondaryParentPhone,
+          emergencyContactName: selectedContactStudent.emergencyContactName,
+          emergencyContactPhone: selectedContactStudent.emergencyContactPhone,
+        }
+      );
+
+      setSelectedContactStudent(saved);
+      setSuccess("Student contact details saved successfully.");
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "Unable to save contact details.");
+    } finally {
+      setSavingContact(false);
     }
   };
 
@@ -2166,7 +2213,7 @@ export default function Students() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="student-contact-title"
-          onClick={() => setSelectedContactStudent(null)}
+          onClick={() => !savingContact && setSelectedContactStudent(null)}
         >
           <div
             className="modal-card student-contact-modal"
@@ -2180,38 +2227,62 @@ export default function Students() {
               <button
                 type="button"
                 className="modal-close"
-                onClick={() => setSelectedContactStudent(null)}
+                onClick={() => !savingContact && setSelectedContactStudent(null)}
                 aria-label="Close contact details"
+                disabled={savingContact}
               >
                 ×
               </button>
             </div>
 
+            <p className="student-contact-edit-note">
+              Fill in missing details and save. Existing information can also be corrected here.
+            </p>
+
             <div className="student-contact-section">
               <h3>Primary Parent / Guardian</h3>
               <div className="student-contact-grid">
-                <div><span>Name</span><strong>{selectedContactStudent.parentName || "—"}</strong></div>
-                <div><span>Relationship</span><strong>{selectedContactStudent.parentRelationship || "—"}</strong></div>
-                <div><span>Phone</span><strong>{selectedContactStudent.parentPhone || "—"}</strong></div>
-                <div><span>Email</span><strong>{selectedContactStudent.parentEmail || "—"}</strong></div>
-                <div><span>Address</span><strong>{selectedContactStudent.address || "—"}</strong></div>
+                <label><span>Name</span><input name="parentName" value={selectedContactStudent.parentName || ""} onChange={handleContactChange} placeholder="Enter name" /></label>
+                <label><span>Relationship</span><input name="parentRelationship" value={selectedContactStudent.parentRelationship || ""} onChange={handleContactChange} placeholder="e.g. Father, Mother, Guardian" /></label>
+                <label><span>Phone</span><input name="parentPhone" value={selectedContactStudent.parentPhone || ""} onChange={handleContactChange} placeholder="Enter phone number" inputMode="tel" /></label>
+                <label><span>Email</span><input name="parentEmail" value={selectedContactStudent.parentEmail || ""} onChange={handleContactChange} placeholder="Enter email address" type="email" /></label>
+                <label className="student-contact-field-full"><span>Address</span><textarea name="address" value={selectedContactStudent.address || ""} onChange={handleContactChange} placeholder="Enter residential address" rows="3" /></label>
               </div>
             </div>
 
             <div className="student-contact-section">
               <h3>Secondary Parent / Guardian</h3>
               <div className="student-contact-grid">
-                <div><span>Name</span><strong>{selectedContactStudent.secondaryParentName || "—"}</strong></div>
-                <div><span>Phone</span><strong>{selectedContactStudent.secondaryParentPhone || "—"}</strong></div>
+                <label><span>Name</span><input name="secondaryParentName" value={selectedContactStudent.secondaryParentName || ""} onChange={handleContactChange} placeholder="Enter name" /></label>
+                <label><span>Phone</span><input name="secondaryParentPhone" value={selectedContactStudent.secondaryParentPhone || ""} onChange={handleContactChange} placeholder="Enter phone number" inputMode="tel" /></label>
               </div>
             </div>
 
             <div className="student-contact-section">
               <h3>Emergency Contact</h3>
               <div className="student-contact-grid">
-                <div><span>Name</span><strong>{selectedContactStudent.emergencyContactName || "—"}</strong></div>
-                <div><span>Phone</span><strong>{selectedContactStudent.emergencyContactPhone || "—"}</strong></div>
+                <label><span>Name</span><input name="emergencyContactName" value={selectedContactStudent.emergencyContactName || ""} onChange={handleContactChange} placeholder="Enter name" /></label>
+                <label><span>Phone</span><input name="emergencyContactPhone" value={selectedContactStudent.emergencyContactPhone || ""} onChange={handleContactChange} placeholder="Enter phone number" inputMode="tel" /></label>
               </div>
+            </div>
+
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="secondary-btn"
+                onClick={() => setSelectedContactStudent(null)}
+                disabled={savingContact}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="primary-btn"
+                onClick={saveStudentContact}
+                disabled={savingContact}
+              >
+                {savingContact ? "Saving..." : "Save Contact Details"}
+              </button>
             </div>
           </div>
         </div>
