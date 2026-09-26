@@ -1941,3 +1941,37 @@ body,
 .mobile-brand strong{white-space:nowrap}
 .meka-logo-mark{width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;border:2px solid #D97706;border-radius:10px;background:#D97706;color:#fff;font-size:19px;font-weight:800;line-height:1;letter-spacing:-1px}
 @media (max-width:700px){.sidebar h2{display:none}}
+
+/* MEKA LOGIC developer attribution */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-developer-credit {
+  margin-top: auto;
+  padding: 18px 12px 8px;
+  text-align: center;
+  color: rgba(255,255,255,.65);
+  font-size: 11px;
+  line-height: 1.35;
+  letter-spacing: .02em;
+}
+
+.sidebar-developer-credit span {
+  display: block;
+}
+
+.sidebar-developer-credit strong {
+  display: block;
+  margin-top: 2px;
+  color: #D97706;
+  font-size: 13px;
+  letter-spacing: .04em;
+}
+
+@media (max-width: 700px) {
+  .sidebar-developer-credit {
+    padding-bottom: 18px;
+  }
+}
