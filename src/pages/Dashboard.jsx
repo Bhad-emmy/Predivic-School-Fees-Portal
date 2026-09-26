@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { getStudents, getStudentFeeAccounts, getPayments } from "../lib/schoolData";
 
-const API_URL = "https://predivic-school-fees-portal.onrender.com";
 const formatMoney = (amount) =>
   `\u20A6${Number(amount || 0).toLocaleString("en-NG")}`;
 
