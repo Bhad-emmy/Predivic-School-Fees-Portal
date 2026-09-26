@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { getClasses } from "../lib/schoolData";
 
-const API_URL = "https://predivic-school-fees-portal.onrender.com";
-
 const DEFAULT_SETTINGS = {
   school_name: "Predivic Schools",
   address: "",
@@ -205,30 +203,17 @@ export default function Settings() {
       try {
         setStaffLoading(true);
 
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        if (!session?.access_token) {
-          throw new Error("Your session has expired. Please sign in again.");
-        }
-
-        const [staffResponse, classesResponse] =
+        const [{ data: staffData, error: staffError }, classesData] =
           await Promise.all([
-            fetch(`${API_URL}/api/staff-accounts`, {
-              headers: {
-                Authorization: `Bearer ${session.access_token}`,
-              },
+            supabase.functions.invoke("staff-accounts", {
+              body: { action: "list" },
             }),
             getClasses(),
           ]);
 
-        const staffData = await staffResponse.json();
-        const classesData = await classesResponse;
-
-        if (!staffResponse.ok) {
+        if (staffError) {
           throw new Error(
-            staffData.error || "Unable to load staff accounts."
+            staffError.message || "Unable to load staff accounts."
           );
         }
 
@@ -238,8 +223,7 @@ export default function Settings() {
 
         setClasses(
           Array.isArray(classesData) ? classesData : []
-        );
-      } catch (err) {
+        );     } catch (err) {
         console.error("STAFF ACCOUNTS LOAD ERROR:", err);
         setError(
           err.message || "Unable to load staff accounts."
@@ -314,50 +298,29 @@ export default function Settings() {
         );
       }
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const { data, error: staffError } =
+        await supabase.functions.invoke("staff-accounts", {
+          body: {
+            action: "create",
+            ...staffForm,
+          },
+        });
 
-      if (!session?.access_token) {
+      if (staffError) {
         throw new Error(
-          "Your session has expired. Please sign in again."
+          staffError.message || "Unable to create staff account."
         );
       }
 
-      const response = await fetch(
-        `${API_URL}/api/staff-accounts`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify(staffForm),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
+      if (!data?.staff) {
         throw new Error(
-          data.error || "Unable to create staff account."
+          "Staff account was created but no staff record was returned."
         );
       }
 
       setStaffAccounts((current) => [
         ...current,
-        {
-          ...data.staff,
-          fullName: [
-            data.staff.firstName,
-            data.staff.middleName,
-            data.staff.lastName,
-          ]
-            .filter(Boolean)
-            .join(" "),
-          classes: [],
-          hasAuthAccount: true,
-        },
+        data.staff,
       ]);
 
       resetStaffForm();
