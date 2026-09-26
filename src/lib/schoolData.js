@@ -876,20 +876,18 @@ export async function createNewStudent(form) {
     if (enrollmentError) throw enrollmentError;
     enrollment = enrollmentData;
 
+    // Fee-account allocation is handled by the database trigger on student_enrollments.
+    // Keeping allocation server-side prevents frontend flows from bypassing the rule.
     const { data: feeAccountData, error: feeAccountError } = await supabase
       .from("student_fee_accounts")
-      .insert({
-        school_id: schoolId,
-        student_id: student.id,
-        enrollment_id: enrollment.id,
-        fee_account_id: feeStructure.id,
-        total_amount: Number(feeStructure.total_amount) || 0,
-        status: "outstanding",
-      })
-      .select()
-      .single();
+      .select("id, student_id, enrollment_id, fee_account_id, total_amount, status")
+      .eq("enrollment_id", enrollment.id)
+      .maybeSingle();
 
     if (feeAccountError) throw feeAccountError;
+    if (!feeAccountData) {
+      throw new Error("Fee account was not allocated automatically for this registration.");
+    }
     studentFeeAccount = feeAccountData;
 
     const guardianForm = form.guardian || {};
