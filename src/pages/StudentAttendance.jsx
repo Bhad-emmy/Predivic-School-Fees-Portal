@@ -2090,9 +2090,11 @@ export default function StudentAttendance() {
                               aria-label={`Mark ${student.fullName} present`}
                               style={{
                                 width: "100%",
-                                minWidth: "115px",
-                                maxWidth: "125px",
-                                padding: "10px 8px",
+                                minWidth: 0,
+                                width: "calc(100% - 8px)",
+                                maxWidth: "none",
+                                boxSizing: "border-box",
+                                padding: "10px 6px",
                                 borderRadius: "6px",
                                 cursor: isLocked
                                   ? "not-allowed"
