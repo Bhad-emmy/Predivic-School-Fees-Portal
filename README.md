@@ -1,126 +1,82 @@
 # MEKA School
 
-A web-based school management system by MEKA.
-
-The system is designed to centralize student records, school fee management, payments, receipts, reporting, and student/staff attendance in one application.
-
----
+A web-based school management system by MEKA for student records, school fees, payments, receipts, reporting, and staff/student attendance.
 
 ## Project Status
 
 **Status:** Active Development
 
-The core student management, fee management, payment, and student attendance workflows are functional.
+The Supabase migration is complete for the current application workflows. The legacy Node.js/Express backend has been removed from the repository.
 
-The current development focus is weekly attendance analytics followed by teacher attendance.
+**Paystack has not yet been integrated.** Payment-gateway integration is planned as a separate next step.
 
----
+## Core Features
 
-## Features
+- Dashboard and school overview
+- Student registration and student records
+- Returning-student registration
+- Class and enrollment management
+- Fee structures and student fee accounts
+- Payment records and receipts
+- Financial and attendance reports
+- Student attendance
+- Teacher attendance
+- Staff account management
+- Admin, Secretary, and Teacher role restrictions
+- Multi-tenant school scoping
+- Admin-only student contact lookup and editing
+- Responsive mobile interface
 
-### Dashboard
-
-- School management overview
-- Key statistics
-- Recent payment information
-- Navigation to system modules
-
-### Student Management
-
-- Student registration
-- First Name
-- Last Name
-- Automatic Student Number from Airtable
-- Automatic Student ID
-- Parent phone number
-- Student status
-- Class assignment
-- Student list
-- Airtable-backed student records
-
-### School Classes
-
-The system supports:
-
-- Creche
-- Nursery 1
-- Nursery 2
-- Primary 1
-- Primary 2
-- Primary 3
-- Primary 4
-- Primary 5
-- JSS 1
-- JSS 2
-- JSS 3
-- SS 1
-- SS 2
-- SS 3
-
-### Fee Accounts
-
-- Student-linked fee accounts
-- Academic session
-- Term
-- Total fee
-- Airtable-backed records
-
-### Payments
-
-- Payment records
-- Student-linked payments
-- Payment tracking
-
-### Receipts
-
-- Receipt management
-- Payment-based receipt information
-
-### Reports
-
-- Financial reporting
-- Attendance reporting
-- Additional reporting functionality is under development
-
-### Student Attendance
-
-- Attendance organized by class
-- Students loaded from the student register
-- Present status
-- Absent status
-- Late status
-- Excused status
-- Attendance date
-- Student-linked attendance records
-- Airtable attendance storage
-- Duplicate attendance protection
-- Attendance recorded by school staff
-
----
-
-# System Architecture
+## System Architecture
 
 ```text
-React Frontend
-      |
-      | HTTP Requests
-      v
-Node.js / Express Backend
-      |
-      | Airtable API
-      v
-Airtable
-      |
-      +----------------------+
-      |                      |
-      v                      v
-   Students             Fee Accounts
-      |
-      +----------------------+
-      |
-      v
-   Attendance
-      |
-      v
-    Reports
+React + Vite
+    |
+    +--> Vercel
+    |
+    +--> Supabase Auth
+    |
+    +--> Supabase Database
+    |
+    +--> Supabase Edge Functions
+             |
+             +--> Protected staff-account operations
+             +--> Protected student-contact operations
+             +--> Other privileged server-side operations
+
+Paystack
+    |
+    +--> Planned payment-gateway integration
 ```
+
+## Data
+
+The application uses Supabase for the current production data layer. The migration was designed to preserve existing student records; no student-data transformation or cleanup is performed as part of the frontend migration.
+
+## Development
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Run locally:
+
+```bash
+npm run dev
+```
+
+Build for production:
+
+```bash
+npm run build
+```
+
+## Deployment
+
+- Frontend: Vercel
+- Authentication: Supabase Auth
+- Database: Supabase
+- Privileged backend operations: Supabase Edge Functions
+- Payment gateway: Paystack (planned)
