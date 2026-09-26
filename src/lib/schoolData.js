@@ -609,10 +609,18 @@ export async function createNewStudent(form) {
       admission = admissionData;
     }
   } catch (error) {
-    await supabase.from("student_fee_accounts").delete().eq("id", studentFeeAccount?.id || "__none__");
-    await supabase.from("student_enrollments").delete().eq("id", enrollment?.id || "__none__");
-    await supabase.from("guardians").delete().eq("id", guardian?.id || "__none__");
-    await supabase.from("admissions").delete().eq("id", admission?.id || "__none__");
+    if (admission?.id) {
+      await supabase.from("admissions").delete().eq("id", admission.id);
+    }
+    if (guardian?.id) {
+      await supabase.from("guardians").delete().eq("id", guardian.id);
+    }
+    if (studentFeeAccount?.id) {
+      await supabase.from("student_fee_accounts").delete().eq("id", studentFeeAccount.id);
+    }
+    if (enrollment?.id) {
+      await supabase.from("student_enrollments").delete().eq("id", enrollment.id);
+    }
     await supabase.from("students").delete().eq("id", student.id);
     throw error;
   }
