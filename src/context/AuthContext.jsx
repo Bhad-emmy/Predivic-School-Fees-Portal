@@ -34,6 +34,14 @@ export function AuthProvider({ children }) {
     }
 
     try {
+      if (!nextSession.user.email_confirmed_at) {
+        await supabase.auth.signOut();
+        setStaff(null);
+        setSession(null);
+        setError("Your email address must be verified before you can sign in.");
+        return;
+      }
+
       const record = await getStaffRecord(nextSession.user.id);
       setStaff(record);
       setError("");
@@ -76,7 +84,7 @@ export function AuthProvider({ children }) {
   const signIn = async (email, password) => {
     setError("");
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -84,6 +92,32 @@ export function AuthProvider({ children }) {
     if (signInError) {
       setError(signInError.message);
       throw signInError;
+    }
+
+    if (!data.user?.email_confirmed_at) {
+      await supabase.auth.signOut();
+      const verificationError = new Error(
+        "Your email address must be verified before you can sign in. Check your email for the verification link."
+      );
+      setError(verificationError.message);
+      throw verificationError;
+    }
+  };
+
+  const resendVerification = async (email) => {
+    setError("");
+
+    const { error: resendError } = await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: {
+        emailRedirectTo: AUTH_REDIRECT_URL,
+      },
+    });
+
+    if (resendError) {
+      setError(resendError.message);
+      throw resendError;
     }
   };
 
@@ -127,6 +161,7 @@ export function AuthProvider({ children }) {
       loading,
       error,
       signIn,
+      resendVerification,
       signUp,
       signOut,
       isAdmin,
