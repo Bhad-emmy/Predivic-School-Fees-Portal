@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from "react";
-import { getClasses, getStudents, createNewStudent, searchReturningStudents, registerReturningStudent } from "../lib/schoolData";
+import { getClasses, getStudents, createNewStudent, searchReturningStudents as searchReturningStudentsData, registerReturningStudent } from "../lib/schoolData";
 
 const SCHOOL_CLASS_ORDER = [
   "Creche",
@@ -442,7 +442,7 @@ export default function Students() {
     try {
       setSearchingReturning(true);
       setError(""); setSuccess(""); setReturningMatches([]); setSelectedReturningStudent(null);
-      const matches = await searchReturningStudents({ admissionNo, firstName, lastName, dateOfBirth: form.dateOfBirth, parentPhone });
+      const matches = await searchReturningStudentsData({ admissionNo, firstName, lastName, dateOfBirth: form.dateOfBirth, parentPhone });
       setReturningMatches(matches);
       if (matches.length === 0) { setError("No matching existing student found."); return; }
       if (matches.length === 1) { setSelectedReturningStudent(matches[0]); setSuccess("Existing student found and selected."); }
