@@ -90,7 +90,10 @@ function ProtectedApp() {
   return (
     <div className="app">
       <header className="mobile-header">
-        <strong>MEKA School</strong>
+        <div className="mobile-brand">
+          <span className="meka-logo-mark" aria-hidden="true">M</span>
+          <strong>MEKA School</strong>
+        </div>
         <button
           className="mobile-menu-button"
           type="button"
