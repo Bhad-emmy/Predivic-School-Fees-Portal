@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { getPayments } from "../lib/schoolData";
 
 const formatCurrency = (amount) =>
   `\u20A6${Number(amount || 0).toLocaleString("en-NG")}`;
