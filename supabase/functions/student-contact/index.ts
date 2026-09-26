@@ -58,6 +58,11 @@ Deno.serve(async (req: Request) => {
     return json({ error: "Invalid request body." }, 400);
   }
 
+  const action = String(body.action || "get").trim().toLowerCase();
+  if (!["get", "update"].includes(action)) {
+    return json({ error: "Unsupported action." }, 400);
+  }
+
   const studentId = String(body.studentId || "").trim();
   if (!studentId) return json({ error: "Student ID is required." }, 400);
 
@@ -73,6 +78,61 @@ Deno.serve(async (req: Request) => {
     return json({ error: "Unable to load student contact details." }, 500);
   }
   if (!student) return json({ error: "Student contact details were not found." }, 404);
+
+  if (action === "update") {
+    const updates: Record<string, string | null> = {};
+
+    const fields: Record<string, string> = {
+      parentName: "parent_name",
+      parentRelationship: "parent_relationship",
+      parentPhone: "parent_phone",
+      parentEmail: "parent_email",
+      address: "address",
+      secondaryParentName: "secondary_parent_name",
+      secondaryParentPhone: "secondary_parent_phone",
+      emergencyContactName: "emergency_contact_name",
+      emergencyContactPhone: "emergency_contact_phone",
+    };
+
+    for (const [inputKey, column] of Object.entries(fields)) {
+      if (Object.prototype.hasOwnProperty.call(body, inputKey)) {
+        const value = String(body[inputKey] ?? "").trim();
+        updates[column] = value || null;
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return json({ error: "No contact fields were provided." }, 400);
+    }
+
+    const { data: updatedStudent, error: updateError } = await adminClient
+      .from("students")
+      .update(updates)
+      .eq("id", studentId)
+      .eq("school_id", staff.school_id)
+      .select("id, admission_no, first_name, middle_name, last_name, parent_name, parent_relationship, parent_phone, parent_email, address, secondary_parent_name, secondary_parent_phone, emergency_contact_name, emergency_contact_phone")
+      .single();
+
+    if (updateError || !updatedStudent) {
+      console.error("STUDENT CONTACT UPDATE ERROR:", updateError);
+      return json({ error: "Unable to save student contact details." }, 500);
+    }
+
+    return json({
+      id: updatedStudent.id,
+      admissionNo: updatedStudent.admission_no || "",
+      fullName: [updatedStudent.first_name, updatedStudent.middle_name, updatedStudent.last_name].filter(Boolean).join(" "),
+      parentName: updatedStudent.parent_name || "",
+      parentRelationship: updatedStudent.parent_relationship || "",
+      parentPhone: updatedStudent.parent_phone || "",
+      parentEmail: updatedStudent.parent_email || "",
+      address: updatedStudent.address || "",
+      secondaryParentName: updatedStudent.secondary_parent_name || "",
+      secondaryParentPhone: updatedStudent.secondary_parent_phone || "",
+      emergencyContactName: updatedStudent.emergency_contact_name || "",
+      emergencyContactPhone: updatedStudent.emergency_contact_phone || "",
+    });
+  }
 
   return json({
     id: student.id,
