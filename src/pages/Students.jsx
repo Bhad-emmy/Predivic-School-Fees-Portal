@@ -130,6 +130,7 @@ export default function Students() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showDepartmentAllocator, setShowDepartmentAllocator] = useState(false);
 
   const [showForm, setShowForm] = useState(false);
   const [registrationType, setRegistrationType] =
@@ -578,6 +579,7 @@ export default function Students() {
 
   const resetRegistration = () => {
     setRegistrationType("new");
+    setShowDepartmentAllocator(false);
 
     setNewStudent(
       EMPTY_NEW_STUDENT
@@ -1072,17 +1074,65 @@ export default function Students() {
 
                   {(newStudent.className === "SS 2" ||
                     newStudent.className === "SS 3") && (
-                    <select
-                      name="department"
-                      value={newStudent.department}
-                      onChange={handleNewStudentChange}
-                      className="filter-select"
+                    <div
+                      style={{
+                        gridColumn: "1 / -1",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "10px",
+                        padding: "14px",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "10px",
+                        background: "#f8fafc",
+                      }}
                     >
-                      <option value="">Select Department *</option>
-                      <option value="Science">Science</option>
-                      <option value="Commercial">Commercial</option>
-                      <option value="Art">Arts</option>
-                    </select>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
+                        <div>
+                          <strong>Department Allocation</strong>
+                          <div style={{ fontSize: "12px", color: "#64748b", marginTop: "3px" }}>
+                            Required for {newStudent.className}. Select the student's department before registration.
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="secondary-btn"
+                          onClick={() => setShowDepartmentAllocator((current) => !current)}
+                        >
+                          {showDepartmentAllocator ? "Hide Departments" : "Allocate Department"}
+                        </button>
+                      </div>
+
+                      {newStudent.department && (
+                        <div style={{ fontSize: "13px", color: "#0F2A43", fontWeight: 600 }}>
+                          Selected: {newStudent.department === "Art" ? "Arts" : newStudent.department}
+                        </div>
+                      )}
+
+                      {showDepartmentAllocator && (
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "10px" }}>
+                          {[
+                            { value: "Science", label: "Science" },
+                            { value: "Commercial", label: "Commercial" },
+                            { value: "Art", label: "Arts" },
+                          ].map((department) => (
+                            <button
+                              key={department.value}
+                              type="button"
+                              className={newStudent.department === department.value ? "primary-btn" : "secondary-btn"}
+                              onClick={() => {
+                                setNewStudent((current) => ({
+                                  ...current,
+                                  department: department.value,
+                                }));
+                                setShowDepartmentAllocator(false);
+                              }}
+                            >
+                              {department.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   )}
 
                   <input
