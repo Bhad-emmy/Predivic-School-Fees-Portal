@@ -1,6 +1,5 @@
 ﻿import { useEffect, useState } from "react";
-
-const API_URL = "https://predivic-school-fees-portal.onrender.com";
+import { getClasses, getStudents, createNewStudent, searchReturningStudents as searchReturningStudentsData, registerReturningStudent } from "../lib/schoolData";
 
 const SCHOOL_CLASS_ORDER = [
   "Creche",
@@ -160,28 +159,11 @@ export default function Students() {
   const fetchStudents = async () => {
     try {
       setLoading(true);
-
-      const response = await fetch(
-        `${API_URL}/api/students`
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.error ||
-            "Unable to load students."
-        );
-      }
-
-      setStudents(data);
+      const data = await getStudents();
+      setStudents(data || []);
     } catch (err) {
       console.error(err);
-
-      setError(
-        err.message ||
-          "Unable to load students."
-      );
+      setError(err.message || "Unable to load students.");
     } finally {
       setLoading(false);
     }
@@ -193,43 +175,21 @@ export default function Students() {
 
   const fetchClasses = async () => {
     try {
-      const response = await fetch(
-        `${API_URL}/api/classes`
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.error ||
-            "Unable to load classes."
-        );
-      }
-
-      const sortedClasses = [...data].sort((a, b) => {
+      const data = await getClasses();
+      const sortedClasses = [...(data || [])].sort((a, b) => {
         const orderA = SCHOOL_CLASS_ORDER.indexOf(a.name);
         const orderB = SCHOOL_CLASS_ORDER.indexOf(b.name);
-
         if (orderA === -1 && orderB === -1) {
-          return String(a.name || "").localeCompare(
-            String(b.name || "")
-          );
+          return String(a.name || "").localeCompare(String(b.name || ""));
         }
-
         if (orderA === -1) return 1;
         if (orderB === -1) return -1;
-
         return orderA - orderB;
       });
-
       setClasses(sortedClasses);
     } catch (err) {
       console.error(err);
-
-      setError(
-        err.message ||
-          "Unable to load classes."
-      );
+      setError(err.message || "Unable to load classes.");
     }
   };
 
@@ -427,195 +387,10 @@ export default function Students() {
       setError("");
       setSuccess("");
 
-      const response = await fetch(
-        `${API_URL}/api/students`,
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-
-          body: JSON.stringify({
-            firstName:
-              form.firstName.trim(),
-
-            middleName:
-              form.middleName.trim(),
-
-            lastName:
-              form.lastName.trim(),
-
-            gender:
-              form.gender,
-
-            dateOfBirth:
-              form.dateOfBirth ||
-              null,
-
-            age:
-              form.age,
-
-            placeOfBirth:
-              form.placeOfBirth.trim(),
-
-            nationality:
-              form.nationality.trim(),
-
-            stateOfOrigin:
-              form.stateOfOrigin.trim(),
-
-            hometown:
-              form.hometown.trim(),
-
-            lga:
-              form.lga.trim(),
-
-            religion:
-              form.religion.trim(),
-
-            denomination:
-              form.denomination.trim(),
-
-            classId:
-              form.classId,
-
-            className:
-              form.className,
-
-            department:
-              form.department || null,
-
-            studentType:
-              "new",
-
-            admissionDate:
-              form.admissionDate ||
-              null,
-
-            parentName:
-              form.parentName.trim(),
-
-            parentRelationship:
-              form.parentRelationship.trim(),
-
-            parentPhone:
-              form.parentPhone.trim(),
-
-            parentEmail:
-              form.parentEmail.trim(),
-
-            address:
-              form.address.trim(),
-
-            secondaryParentName:
-              form.secondaryParentName.trim(),
-
-            secondaryParentPhone:
-              form.secondaryParentPhone.trim(),
-
-            emergencyContactName:
-              form.emergencyContactName.trim(),
-
-            emergencyContactPhone:
-              form.emergencyContactPhone.trim(),
-
-            previousSchool:
-              form.previousSchool.trim(),
-
-            medicalInformation:
-              form.medicalInformation.trim(),
-
-            notes:
-              form.notes.trim(),
-
-            guardian: {
-              fullName:
-                form.guardian.fullName.trim(),
-
-              relationship:
-                form.guardian.relationship.trim(),
-
-              residentialAddress:
-                form.guardian.residentialAddress.trim(),
-
-              contactAddress:
-                form.guardian.contactAddress.trim(),
-
-              nationality:
-                form.guardian.nationality.trim(),
-
-              state:
-                form.guardian.state.trim(),
-
-              occupation:
-                form.guardian.occupation.trim(),
-
-              religion:
-                form.guardian.religion.trim(),
-
-              denomination:
-                form.guardian.denomination.trim(),
-
-              dateOfBirth:
-                form.guardian.dateOfBirth ||
-                null,
-
-              marriageAnniversary:
-                form.guardian
-                  .marriageAnniversary ||
-                null,
-
-              medicalDeclaration:
-                form.guardian
-                  .medicalDeclaration
-                  .trim(),
-            },
-
-            admission: {
-              admissionStatus:
-                form.admission
-                  .admissionStatus,
-
-              parentDeclaration:
-                form.admission
-                  .parentDeclaration
-                  .trim(),
-
-              parentSignatureName:
-                form.admission
-                  .parentSignatureName
-                  .trim(),
-
-              declarationDate:
-                form.admission
-                  .declarationDate ||
-                null,
-
-              schoolAuthorizedBy:
-                form.admission
-                  .schoolAuthorizedBy
-                  .trim(),
-
-              schoolSignatureName:
-                form.admission
-                  .schoolSignatureName
-                  .trim(),
-            },
-          }),
-        }
-      );
-
-      const data =
-        await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.error ||
-            "Unable to create student."
-        );
-      }
+      const data = await createNewStudent({
+        ...form,
+        admissionNo: form.admissionNo || null,
+      });
 
       setSuccess(
         `New student added successfully. Admission No: ${
@@ -655,135 +430,26 @@ export default function Students() {
   // ==================================================
 
   const searchReturningStudents = async () => {
-    const form =
-      returningStudent;
-
-    const admissionNo =
-      form.admissionNo.trim();
-
-    const firstName =
-      form.firstName.trim();
-
-    const lastName =
-      form.lastName.trim();
-
-    const parentPhone =
-      form.parentPhone.trim();
-
-    if (
-      !admissionNo &&
-      !firstName &&
-      !lastName &&
-      !form.dateOfBirth &&
-      !parentPhone
-    ) {
-      setError(
-        "Enter an admission number, name, date of birth, or parent phone number."
-      );
+    const form = returningStudent;
+    const admissionNo = form.admissionNo.trim();
+    const firstName = form.firstName.trim();
+    const lastName = form.lastName.trim();
+    const parentPhone = form.parentPhone.trim();
+    if (!admissionNo && !firstName && !lastName && !form.dateOfBirth && !parentPhone) {
+      setError("Enter an admission number, name, date of birth, or parent phone number.");
       return;
     }
-
     try {
       setSearchingReturning(true);
-      setError("");
-      setSuccess("");
-
-      setReturningMatches([]);
-      setSelectedReturningStudent(null);
-
-      const params =
-        new URLSearchParams();
-
-      if (admissionNo) {
-        params.set(
-          "admissionNo",
-          admissionNo
-        );
-      } else {
-        if (firstName) {
-          params.set(
-            "firstName",
-            firstName
-          );
-        }
-
-        if (lastName) {
-          params.set(
-            "lastName",
-            lastName
-          );
-        }
-
-        if (form.dateOfBirth) {
-          params.set(
-            "dateOfBirth",
-            form.dateOfBirth
-          );
-        }
-
-        if (parentPhone) {
-          params.set(
-            "parentPhone",
-            parentPhone
-          );
-        }
-      }
-
-      const response = await fetch(
-        `${API_URL}/api/returning-students/search?${params.toString()}`
-      );
-
-      const data =
-        await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.error ||
-            "Unable to search for student."
-        );
-      }
-
-      const matches =
-        Array.isArray(data)
-          ? data
-          : [];
-
+      setError(""); setSuccess(""); setReturningMatches([]); setSelectedReturningStudent(null);
+      const matches = await searchReturningStudentsData({ admissionNo, firstName, lastName, dateOfBirth: form.dateOfBirth, parentPhone });
       setReturningMatches(matches);
-
-      if (matches.length === 0) {
-        setError(
-          "No matching existing student found."
-        );
-        return;
-      }
-
-      // IMPORTANT:
-      // If there is exactly one match,
-      // select it automatically.
-      if (matches.length === 1) {
-        setSelectedReturningStudent(
-          matches[0]
-        );
-
-        setSuccess(
-          "Existing student found and selected."
-        );
-      }
+      if (matches.length === 0) { setError("No matching existing student found."); return; }
+      if (matches.length === 1) { setSelectedReturningStudent(matches[0]); setSuccess("Existing student found and selected."); }
     } catch (err) {
-      console.error(err);
-
-      setError(
-        err.message ||
-          "Unable to search for student."
-      );
-    } finally {
-      setSearchingReturning(false);
-    }
+      console.error(err); setError(err.message || "Unable to search for student.");
+    } finally { setSearchingReturning(false); }
   };
-
-  // ==================================================
-  // SELECT RETURNING STUDENT
-  // ==================================================
 
   const selectReturningStudent = (student) => {
     setSelectedReturningStudent(
@@ -802,16 +468,12 @@ export default function Students() {
 
   const submitReturningStudent = async () => {
     if (!selectedReturningStudent) {
-      setError(
-        "Search for and select the existing student first."
-      );
+      setError("Search for and select the existing student first.");
       return;
     }
 
     if (!returningStudent.classId) {
-      setError(
-        "Please select the student's current class."
-      );
+      setError("Please select the student's current class.");
       return;
     }
 
@@ -820,61 +482,24 @@ export default function Students() {
       setError("");
       setSuccess("");
 
-      const response = await fetch(
-        `${API_URL}/api/students/returning`,
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-
-          body: JSON.stringify({
-            studentId:
-              selectedReturningStudent.id,
-
-            classId:
-              returningStudent.classId,
-          }),
-        }
-      );
-
-      const data =
-        await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.error ||
-            "Unable to register returning student."
-        );
-      }
+      const data = await registerReturningStudent({
+        studentId: selectedReturningStudent.id,
+        classId: returningStudent.classId,
+      });
 
       setSuccess(
-        data.message ||
-          "Returning student registered successfully."
+        data.message || "Returning student registered successfully."
       );
 
-      setReturningStudent(
-        EMPTY_RETURNING_STUDENT
-      );
-
+      setReturningStudent(EMPTY_RETURNING_STUDENT);
       setReturningMatches([]);
-
-      setSelectedReturningStudent(
-        null
-      );
-
+      setSelectedReturningStudent(null);
       setShowForm(false);
 
       await fetchStudents();
     } catch (err) {
       console.error(err);
-
-      setError(
-        err.message ||
-          "Unable to register returning student."
-      );
+      setError(err.message || "Unable to register returning student.");
     } finally {
       setSaving(false);
     }

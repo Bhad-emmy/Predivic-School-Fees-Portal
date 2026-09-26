@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import StudentSearchSelect from "../components/StudentSearchSelect";
-
-const API_URL = "https://predivic-school-fees-portal.onrender.com";
+import { getStudents, getStudentFeeAccounts, getFeeStructures, createFeeStructure, updateFeeStructure, deleteFeeStructure, assignFeeStructure } from "../lib/schoolData";
 
 const TERM_OPTIONS = [
   "First Term",
@@ -248,22 +247,7 @@ export default function FeeAccounts() {
   // =====================================================
 
   const loadStudents = async () => {
-    const response = await fetch(
-      `${API_URL}/api/students`
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data.error ||
-          "Unable to load students."
-      );
-    }
-
-    return Array.isArray(data)
-      ? data
-      : data.records || [];
+    return getStudents();
   };
 
   // =====================================================
@@ -271,22 +255,7 @@ export default function FeeAccounts() {
   // =====================================================
 
   const loadFeeAccounts = async () => {
-    const response = await fetch(
-      `${API_URL}/api/student-fee-accounts`
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data.error ||
-          "Unable to load student fee accounts."
-      );
-    }
-
-    return Array.isArray(data)
-      ? data
-      : data.records || [];
+    return getStudentFeeAccounts();
   };
 
   // =====================================================
@@ -296,159 +265,50 @@ export default function FeeAccounts() {
   const loadFeeStructures = async () => {
     try {
       setStructureLoading(true);
+      const records = await getFeeStructures();
 
-      const response = await fetch(
-        `${API_URL}/api/fee-accounts`
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.error ||
-            "Unable to load fee structures."
-        );
-      }
-
-      const records = Array.isArray(data)
-        ? data
-        : data.records || [];
-
-      const structures = records.map(
-        (record) => ({
-          id: record.id,
-
-          classId:
-            record.classId,
-
-          className:
-            record.className ||
-            "Unknown Class",
-
-          academicSessionId:
-            record.academicSessionId,
-
-          session:
-            record.session ||
-            "",
-
-          termId:
-            record.termId,
-
-          term:
-            displayTermName(
-              record.term
-            ),
-
-          studentType:
-            String(
-              record.studentType ||
-                "Returning"
-            ).toLowerCase() === "new"
-              ? "New"
-              : "Returning",
-
-          department:
-            record.department ||
-            null,
-
-          total:
-            Number(
-              record.total || 0
-            ),
-
-          notes:
-            record.notes || "",
-
-          isActive:
-            record.isActive !== false,
-
-          feeItems:
-            Array.isArray(
-              record.feeItems
-            )
-              ? record.feeItems
-              : [],
-
-          createdAt:
-            record.createdAt,
-
-          updatedAt:
-            record.updatedAt,
-        })
-      );
+      const structures = records.map((record) => ({
+        id: record.id,
+        classId: record.classId,
+        className: record.className || "Unknown Class",
+        academicSessionId: record.academicSessionId,
+        session: record.session || "",
+        termId: record.termId,
+        term: displayTermName(record.term),
+        studentType:
+          String(record.studentType || "Returning").toLowerCase() === "new"
+            ? "New"
+            : "Returning",
+        department: record.department || null,
+        total: Number(record.total || 0),
+        notes: record.notes || "",
+        isActive: record.isActive !== false,
+        feeItems: Array.isArray(record.feeItems) ? record.feeItems : [],
+        createdAt: record.createdAt,
+        updatedAt: record.updatedAt,
+      }));
 
       structures.sort((a, b) => {
-        const classA =
-          CLASS_ORDER.indexOf(
-            a.className
-          );
+        const classA = CLASS_ORDER.indexOf(a.className);
+        const classB = CLASS_ORDER.indexOf(b.className);
+        const orderA = classA === -1 ? 999 : classA;
+        const orderB = classB === -1 ? 999 : classB;
+        if (orderA !== orderB) return orderA - orderB;
 
-        const classB =
-          CLASS_ORDER.indexOf(
-            b.className
-          );
+        const departmentA = DEPARTMENT_ORDER[a.department] || 99;
+        const departmentB = DEPARTMENT_ORDER[b.department] || 99;
+        if (departmentA !== departmentB) return departmentA - departmentB;
 
-        const orderA =
-          classA === -1
-            ? 999
-            : classA;
-
-        const orderB =
-          classB === -1
-            ? 999
-            : classB;
-
-        if (orderA !== orderB) {
-          return orderA - orderB;
+        if (a.studentType !== b.studentType) {
+          return a.studentType === "Returning" ? -1 : 1;
         }
-
-        const departmentA =
-          DEPARTMENT_ORDER[
-            a.department
-          ] || 99;
-
-        const departmentB =
-          DEPARTMENT_ORDER[
-            b.department
-          ] || 99;
-
-        if (
-          departmentA !==
-          departmentB
-        ) {
-          return (
-            departmentA -
-            departmentB
-          );
-        }
-
-        if (
-          a.studentType !==
-          b.studentType
-        ) {
-          return a.studentType ===
-            "Returning"
-            ? -1
-            : 1;
-        }
-
         return 0;
       });
 
-      setFeeStructures(
-        structures
-      );
+      setFeeStructures(structures);
     } catch (err) {
-      console.error(
-        "LOAD FEE STRUCTURES ERROR:",
-        err
-      );
-
-      setError(
-        err.message ||
-          "Unable to load fee structures."
-      );
+      console.error("LOAD FEE STRUCTURES ERROR:", err);
+      setError(err.message || "Unable to load fee structures.");
     } finally {
       setStructureLoading(false);
     }
@@ -799,88 +659,34 @@ export default function FeeAccounts() {
   // }
   // =====================================================
 
-  const handleAssignFee = async (
-    event
-  ) => {
+  const handleAssignFee = async (event) => {
     event.preventDefault();
-
     setError("");
 
     if (!assignForm.studentId) {
-      setError(
-        "Please select a student."
-      );
+      setError("Please select a student.");
       return;
     }
 
     if (!assignForm.feeAccountId) {
-      setError(
-        "Please select a fee structure."
-      );
+      setError("Please select a fee structure.");
       return;
     }
 
     try {
       setAssigning(true);
+      await assignFeeStructure({
+        studentId: assignForm.studentId,
+        feeAccountId: assignForm.feeAccountId,
+        notes: assignForm.notes,
+      });
 
-      const payload = {
-        studentId:
-          assignForm.studentId,
-
-        feeAccountId:
-          assignForm.feeAccountId,
-
-        status:
-          "outstanding",
-
-        notes:
-          assignForm.notes.trim() ||
-          null,
-      };
-
-      const response = await fetch(
-        `${API_URL}/api/student-fee-accounts`,
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-
-          body: JSON.stringify(
-            payload
-          ),
-        }
-      );
-
-      const data =
-        await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.error ||
-            "Unable to assign fee structure."
-        );
-      }
-
-      setShowAssignModal(
-        false
-      );
-
+      setShowAssignModal(false);
       resetAssignForm();
-
       await loadFeeAccounts();
     } catch (err) {
-      console.error(
-        "ASSIGN FEE ERROR:",
-        err
-      );
-
-      setError(
-        err.message ||
-          "Unable to assign fee structure."
-      );
+      console.error("ASSIGN FEE ERROR:", err);
+      setError(err.message || "Unable to assign fee structure.");
     } finally {
       setAssigning(false);
     }
@@ -1019,140 +825,59 @@ export default function FeeAccounts() {
   // SAVE FEE STRUCTURE
   // =====================================================
 
-  const handleSaveStructure =
-    async (event) => {
-      event.preventDefault();
+  const handleSaveStructure = async (event) => {
+    event.preventDefault();
+    setError("");
 
-      setError("");
+    if (!structureForm.session || !structureForm.term || !structureForm.className) {
+      setError("Session, term and class are required.");
+      return;
+    }
 
-      if (
-        !structureForm.session ||
-        !structureForm.term ||
-        !structureForm.className
-      ) {
-        setError(
-          "Session, term and class are required."
-        );
-        return;
+    if (requiresDepartment && !structureForm.department) {
+      setError("Please select a department.");
+      return;
+    }
+
+    const validItems = structureForm.feeItems.filter(
+      (item) => item.name.trim() && Number(item.amount) > 0
+    );
+
+    if (!validItems.length) {
+      setError("Add at least one valid fee item.");
+      return;
+    }
+
+    try {
+      setStructureSaving(true);
+
+      const payload = {
+        session: structureForm.session,
+        term: apiTermName(structureForm.term),
+        className: structureForm.className,
+        department: requiresDepartment ? structureForm.department : null,
+        studentType: structureForm.studentType,
+        feeItems: validItems.map((item) => ({
+          name: item.name.trim(),
+          amount: Number(item.amount),
+        })),
+      };
+
+      if (editingStructureId) {
+        await updateFeeStructure({ id: editingStructureId, ...payload });
+      } else {
+        await createFeeStructure(payload);
       }
 
-      if (
-        requiresDepartment &&
-        !structureForm.department
-      ) {
-        setError(
-          "Please select a department."
-        );
-        return;
-      }
-
-      const validItems =
-        structureForm.feeItems.filter(
-          (item) =>
-            item.name.trim() &&
-            Number(item.amount) >
-              0
-        );
-
-      if (
-        validItems.length === 0
-      ) {
-        setError(
-          "Add at least one valid fee item."
-        );
-        return;
-      }
-
-      try {
-        setStructureSaving(
-          true
-        );
-
-        const payload = {
-          session:
-            structureForm.session,
-
-          term:
-            apiTermName(
-              structureForm.term
-            ),
-
-          className:
-            structureForm.className,
-
-          department:
-            requiresDepartment
-              ? structureForm.department
-              : null,
-
-          studentType:
-            structureForm.studentType,
-
-          feeItems:
-            validItems.map(
-              (item) => ({
-                name:
-                  item.name.trim(),
-
-                amount:
-                  Number(
-                    item.amount
-                  ),
-              })
-            ),
-        };
-
-        const url =
-          editingStructureId
-            ? `${API_URL}/api/fee-accounts/${editingStructureId}`
-            : `${API_URL}/api/fee-accounts`;
-
-        const response =
-          await fetch(url, {
-            method:
-              editingStructureId
-                ? "PUT"
-                : "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body: JSON.stringify(
-              payload
-            ),
-          });
-
-        const data =
-          await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            data.error ||
-              "Unable to save fee structure."
-          );
-        }
-
-        resetStructureForm();
-
-        await loadFeeStructures();
-      } catch (err) {
-        console.error(
-          "SAVE FEE STRUCTURE ERROR:",
-          err
-        );
-
-        setError(
-          err.message ||
-            "Unable to save fee structure."
-        );
-      } finally {
-        setStructureSaving(
-          false
-        );
-      }
-    };
+      resetStructureForm();
+      await loadFeeStructures();
+    } catch (err) {
+      console.error("SAVE FEE STRUCTURE ERROR:", err);
+      setError(err.message || "Unable to save fee structure.");
+    } finally {
+      setStructureSaving(false);
+    }
+  };
 
   // =====================================================
   // EDIT STRUCTURE
@@ -1212,66 +937,27 @@ export default function FeeAccounts() {
   // DELETE STRUCTURE
   // =====================================================
 
-  const handleDeleteStructure =
-    async (id) => {
-      const confirmed =
-        window.confirm(
-          "Delete this fee structure?"
-        );
+  const handleDeleteStructure = async (id) => {
+    const confirmed = window.confirm("Delete this fee structure?");
+    if (!confirmed) return;
 
-      if (!confirmed) {
-        return;
+    try {
+      setError("");
+      setStructureSaving(true);
+      await deleteFeeStructure(id);
+
+      if (editingStructureId === id) {
+        resetStructureForm();
       }
 
-      try {
-        setError("");
-        setStructureSaving(
-          true
-        );
-
-        const response =
-          await fetch(
-            `${API_URL}/api/fee-accounts/${id}`,
-            {
-              method:
-                "DELETE",
-            }
-          );
-
-        const data =
-          await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            data.error ||
-              "Unable to delete fee structure."
-          );
-        }
-
-        if (
-          editingStructureId ===
-          id
-        ) {
-          resetStructureForm();
-        }
-
-        await loadFeeStructures();
-      } catch (err) {
-        console.error(
-          "DELETE STRUCTURE ERROR:",
-          err
-        );
-
-        setError(
-          err.message ||
-            "Unable to delete fee structure."
-        );
-      } finally {
-        setStructureSaving(
-          false
-        );
-      }
-    };
+      await loadFeeStructures();
+    } catch (err) {
+      console.error("DELETE FEE STRUCTURE ERROR:", err);
+      setError(err.message || "Unable to delete fee structure.");
+    } finally {
+      setStructureSaving(false);
+    }
+  };
 
   // =====================================================
   // RENDER

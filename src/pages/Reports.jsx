@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
-
-const API_URL = "https://predivic-school-fees-portal.onrender.com";
+import { getPayments, getStudentFeeAccounts, getStudents } from "../lib/schoolData";
 
 const formatMoney = (amount) =>
   `\u20A6${Number(amount || 0).toLocaleString("en-NG")}`;
@@ -39,99 +38,31 @@ export default function Reports() {
       setLoading(true);
       setError("");
 
-      const [
-        studentsResponse,
-        feeAccountsResponse,
-        paymentsResponse,
-        attendanceResponse,
-      ] = await Promise.all([
-        fetch(`${API_URL}/api/students`),
-        fetch(`${API_URL}/api/student-fee-accounts`),
-        fetch(`${API_URL}/api/payments`),
-
-        supabase
-          .from("student_attendance")
-          .select(`
-            id,
-            student_id,
-            class_id,
-            attendance_date,
-            status
-          `)
-          .order("attendance_date", {
-            ascending: false,
-          })
-          .limit(5000),
-      ]);
-
-      const studentsData =
-        await studentsResponse.json();
-
-      const feeAccountsData =
-        await feeAccountsResponse.json();
-
-      const paymentsData =
-        await paymentsResponse.json();
-
-      if (!studentsResponse.ok) {
-        throw new Error(
-          studentsData.error ||
-            "Unable to load students."
-        );
-      }
-
-      if (!feeAccountsResponse.ok) {
-        throw new Error(
-          feeAccountsData.error ||
-            "Unable to load fee accounts."
-        );
-      }
-
-      if (!paymentsResponse.ok) {
-        throw new Error(
-          paymentsData.error ||
-            "Unable to load payments."
-        );
-      }
+      const [studentsData, feeAccountsData, paymentsData, attendanceResponse] =
+        await Promise.all([
+          getStudents(),
+          getStudentFeeAccounts(),
+          getPayments(),
+          supabase
+            .from("student_attendance")
+            .select("id, student_id, class_id, attendance_date, status")
+            .order("attendance_date", { ascending: false })
+            .limit(5000),
+        ]);
 
       if (attendanceResponse.error) {
         throw new Error(
-          attendanceResponse.error.message ||
-            "Unable to load attendance."
+          attendanceResponse.error.message || "Unable to load attendance."
         );
       }
 
-      setStudents(
-        Array.isArray(studentsData)
-          ? studentsData
-          : studentsData.records || []
-      );
-
-      setFeeAccounts(
-        Array.isArray(feeAccountsData)
-          ? feeAccountsData
-          : feeAccountsData.records || []
-      );
-
-      setPayments(
-        Array.isArray(paymentsData)
-          ? paymentsData
-          : paymentsData.records || []
-      );
-
-      setAttendance(
-        attendanceResponse.data || []
-      );
+      setStudents(studentsData || []);
+      setFeeAccounts(feeAccountsData || []);
+      setPayments(paymentsData || []);
+      setAttendance(attendanceResponse.data || []);
     } catch (err) {
-      console.error(
-        "REPORTS LOAD ERROR:",
-        err
-      );
-
-      setError(
-        err.message ||
-          "Unable to load reports."
-      );
+      console.error("REPORTS LOAD ERROR:", err);
+      setError(err.message || "Unable to load reports.");
     } finally {
       setLoading(false);
     }

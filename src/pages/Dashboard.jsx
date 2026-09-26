@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { getStudents, getStudentFeeAccounts, getPayments } from "../lib/schoolData";
 
 const API_URL = "https://predivic-school-fees-portal.onrender.com";
 const formatMoney = (amount) =>
@@ -42,102 +43,29 @@ export default function Dashboard() {
       setLoading(true);
       setError("");
 
-      const [
-        studentsResponse,
-        feeAccountsResponse,
-        paymentsResponse,
-        attendanceResponse,
-      ] = await Promise.all([
-        fetch(`${API_URL}/api/students`),
-        fetch(`${API_URL}/api/student-fee-accounts`),
-        fetch(`${API_URL}/api/payments`),
-
-        supabase
-          .from("student_attendance")
-          .select(`
-            id,
-            student_id,
-            class_id,
-            attendance_date,
-            status
-          `)
-          .order("attendance_date", {
-            ascending: false,
-          })
-          .limit(1000),
-      ]);
-
-      const studentsData =
-        await studentsResponse.json();
-
-      const feeAccountsData =
-        await feeAccountsResponse.json();
-
-      const paymentsData =
-        await paymentsResponse.json();
-
-      const attendanceResult =
-        attendanceResponse;
-
-      if (!studentsResponse.ok) {
-        throw new Error(
-          studentsData.error ||
-            "Unable to load students."
-        );
-      }
-
-      if (!feeAccountsResponse.ok) {
-        throw new Error(
-          feeAccountsData.error ||
-            "Unable to load fee accounts."
-        );
-      }
-
-      if (!paymentsResponse.ok) {
-        throw new Error(
-          paymentsData.error ||
-            "Unable to load payments."
-        );
-      }
+      const [studentsData, feeAccountsData, paymentsData, attendanceResult] =
+        await Promise.all([
+          getStudents(),
+          getStudentFeeAccounts(),
+          getPayments(),
+          supabase
+            .from("student_attendance")
+            .select("id, student_id, class_id, attendance_date, status")
+            .order("attendance_date", { ascending: false })
+            .limit(1000),
+        ]);
 
       if (attendanceResult.error) {
-        console.warn(
-          "Attendance could not be loaded:",
-          attendanceResult.error
-        );
+        console.warn("Attendance could not be loaded:", attendanceResult.error);
       }
 
-      setStudents(
-        Array.isArray(studentsData)
-          ? studentsData
-          : studentsData.records || []
-      );
-
-      setFeeAccounts(
-        Array.isArray(feeAccountsData)
-          ? feeAccountsData
-          : feeAccountsData.records || []
-      );
-
-      setPayments(
-        Array.isArray(paymentsData)
-          ? paymentsData
-          : paymentsData.records || []
-      );
-
-      setAttendance(
-        attendanceResult.data || []
-      );
+      setStudents(studentsData || []);
+      setFeeAccounts(feeAccountsData || []);
+      setPayments(paymentsData || []);
+      setAttendance(attendanceResult.data || []);
     } catch (err) {
-      console.error(
-        "DASHBOARD LOAD ERROR:",
-        err
-      );
-
-      setError(
-        err.message ||
-          "Unable to load dashboard data."
-      );
+      console.error("DASHBOARD LOAD ERROR:", err);
+      setError(err.message || "Unable to load dashboard data.");
     } finally {
       setLoading(false);
     }

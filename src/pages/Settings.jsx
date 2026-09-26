@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { getClasses } from "../lib/schoolData";
 
 const API_URL = "https://predivic-school-fees-portal.onrender.com";
 
@@ -219,25 +220,15 @@ export default function Settings() {
                 Authorization: `Bearer ${session.access_token}`,
               },
             }),
-            fetch(`${API_URL}/api/classes`, {
-              headers: {
-                Authorization: `Bearer ${session.access_token}`,
-              },
-            }),
+            getClasses(),
           ]);
 
         const staffData = await staffResponse.json();
-        const classesData = await classesResponse.json();
+        const classesData = await classesResponse;
 
         if (!staffResponse.ok) {
           throw new Error(
             staffData.error || "Unable to load staff accounts."
-          );
-        }
-
-        if (!classesResponse.ok) {
-          throw new Error(
-            classesData.error || "Unable to load classes."
           );
         }
 
@@ -662,7 +653,7 @@ export default function Settings() {
           </div>
         </div>
 
-        <div className="settings-section">
+        <div id="settings-loading" className="settings-section">
           <p>Loading settings...</p>
         </div>
       </div>
@@ -699,11 +690,55 @@ export default function Settings() {
         </div>
       )}
 
+
+      <nav
+        className="settings-navigation"
+        aria-label="Settings sections"
+        style={{
+          position: "sticky",
+          top: "12px",
+          zIndex: 10,
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "8px",
+          padding: "10px",
+          marginBottom: "20px",
+          background: "var(--card, #fff)",
+          border: "1px solid rgba(0,0,0,0.08)",
+          borderRadius: "12px",
+          boxShadow: "0 4px 16px rgba(0,0,0,0.06)",
+        }}
+      >
+        {[
+          ["account", "Account"],
+          ["school", "School"],
+          ["receipts", "Receipts"],
+          ["staff", "Staff & Access"],
+          ["security", "Security"],
+          ["system", "System"],
+        ].map(([id, label]) => (
+          <a
+            key={id}
+            href={`#settings-${id}`}
+            style={{
+              padding: "8px 12px",
+              borderRadius: "8px",
+              textDecoration: "none",
+              fontWeight: 600,
+              fontSize: "14px",
+              color: "inherit",
+              background: "rgba(0,0,0,0.04)",
+            }}
+          >
+            {label}
+          </a>
+        ))}
+      </nav>
       {/* =================================================
           ACCOUNT
       ================================================= */}
 
-      <div className="settings-section">
+      <div id="settings-account" className="settings-section">
 
         <div className="settings-section-header">
           <div>
@@ -756,15 +791,14 @@ export default function Settings() {
           PASSWORD
       ================================================= */}
 
-      <div className="settings-section">
+      <div id="settings-password" className="settings-section">
 
         <div className="settings-section-header">
           <div>
-            <h2>Change Password</h2>
+            <h2>Account Security</h2>
 
             <p>
-              Update the password for your
-              authenticated account.
+              Manage the password for your authenticated account.
             </p>
           </div>
         </div>
@@ -833,7 +867,7 @@ export default function Settings() {
           SCHOOL CONFIGURATION
       ================================================= */}
 
-      <div className="settings-section">
+      <div id="settings-school" className="settings-section">
 
         <div className="settings-section-header">
           <div>
@@ -1086,7 +1120,7 @@ export default function Settings() {
           RECEIPT
       ================================================= */}
 
-      <div className="settings-section">
+      <div id="settings-receipts" className="settings-section">
 
         <div className="settings-section-header">
           <div>
@@ -1283,7 +1317,7 @@ export default function Settings() {
       ================================================= */}
 
       {isAdmin && (
-        <div className="settings-section">
+        <div id="settings-staff" className="settings-section">
 
           <div className="settings-section-header">
             <div>
@@ -1293,8 +1327,7 @@ export default function Settings() {
 
               <p>
                 Create authenticated Admin, Secretary,
-                and Teacher accounts. Teacher accounts can
-                be assigned to any of the 16 classes.
+                and Teacher accounts. Teacher accounts can be assigned to one or more classes configured for this school.
               </p>
             </div>
 
@@ -1573,14 +1606,14 @@ export default function Settings() {
           SECURITY
       ================================================= */}
 
-      <div className="settings-section">
+      <div id="settings-security" className="settings-section">
 
         <div className="settings-section-header">
           <div>
             <h2>Security</h2>
 
             <p>
-              Current authorization controls.
+              Authentication, permissions, and data-access controls.
             </p>
           </div>
         </div>
@@ -1654,7 +1687,7 @@ export default function Settings() {
           SYSTEM INFORMATION
       ================================================= */}
 
-      <div className="settings-section">
+      <div id="settings-system" className="settings-section">
 
         <div className="settings-section-header">
           <div>
@@ -1663,7 +1696,7 @@ export default function Settings() {
             </h2>
 
             <p>
-              Current Predvic Schools
+              Current MEKA School
               technology stack.
             </p>
           </div>
@@ -1673,34 +1706,43 @@ export default function Settings() {
 
           <div className="settings-item">
             <span>Frontend</span>
-
-            <strong>
-              React + Vite
-            </strong>
+            <strong>React + Vite</strong>
           </div>
 
           <div className="settings-item">
-            <span>Backend</span>
-
-            <strong>
-              Node.js + Express
-            </strong>
+            <span>Hosting</span>
+            <strong>Vercel</strong>
           </div>
 
           <div className="settings-item">
             <span>Database</span>
+            <strong>Supabase PostgreSQL</strong>
+          </div>
 
-            <strong>
-              Supabase PostgreSQL
-            </strong>
+          <div className="settings-item">
+            <span>Authentication</span>
+            <strong>Supabase Auth</strong>
+          </div>
+
+          <div className="settings-item">
+            <span>Payments</span>
+            <strong>Paystack</strong>
+          </div>
+
+          <div className="settings-item">
+            <span>Source Control</span>
+            <strong>GitHub</strong>
+          </div>
+
+          <div className="settings-item">
+            <span>Legacy Service</span>
+            <strong>Node.js + Express</strong>
+            <small>Temporary: remaining staff-account operations are being migrated.</small>
           </div>
 
           <div className="settings-item">
             <span>Receipt Printer</span>
-
-            <strong>
-              80mm Thermal
-            </strong>
+            <strong>80mm Thermal</strong>
           </div>
 
         </div>

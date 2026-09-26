@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 
-const API_URL = "https://predivic-school-fees-portal.onrender.com";
-
 const formatCurrency = (amount) =>
   `\u20A6${Number(amount || 0).toLocaleString("en-NG")}`;
 
@@ -309,14 +307,8 @@ export default function Receipts() {
   useEffect(() => {
     const loadPayments = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/payments`);
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || "Unable to load receipts.");
-        }
-
-        setPayments(data);
+        const data = await getPayments();
+        setPayments(data || []);
       } catch (err) {
         console.error(err);
         setError(err.message || "Unable to load receipts.");
