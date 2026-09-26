@@ -234,34 +234,60 @@ export default function Reports() {
   ===================================================== */
 
   const financeSummary = useMemo(() => {
-    const expected = feeAccounts.reduce(
+    // Expected fees are scoped to the selected class, but not to the
+    // payment-date filter. A date range describes collections during
+    // that period; it should not make a student's total school fee
+    // disappear from the expected-fee figure.
+    const classFilteredFeeAccounts = feeAccounts.filter((account) => {
+      return (
+        classFilter === "all" ||
+        account.className === classFilter
+      );
+    });
+
+    const expected = classFilteredFeeAccounts.reduce(
       (sum, account) =>
         sum +
         Number(account.totalAmount || 0),
       0
     );
 
-    const collected =
-      filteredPayments.reduce(
-        (sum, payment) =>
-          sum +
-          Number(payment.amount || 0),
-        0
+    const classFilteredPayments = payments.filter((payment) => {
+      return (
+        classFilter === "all" ||
+        payment.className === classFilter
       );
+    });
+
+    const totalCollected = classFilteredPayments.reduce(
+      (sum, payment) =>
+        sum +
+        Number(payment.amount || 0),
+      0
+    );
+
+    const collectedInPeriod = filteredPayments.reduce(
+      (sum, payment) =>
+        sum +
+        Number(payment.amount || 0),
+      0
+    );
 
     const outstanding = Math.max(
-      expected - collected,
+      expected - totalCollected,
       0
     );
 
     return {
       expected,
-      collected,
+      collected: collectedInPeriod,
       outstanding,
     };
   }, [
     feeAccounts,
+    payments,
     filteredPayments,
+    classFilter,
   ]);
 
   /* =====================================================
@@ -514,7 +540,7 @@ export default function Reports() {
             </div>
 
             <div className="report-summary-card">
-              <span>Total Collected</span>
+              <span>Collected in Period</span>
 
               <strong>
                 {formatMoney(
