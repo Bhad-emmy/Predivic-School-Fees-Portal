@@ -108,11 +108,28 @@ export async function getStudentContact(studentId) {
   if (!studentId) throw new Error("Student ID is required.");
 
   const { data, error } = await supabase.functions.invoke("student-contact", {
-    body: { studentId },
+    body: { action: "get", studentId },
   });
 
   if (error) throw error;
   if (!data) throw new Error("Student contact details were not found.");
+
+  return data;
+}
+
+export async function updateStudentContact(studentId, contact) {
+  if (!studentId) throw new Error("Student ID is required.");
+
+  const { data, error } = await supabase.functions.invoke("student-contact", {
+    body: {
+      action: "update",
+      studentId,
+      ...contact,
+    },
+  });
+
+  if (error) throw error;
+  if (!data) throw new Error("Student contact details could not be saved.");
 
   return data;
 }
