@@ -73,6 +73,20 @@ Deno.serve(async (req: Request) => {
     return json({ error: "Your staff account is not linked to a school." }, 403);
   }
 
+  const { data: school, error: schoolError } = await adminClient
+    .from("schools")
+    .select("id, name, status")
+    .eq("id", schoolId)
+    .maybeSingle();
+
+  if (schoolError || !school) {
+    return json({ error: "Your school could not be found." }, 403);
+  }
+
+  if (String(school.status || "").toLowerCase() !== "active") {
+    return json({ error: "This school is not active." }, 403);
+  }
+
   let body: Record<string, unknown>;
   try {
     body = await req.json();
@@ -332,6 +346,21 @@ Deno.serve(async (req: Request) => {
         if (savedAssignmentError) throw savedAssignmentError;
 
         const savedClassIds = (savedAssignments || []).map((item) => item.class_id);
+
+        const { error: auditError } = await adminClient
+          .from("staff_account_audit_logs")
+          .insert({
+            school_id: schoolId,
+            actor_auth_user_id: authData.user.id,
+            actor_teacher_id: authenticatedStaff.id,
+            target_teacher_id: staffRecord.id,
+            target_auth_user_id: authUserId,
+            action: existingAccount ? "STAFF_ACCOUNT_AUTHORIZED" : "STAFF_ACCOUNT_CREATED",
+            target_email: staffRecord.email,
+            target_role: staffRecord.role,
+          });
+
+        if (auditError) throw auditError;
         let savedClasses: Array<{ id: string; name: string }> = [];
 
         if (savedClassIds.length > 0) {
