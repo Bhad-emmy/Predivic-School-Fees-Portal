@@ -23,7 +23,7 @@ function App() {
 }
 
 function ProtectedApp() {
-  const { user, staff, loading, signOut, isAttendanceOnly } = useAuth();
+  const { user, staff, loading, signOut, isAdmin, isAttendanceOnly } = useAuth();
   const [page, setPage] = useState("dashboard");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
@@ -48,9 +48,18 @@ function ProtectedApp() {
     return <Login />;
   }
 
+  const role = String(staff?.role || "").toLowerCase();
+  const isSecretary = role === "secretary";
+  const isTeacherRole = role === "teacher" || role === "attendance";
+  const isRestrictedStaff = isTeacherRole && !isAdmin;
+
   const renderPage = () => {
-    if (isAttendanceOnly) {
+    if (isRestrictedStaff) {
       return <StudentAttendance />;
+    }
+
+    if (isSecretary && page === "settings") {
+      return <Dashboard />;
     }
 
     switch (page) {
@@ -101,7 +110,7 @@ function ProtectedApp() {
           <span>{isAttendanceOnly ? "Teacher Attendance" : staff.role}</span>
         </div>
 
-        {isAttendanceOnly ? (
+        {isRestrictedStaff ? (
           <button
             className={page === "student-attendance" ? "active" : ""}
             onClick={() => navigateTo("student-attendance")}
@@ -118,7 +127,9 @@ function ProtectedApp() {
             <button className={page === "payments" ? "active" : ""} onClick={() => navigateTo("payments")}>Payments</button>
             <button className={page === "receipts" ? "active" : ""} onClick={() => navigateTo("receipts")}>Receipts</button>
             <button className={page === "reports" ? "active" : ""} onClick={() => navigateTo("reports")}>Reports</button>
-            <button className={page === "settings" ? "active" : ""} onClick={() => navigateTo("settings")}>Settings</button>
+            {isAdmin && (
+              <button className={page === "settings" ? "active" : ""} onClick={() => navigateTo("settings")}>Settings</button>
+            )}
           </>
         )}
 
