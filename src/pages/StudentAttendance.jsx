@@ -1996,7 +1996,7 @@ export default function StudentAttendance() {
                     <tr>
                       <th
                         style={{
-                          width: "50%",
+                          width: "52%",
                           textAlign: "left",
                         }}
                       >
@@ -2005,7 +2005,7 @@ export default function StudentAttendance() {
 
                       <th
                         style={{
-                          width: "25%",
+                          width: "24%",
                           textAlign: "center",
                         }}
                       >
@@ -2090,8 +2090,9 @@ export default function StudentAttendance() {
                               aria-label={`Mark ${student.fullName} present`}
                               style={{
                                 width: "100%",
-                                maxWidth: "105px",
-                                padding: "10px 6px",
+                                minWidth: "115px",
+                                maxWidth: "125px",
+                                padding: "10px 8px",
                                 borderRadius: "6px",
                                 cursor: isLocked
                                   ? "not-allowed"
