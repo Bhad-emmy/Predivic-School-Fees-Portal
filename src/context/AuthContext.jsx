@@ -1,8 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 
-const AUTH_REDIRECT_URL = "https://mekaschool.vercel.app";
-
 const AuthContext = createContext(null);
 
 const getStaffRecord = async (userId) => {
@@ -94,55 +92,6 @@ export function AuthProvider({ children }) {
       throw signInError;
     }
 
-    if (!data.user?.email_confirmed_at) {
-      await supabase.auth.signOut();
-      const verificationError = new Error(
-        "Your email address must be verified before you can sign in. Check your email for the verification link."
-      );
-      setError(verificationError.message);
-      throw verificationError;
-    }
-  };
-
-  const resendVerification = async (email) => {
-    setError("");
-
-    const { error: resendError } = await supabase.auth.resend({
-      type: "signup",
-      email,
-      options: {
-        emailRedirectTo: AUTH_REDIRECT_URL,
-      },
-    });
-
-    if (resendError) {
-      setError(resendError.message);
-      throw resendError;
-    }
-  };
-
-  const signUp = async ({ email, password, schoolName, firstName, lastName }) => {
-    setError("");
-
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: AUTH_REDIRECT_URL,
-        data: {
-          school_name: schoolName,
-          first_name: firstName,
-          last_name: lastName,
-        },
-      },
-    });
-
-    if (signUpError) {
-      setError(signUpError.message);
-      throw signUpError;
-    }
-
-    return data;
   };
 
   const signOut = async () => {
@@ -161,8 +110,6 @@ export function AuthProvider({ children }) {
       loading,
       error,
       signIn,
-      resendVerification,
-      signUp,
       signOut,
       isAdmin,
       isAttendanceOnly,
