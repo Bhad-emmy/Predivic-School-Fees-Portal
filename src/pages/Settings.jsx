@@ -1700,7 +1700,7 @@ export default function Settings() {
           <div className="settings-item">
             <span>Legacy Service</span>
             <strong>Node.js + Express</strong>
-            <small>Temporary: remaining staff-account operations are being migrated.</small>
+            <small>Temporary: remaining legacy backend operations are being migrated.</small>
           </div>
 
           <div className="settings-item">
