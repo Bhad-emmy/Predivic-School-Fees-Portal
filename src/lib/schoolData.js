@@ -381,6 +381,257 @@ export async function recordPayment({
 }
 
 
+
+export async function createNewStudent(form) {
+  if (!form?.firstName?.trim()) throw new Error("First name is required.");
+  if (!form?.lastName?.trim()) throw new Error("Last name is required.");
+  if (!form?.gender) throw new Error("Gender is required.");
+  if (!form?.classId) throw new Error("Class is required.");
+
+  const { data: classRecord, error: classError } = await supabase
+    .from("classes")
+    .select("id, name, school_id")
+    .eq("id", form.classId)
+    .maybeSingle();
+
+  if (classError) throw classError;
+  if (!classRecord) throw new Error("Selected class was not found.");
+
+  const className = String(classRecord.name || "").trim().toUpperCase();
+  const isSeniorSecondary = className === "SS 2" || className === "SS 3";
+  const department = form.department ? String(form.department).trim() : null;
+
+  if (isSeniorSecondary && !department) {
+    throw new Error("Department is required for SS2/SS3 students.");
+  }
+
+  if (!isSeniorSecondary && department) {
+    throw new Error("Department should only be selected for SS2/SS3 students.");
+  }
+
+  if (isSeniorSecondary && !["Science", "Commercial", "Art"].includes(department)) {
+    throw new Error("Invalid department. Choose Science, Commercial, or Art.");
+  }
+
+  const { data: session, error: sessionError } = await supabase
+    .from("academic_sessions")
+    .select("id, name, school_id")
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (sessionError) throw sessionError;
+  if (!session) throw new Error("No active academic session exists.");
+
+  const { data: term, error: termError } = await supabase
+    .from("terms")
+    .select("id, name, academic_session_id, status, school_id")
+    .eq("academic_session_id", session.id)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (termError) throw termError;
+  if (!term) throw new Error("No active term exists for the current academic session.");
+
+  const schoolId = classRecord.school_id || session.school_id || term.school_id || null;
+  if (!schoolId) throw new Error("Unable to determine the school for this registration.");
+
+  let feeQuery = supabase
+    .from("fee_accounts")
+    .select("id, total_amount, student_type, department")
+    .eq("school_id", schoolId)
+    .eq("class_id", form.classId)
+    .eq("academic_session_id", session.id)
+    .eq("term_id", term.id)
+    .eq("student_type", "new")
+    .eq("is_active", true);
+
+  feeQuery = isSeniorSecondary
+    ? feeQuery.eq("department", department)
+    : feeQuery.is("department", null);
+
+  const { data: feeStructure, error: feeStructureError } = await feeQuery.maybeSingle();
+  if (feeStructureError) throw feeStructureError;
+
+  if (!feeStructure) {
+    throw new Error(
+      isSeniorSecondary
+        ? \`No active fee structure exists for \${classRecord.name} - new - \${department}.\`
+        : \`No active fee structure exists for \${classRecord.name} - new.\`
+    );
+  }
+
+  const admissionNo = form.admissionNo?.trim() || null;
+
+  if (admissionNo) {
+    const { data: existingAdmission, error: admissionCheckError } = await supabase
+      .from("students")
+      .select("id")
+      .eq("school_id", schoolId)
+      .eq("admission_no", admissionNo)
+      .maybeSingle();
+
+    if (admissionCheckError) throw admissionCheckError;
+    if (existingAdmission) throw new Error("Admission number already exists.");
+  }
+
+  const { data: student, error: studentError } = await supabase
+    .from("students")
+    .insert({
+      school_id: schoolId,
+      admission_no: admissionNo,
+      first_name: form.firstName.trim(),
+      middle_name: form.middleName?.trim() || null,
+      last_name: form.lastName.trim(),
+      gender: form.gender,
+      status: "Active",
+      student_type: "new",
+      department: isSeniorSecondary ? department : null,
+      date_of_birth: form.dateOfBirth || null,
+      parent_name: form.parentName?.trim() || null,
+      parent_relationship: form.parentRelationship?.trim() || null,
+      parent_phone: form.parentPhone?.trim() || null,
+      parent_email: form.parentEmail?.trim() || null,
+      address: form.address?.trim() || null,
+      admission_date: form.admissionDate || null,
+      age: form.age === "" || form.age === undefined ? null : Number(form.age),
+      place_of_birth: form.placeOfBirth?.trim() || null,
+      nationality: form.nationality?.trim() || null,
+      state_of_origin: form.stateOfOrigin?.trim() || null,
+      hometown: form.hometown?.trim() || null,
+      lga: form.lga?.trim() || null,
+      religion: form.religion?.trim() || null,
+      denomination: form.denomination?.trim() || null,
+      secondary_parent_name: form.secondaryParentName?.trim() || null,
+      secondary_parent_phone: form.secondaryParentPhone?.trim() || null,
+      emergency_contact_name: form.emergencyContactName?.trim() || null,
+      emergency_contact_phone: form.emergencyContactPhone?.trim() || null,
+      previous_school: form.previousSchool?.trim() || null,
+      medical_information: form.medicalInformation?.trim() || null,
+      notes: form.notes?.trim() || null,
+    })
+    .select()
+    .single();
+
+  if (studentError) throw studentError;
+
+  let enrollment = null;
+  let studentFeeAccount = null;
+  let guardian = null;
+  let admission = null;
+
+  try {
+    const { data: enrollmentData, error: enrollmentError } = await supabase
+      .from("student_enrollments")
+      .insert({
+        school_id: schoolId,
+        student_id: student.id,
+        session_id: session.id,
+        term_id: term.id,
+        class_id: form.classId,
+        status: "active",
+      })
+      .select()
+      .single();
+
+    if (enrollmentError) throw enrollmentError;
+    enrollment = enrollmentData;
+
+    const { data: feeAccountData, error: feeAccountError } = await supabase
+      .from("student_fee_accounts")
+      .insert({
+        school_id: schoolId,
+        student_id: student.id,
+        enrollment_id: enrollment.id,
+        fee_account_id: feeStructure.id,
+        total_amount: Number(feeStructure.total_amount) || 0,
+        status: "outstanding",
+      })
+      .select()
+      .single();
+
+    if (feeAccountError) throw feeAccountError;
+    studentFeeAccount = feeAccountData;
+
+    const guardianForm = form.guardian || {};
+    const hasGuardian = Object.values(guardianForm).some(
+      (value) => value !== null && value !== undefined && String(value).trim() !== ""
+    );
+
+    if (hasGuardian) {
+      const { data: guardianData, error: guardianError } = await supabase
+        .from("guardians")
+        .insert({
+          school_id: schoolId,
+          student_id: student.id,
+          full_name: guardianForm.fullName?.trim() || null,
+          relationship: guardianForm.relationship?.trim() || null,
+          residential_address: guardianForm.residentialAddress?.trim() || null,
+          contact_address: guardianForm.contactAddress?.trim() || null,
+          nationality: guardianForm.nationality?.trim() || null,
+          state: guardianForm.state?.trim() || null,
+          occupation: guardianForm.occupation?.trim() || null,
+          religion: guardianForm.religion?.trim() || null,
+          denomination: guardianForm.denomination?.trim() || null,
+          date_of_birth: guardianForm.dateOfBirth || null,
+          marriage_anniversary: guardianForm.marriageAnniversary || null,
+          medical_declaration: guardianForm.medicalDeclaration?.trim() || null,
+          is_primary: true,
+        })
+        .select()
+        .single();
+
+      if (guardianError) throw guardianError;
+      guardian = guardianData;
+    }
+
+    const admissionForm = form.admission || {};
+    const hasAdmission = Object.values(admissionForm).some(
+      (value) => value !== null && value !== undefined && String(value).trim() !== ""
+    );
+
+    if (hasAdmission) {
+      const { data: admissionData, error: admissionError } = await supabase
+        .from("admissions")
+        .insert({
+          school_id: schoolId,
+          student_id: student.id,
+          admission_status: admissionForm.admissionStatus || "Pending",
+          parent_declaration: admissionForm.parentDeclaration?.trim() || null,
+          parent_signature_name: admissionForm.parentSignatureName?.trim() || null,
+          declaration_date: admissionForm.declarationDate || null,
+          school_authorized_by: admissionForm.schoolAuthorizedBy?.trim() || null,
+          school_signature_name: admissionForm.schoolSignatureName?.trim() || null,
+        })
+        .select()
+        .single();
+
+      if (admissionError) throw admissionError;
+      admission = admissionData;
+    }
+  } catch (error) {
+    await supabase.from("student_fee_accounts").delete().eq("id", studentFeeAccount?.id || "__none__");
+    await supabase.from("student_enrollments").delete().eq("id", enrollment?.id || "__none__");
+    await supabase.from("guardians").delete().eq("id", guardian?.id || "__none__");
+    await supabase.from("admissions").delete().eq("id", admission?.id || "__none__");
+    await supabase.from("students").delete().eq("id", student.id);
+    throw error;
+  }
+
+  return {
+    message: "Student created successfully.",
+    student,
+    studentFeeAccount,
+    feeAllocation: {
+      feeAccountId: feeStructure.id,
+      amount: Number(feeStructure.total_amount) || 0,
+      studentType: "new",
+      department,
+    },
+    guardian,
+    admission,
+  };
+}
+
 export async function searchReturningStudents({ admissionNo, firstName, lastName, dateOfBirth, parentPhone }) {
   if (!admissionNo && !firstName && !lastName && !dateOfBirth && !parentPhone) throw new Error("Enter at least one search field.");
   let query = supabase.from("students").select("id, admission_no, first_name, middle_name, last_name, gender, date_of_birth, parent_name, parent_relationship, parent_phone, parent_email, address, status, student_type").eq("status", "Active").limit(20);
