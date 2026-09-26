@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { getClasses } from "../lib/schoolData";
+import SchoolManagementPanel from "../components/SchoolManagementPanel";
 
 const DEFAULT_SETTINGS = {
   school_name: "Predivic Schools",
@@ -675,6 +676,7 @@ export default function Settings() {
         {[
           ["account", "Account"],
           ["school", "School"],
+          ["school-management", "School Management"],
           ["receipts", "Receipts"],
           ["staff", "Staff & Access"],
           ["security", "Security"],
@@ -697,6 +699,9 @@ export default function Settings() {
           </a>
         ))}
       </nav>
+
+      <SchoolManagementPanel isAdmin={isAdmin} />
+
       {/* =================================================
           ACCOUNT
       ================================================= */}
