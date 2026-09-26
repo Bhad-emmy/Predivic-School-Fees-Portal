@@ -1979,81 +1979,155 @@ export default function StudentAttendance() {
             <>
               <div
                 style={{
-                  marginBottom: "10px",
-                  fontSize: "12px",
-                  color: "#64748b",
-                }}
-              >
-                Swipe left on the attendance table to reach Absent.
-              </div>
-
-              <div
-                style={{
                   width: "100%",
-                  maxWidth: "100%",
-                  overflowX: "auto",
-                  overflowY: "visible",
-                  WebkitOverflowScrolling: "touch",
-                  touchAction: "pan-x pan-y",
-                  overscrollBehaviorX: "contain",
+                  overflowX: "hidden",
                   border: "1px solid #e2e8f0",
                   borderRadius: "10px",
                 }}
               >
                 <table
                   style={{
-                    width: "max-content",
-                    minWidth: "760px",
-                    tableLayout: "auto",
+                    width: "100%",
+                    minWidth: "0",
+                    tableLayout: "fixed",
                   }}
                 >
-                    <thead>
-                      <tr>
-                        <th
-                          style={{
-                            minWidth: "160px",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          Student Number
-                        </th>
+                  <thead>
+                    <tr>
+                      <th
+                        style={{
+                          width: "50%",
+                          textAlign: "left",
+                        }}
+                      >
+                        Student Name
+                      </th>
 
-                        <th
-                          style={{
-                            minWidth: "240px",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          Student Name
-                        </th>
+                      <th
+                        style={{
+                          width: "25%",
+                          textAlign: "center",
+                        }}
+                      >
+                        Present
+                      </th>
 
-                        <th
-                          style={{
-                            minWidth: "330px",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          Attendance
-                        </th>
-                      </tr>
-                    </thead>
+                      <th
+                        style={{
+                          width: "25%",
+                          textAlign: "center",
+                        }}
+                      >
+                        Absent
+                      </th>
+                    </tr>
+                  </thead>
 
-                    <tbody>
-                      {classStudents.map((student) => {
-                        const isLocked =
-                          !!lockedAttendance[student.id];
+                  <tbody>
+                    {classStudents.map((student) => {
+                      const isLocked =
+                        !!lockedAttendance[student.id];
 
-                        return (
-                          <tr key={student.id}>
-                            <td style={{ whiteSpace: "nowrap" }}>
-                              {student.studentNumber || "-"}
-                            </td>
-
-                            <td style={{ minWidth: "240px" }}>
+                      return (
+                        <tr key={student.id}>
+                          <td
+                            style={{
+                              minWidth: 0,
+                              overflowWrap: "anywhere",
+                            }}
+                          >
+                            <strong>
                               {student.fullName || "-"}
-                            </td>
+                            </strong>
+                          </td>
 
-                            <td style={{ minWidth: "330px" }}>
+                          <td style={{ textAlign: "center" }}>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                markAttendance(
+                                  student.id,
+                                  "Present"
+                                )
+                              }
+                              disabled={isLocked}
+                              title={
+                                isLocked
+                                  ? "Attendance already saved for this date"
+                                  : "Mark Present"
+                              }
+                              style={{
+                                minWidth: "0",
+                                width: "100%",
+                                maxWidth: "110px",
+                                padding: "10px 8px",
+                                borderRadius: "6px",
+                                cursor: isLocked
+                                  ? "not-allowed"
+                                  : "pointer",
+                                opacity: isLocked ? 0.65 : 1,
+                                border:
+                                  attendance[student.id] ===
+                                  "Present"
+                                    ? "2px solid #166534"
+                                    : "1px solid #d1d5db",
+                                background:
+                                  attendance[student.id] ===
+                                  "Present"
+                                    ? "#dcfce7"
+                                    : "#fff",
+                                color: "#166534",
+                                fontWeight: "600",
+                              }}
+                            >
+                              Present
+                            </button>
+                          </td>
+
+                          <td style={{ textAlign: "center" }}>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                markAttendance(
+                                  student.id,
+                                  "Absent"
+                                )
+                              }
+                              disabled={isLocked}
+                              title={
+                                isLocked
+                                  ? "Attendance already saved for this date"
+                                  : "Mark Absent"
+                              }
+                              style={{
+                                minWidth: "0",
+                                width: "100%",
+                                maxWidth: "110px",
+                                padding: "10px 8px",
+                                borderRadius: "6px",
+                                cursor: isLocked
+                                  ? "not-allowed"
+                                  : "pointer",
+                                opacity: isLocked ? 0.65 : 1,
+                                border:
+                                  attendance[student.id] ===
+                                  "Absent"
+                                    ? "2px solid #991b1b"
+                                    : "1px solid #d1d5db",
+                                background:
+                                  attendance[student.id] ===
+                                  "Absent"
+                                    ? "#fee2e2"
+                                    : "#fff",
+                                color: "#991b1b",
+                                fontWeight: "600",
+                              }}
+                            >
+                              Absent
+                            </button>
+                          </td>
+
+                          <td style={{ display: "none" }}>
                               <div
                                 style={{
                                   display: "flex",
