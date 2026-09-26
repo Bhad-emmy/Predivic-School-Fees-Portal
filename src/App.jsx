@@ -27,13 +27,20 @@ function ProtectedApp() {
   const [page, setPage] = useState("dashboard");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
+  const role = String(staff?.role || "").toLowerCase();
+  const isSecretary = role === "secretary";
+  const isTeacherRole = role === "teacher" || role === "attendance";
+  const isRestrictedStaff = isTeacherRole && !isAdmin;
+
   useEffect(() => {
-    if (isAttendanceOnly) {
+    if (isRestrictedStaff) {
       setPage("student-attendance");
+    } else if (isSecretary) {
+      setPage("students");
     } else if (page === "student-attendance") {
       setPage("dashboard");
     }
-  }, [isAttendanceOnly]);
+  }, [isRestrictedStaff, isSecretary]);
 
   const navigateTo = (nextPage) => {
     setPage(nextPage);
@@ -48,18 +55,13 @@ function ProtectedApp() {
     return <Login />;
   }
 
-  const role = String(staff?.role || "").toLowerCase();
-  const isSecretary = role === "secretary";
-  const isTeacherRole = role === "teacher" || role === "attendance";
-  const isRestrictedStaff = isTeacherRole && !isAdmin;
-
   const renderPage = () => {
     if (isRestrictedStaff) {
       return <StudentAttendance />;
     }
 
-    if (isSecretary && page === "settings") {
-      return <Dashboard />;
+    if (isSecretary && (page === "settings" || page === "dashboard")) {
+      return <Students />;
     }
 
     switch (page) {
@@ -119,7 +121,7 @@ function ProtectedApp() {
           </button>
         ) : (
           <>
-            <button className={page === "dashboard" ? "active" : ""} onClick={() => navigateTo("dashboard")}>Dashboard</button>
+            {!isSecretary && <button className={page === "dashboard" ? "active" : ""} onClick={() => navigateTo("dashboard")}>Dashboard</button>}
             <button className={page === "students" ? "active" : ""} onClick={() => navigateTo("students")}>Students</button>
             <button className={page === "student-attendance" ? "active" : ""} onClick={() => navigateTo("student-attendance")}>Student Attendance</button>
             <button className={page === "teacher-attendance" ? "active" : ""} onClick={() => navigateTo("teacher-attendance")}>Teacher Attendance</button>
