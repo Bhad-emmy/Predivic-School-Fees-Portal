@@ -32,14 +32,6 @@ export function AuthProvider({ children }) {
     }
 
     try {
-      if (!nextSession.user.email_confirmed_at) {
-        await supabase.auth.signOut();
-        setStaff(null);
-        setSession(null);
-        setError("Your email address must be verified before you can sign in.");
-        return;
-      }
-
       const record = await getStaffRecord(nextSession.user.id);
       setStaff(record);
       setError("");
