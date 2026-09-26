@@ -868,6 +868,7 @@ export async function createNewStudent(form) {
         session_id: session.id,
         term_id: term.id,
         class_id: form.classId,
+        department: isSeniorSecondary ? department : null,
         status: "active",
       })
       .select()
