@@ -291,6 +291,334 @@ export async function getPayments() {
   });
 }
 
+
+
+async function resolveFeeStructureRefs({ session, term, className }) {
+  const normalizedTerm = String(term || "")
+    .toLowerCase()
+    .replace(/\s+/g, "");
+
+  const { data: sessionRecord, error: sessionError } = await supabase
+    .from("academic_sessions")
+    .select("id, name, school_id")
+    .eq("name", session)
+    .maybeSingle();
+
+  if (sessionError) throw sessionError;
+  if (!sessionRecord) throw new Error(\`Academic session "\${session}" was not found.\`);
+
+  const { data: classRecord, error: classError } = await supabase
+    .from("classes")
+    .select("id, name, school_id")
+    .eq("name", className)
+    .maybeSingle();
+
+  if (classError) throw classError;
+  if (!classRecord) throw new Error(\`Class "\${className}" was not found.\`);
+
+  const { data: terms, error: termError } = await supabase
+    .from("terms")
+    .select("id, name, academic_session_id, school_id");
+
+  if (termError) throw termError;
+
+  const termRecord = (terms || []).find((item) => {
+    const value = String(item.name || "")
+      .toLowerCase()
+      .replace(/\s+/g, "");
+    const normalized = value === "1stterm" ? "1stterm"
+      : value === "firstterm" ? "firstterm"
+      : value === "2ndterm" ? "2ndterm"
+      : value === "secondterm" ? "secondterm"
+      : value === "3rdterm" ? "3rdterm"
+      : value === "thirdterm" ? "thirdterm"
+      : value;
+    return normalized === normalizedTerm ||
+      (normalizedTerm === "firstterm" && normalized === "1stterm") ||
+      (normalizedTerm === "secondterm" && normalized === "2ndterm") ||
+      (normalizedTerm === "thirdterm" && normalized === "3rdterm");
+  });
+
+  if (!termRecord) throw new Error(\`Term "\${term}" was not found.\`);
+  if (termRecord.academic_session_id !== sessionRecord.id) {
+    throw new Error("The selected term does not belong to the selected academic session.");
+  }
+
+  const schoolId = classRecord.school_id || sessionRecord.school_id || termRecord.school_id || null;
+  if (!schoolId) throw new Error("Unable to determine the school for this fee structure.");
+
+  return { sessionRecord, classRecord, termRecord, schoolId };
+}
+
+function normalizeFeeDepartment(className, department) {
+  const senior = className === "SS 2" || className === "SS 3";
+  const value = department ? String(department).trim() : "";
+  if (senior && !["Art", "Science", "Commercial"].includes(value)) {
+    throw new Error("Department is required for SS2/SS3 and must be Art, Science, or Commercial.");
+  }
+  if (!senior && value) {
+    throw new Error("Department should only be selected for SS2/SS3.");
+  }
+  return senior ? value : null;
+}
+
+function cleanFeeItemsForWrite(items) {
+  const cleaned = (Array.isArray(items) ? items : [])
+    .map((item) => ({
+      name: String(item?.name || "").trim(),
+      amount: Number(item?.amount || 0),
+    }))
+    .filter((item) => item.name && item.amount > 0);
+
+  if (!cleaned.length) throw new Error("Add at least one valid fee item.");
+  return cleaned.map((item, index) => ({ ...item, sort_order: index }));
+}
+
+export async function createFeeStructure({
+  session,
+  term,
+  className,
+  department,
+  studentType,
+  feeItems,
+}) {
+  if (!session || !term || !className || !studentType) {
+    throw new Error("Session, term, class and student type are required.");
+  }
+
+  const items = cleanFeeItemsForWrite(feeItems);
+  const normalizedDepartment = normalizeFeeDepartment(className, department);
+  const { sessionRecord, classRecord, termRecord, schoolId } =
+    await resolveFeeStructureRefs({ session, term, className });
+
+  const { data: duplicate, error: duplicateError } = await supabase
+    .from("fee_accounts")
+    .select("id, department")
+    .eq("school_id", schoolId)
+    .eq("class_id", classRecord.id)
+    .eq("academic_session_id", sessionRecord.id)
+    .eq("term_id", termRecord.id)
+    .eq("student_type", studentType);
+
+  if (duplicateError) throw duplicateError;
+  if ((duplicate || []).some((row) => (row.department || null) === normalizedDepartment)) {
+    throw new Error("A fee structure already exists for this class, session, term, student type and department.");
+  }
+
+  const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
+
+  const { data: feeAccount, error: accountError } = await supabase
+    .from("fee_accounts")
+    .insert({
+      school_id: schoolId,
+      class_id: classRecord.id,
+      academic_session_id: sessionRecord.id,
+      term_id: termRecord.id,
+      student_type: studentType,
+      department: normalizedDepartment,
+      total_amount: totalAmount,
+      notes: null,
+      is_active: true,
+    })
+    .select()
+    .single();
+
+  if (accountError) throw accountError;
+
+  const { error: itemError } = await supabase.from("fee_items").insert(
+    items.map((item) => ({
+      fee_account_id: feeAccount.id,
+      name: item.name,
+      amount: item.amount,
+      sort_order: item.sort_order,
+    }))
+  );
+
+  if (itemError) {
+    await supabase.from("fee_accounts").delete().eq("id", feeAccount.id);
+    throw itemError;
+  }
+
+  return feeAccount;
+}
+
+export async function updateFeeStructure({
+  id,
+  session,
+  term,
+  className,
+  department,
+  studentType,
+  feeItems,
+}) {
+  if (!id) throw new Error("Fee structure ID is required.");
+  if (!session || !term || !className || !studentType) {
+    throw new Error("Session, term, class and student type are required.");
+  }
+
+  const items = cleanFeeItemsForWrite(feeItems);
+  const normalizedDepartment = normalizeFeeDepartment(className, department);
+  const { sessionRecord, classRecord, termRecord } =
+    await resolveFeeStructureRefs({ session, term, className });
+
+  const { data: existing, error: existingError } = await supabase
+    .from("fee_accounts")
+    .select("id, school_id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (existingError) throw existingError;
+  if (!existing) throw new Error("Fee structure not found.");
+
+  const { data: duplicates, error: duplicateError } = await supabase
+    .from("fee_accounts")
+    .select("id, department")
+    .eq("school_id", existing.school_id)
+    .eq("class_id", classRecord.id)
+    .eq("academic_session_id", sessionRecord.id)
+    .eq("term_id", termRecord.id)
+    .eq("student_type", studentType)
+    .neq("id", id);
+
+  if (duplicateError) throw duplicateError;
+  if ((duplicates || []).some((row) => (row.department || null) === normalizedDepartment)) {
+    throw new Error("A fee structure already exists for this class, session, term, student type and department.");
+  }
+
+  const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
+
+  const { error: updateError } = await supabase
+    .from("fee_accounts")
+    .update({
+      class_id: classRecord.id,
+      academic_session_id: sessionRecord.id,
+      term_id: termRecord.id,
+      student_type: studentType,
+      department: normalizedDepartment,
+      total_amount: totalAmount,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (updateError) throw updateError;
+
+  const { error: deleteItemsError } = await supabase
+    .from("fee_items")
+    .delete()
+    .eq("fee_account_id", id);
+
+  if (deleteItemsError) throw deleteItemsError;
+
+  const { error: insertItemsError } = await supabase.from("fee_items").insert(
+    items.map((item) => ({
+      fee_account_id: id,
+      name: item.name,
+      amount: item.amount,
+      sort_order: item.sort_order,
+    }))
+  );
+
+  if (insertItemsError) throw insertItemsError;
+}
+
+export async function deleteFeeStructure(id) {
+  if (!id) throw new Error("Fee structure ID is required.");
+
+  const { count, error: assignmentError } = await supabase
+    .from("student_fee_accounts")
+    .select("id", { count: "exact", head: true })
+    .eq("fee_account_id", id);
+
+  if (assignmentError) throw assignmentError;
+  if ((count || 0) > 0) {
+    throw new Error("This fee structure has already been assigned to students and cannot be deleted.");
+  }
+
+  const { data: existing, error: findError } = await supabase
+    .from("fee_accounts")
+    .select("id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (findError) throw findError;
+  if (!existing) throw new Error("Fee structure not found.");
+
+  const { error: itemError } = await supabase.from("fee_items").delete().eq("fee_account_id", id);
+  if (itemError) throw itemError;
+
+  const { error: accountError } = await supabase.from("fee_accounts").delete().eq("id", id);
+  if (accountError) throw accountError;
+}
+
+export async function assignFeeStructure({
+  studentId,
+  feeAccountId,
+  notes,
+}) {
+  if (!studentId) throw new Error("Student is required.");
+  if (!feeAccountId) throw new Error("Fee structure is required.");
+
+  const { data: student, error: studentError } = await supabase
+    .from("students")
+    .select("id, school_id")
+    .eq("id", studentId)
+    .maybeSingle();
+
+  if (studentError) throw studentError;
+  if (!student) throw new Error("Student not found.");
+
+  const { data: feeStructure, error: feeError } = await supabase
+    .from("fee_accounts")
+    .select("id, school_id, class_id, academic_session_id, total_amount, is_active")
+    .eq("id", feeAccountId)
+    .maybeSingle();
+
+  if (feeError) throw feeError;
+  if (!feeStructure) throw new Error("Fee structure not found.");
+  if (!feeStructure.is_active) throw new Error("This fee structure is inactive.");
+
+  const { data: existing, error: existingError } = await supabase
+    .from("student_fee_accounts")
+    .select("id")
+    .eq("student_id", studentId)
+    .eq("fee_account_id", feeAccountId)
+    .maybeSingle();
+
+  if (existingError) throw existingError;
+  if (existing) throw new Error("This fee structure is already assigned to the student.");
+
+  const { data: enrollment, error: enrollmentError } = await supabase
+    .from("student_enrollments")
+    .select("id, student_id, session_id, class_id, status")
+    .eq("student_id", studentId)
+    .eq("session_id", feeStructure.academic_session_id)
+    .eq("class_id", feeStructure.class_id)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (enrollmentError) throw enrollmentError;
+  if (!enrollment) {
+    throw new Error("No active enrollment matches this student's fee structure.");
+  }
+
+  const { data, error } = await supabase
+    .from("student_fee_accounts")
+    .insert({
+      school_id: feeStructure.school_id || student.school_id,
+      student_id: studentId,
+      enrollment_id: enrollment.id,
+      fee_account_id: feeAccountId,
+      total_amount: Number(feeStructure.total_amount) || 0,
+      status: "outstanding",
+      notes: String(notes || "").trim() || null,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
 export async function getFeeStructures() {
   const { data: feeAccounts, error } = await supabase
     .from("fee_accounts")
