@@ -2104,7 +2104,14 @@ export default function Students() {
                         <button
                           type="button"
                           className="student-name-link"
-                          onClick={async () => {\n                            try {\n                              const contact = await getStudentContact(student.id);\n                              setSelectedContactStudent(contact);\n                            } catch (error) {\n                              setError(error.message || "Unable to load contact details.");\n                            }\n                          }}
+                          onClick={async () => {
+                            try {
+                              const contact = await getStudentContact(student.id);
+                              setSelectedContactStudent(contact);
+                            } catch (error) {
+                              setError(error.message || "Unable to load contact details.");
+                            }
+                          }}
                           title="View parent and emergency contacts"
                         >
                           {student.fullName}
