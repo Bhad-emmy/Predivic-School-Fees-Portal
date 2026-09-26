@@ -305,7 +305,7 @@ async function resolveFeeStructureRefs({ session, term, className }) {
     .maybeSingle();
 
   if (sessionError) throw sessionError;
-  if (!sessionRecord) throw new Error(\`Academic session "${session}" was not found.\`);
+  if (!sessionRecord) throw new Error(`Academic session "${session}" was not found.`);
 
   const { data: classRecord, error: classError } = await supabase
     .from("classes")
@@ -314,7 +314,7 @@ async function resolveFeeStructureRefs({ session, term, className }) {
     .maybeSingle();
 
   if (classError) throw classError;
-  if (!classRecord) throw new Error(\`Class "${className}" was not found.\`);
+  if (!classRecord) throw new Error(`Class "${className}" was not found.`);
 
   const { data: terms, error: termError } = await supabase
     .from("terms")
@@ -339,7 +339,7 @@ async function resolveFeeStructureRefs({ session, term, className }) {
       (normalizedTerm === "thirdterm" && normalized === "3rdterm");
   });
 
-  if (!termRecord) throw new Error(\`Term "${term}" was not found.\`);
+  if (!termRecord) throw new Error(`Term "${term}" was not found.`);
   if (termRecord.academic_session_id !== sessionRecord.id) {
     throw new Error("The selected term does not belong to the selected academic session.");
   }
