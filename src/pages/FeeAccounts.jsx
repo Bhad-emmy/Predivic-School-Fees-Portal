@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import StudentSearchSelect from "../components/StudentSearchSelect";
+import { getStudents, getStudentFeeAccounts, getFeeStructures } from "../lib/schoolData";
 
 const TERM_OPTIONS = [
   "First Term",
