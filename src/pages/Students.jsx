@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { getClasses, getStudents, createNewStudent, searchReturningStudents as searchReturningStudentsData, registerReturningStudent } from "../lib/schoolData";
+import { getClasses, getStudents, getStudentContact, createNewStudent, searchReturningStudents as searchReturningStudentsData, registerReturningStudent } from "../lib/schoolData";
 
 const SCHOOL_CLASS_ORDER = [
   "Creche",
@@ -2104,7 +2104,7 @@ export default function Students() {
                         <button
                           type="button"
                           className="student-name-link"
-                          onClick={() => setSelectedContactStudent(student)}
+                          onClick={async () => {\n                            try {\n                              const contact = await getStudentContact(student.id);\n                              setSelectedContactStudent(contact);\n                            } catch (error) {\n                              setError(error.message || "Unable to load contact details.");\n                            }\n                          }}
                           title="View parent and emergency contacts"
                         >
                           {student.fullName}
