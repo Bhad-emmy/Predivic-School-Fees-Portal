@@ -456,7 +456,7 @@ export async function createNewStudent(form) {
     throw new Error(
       isSeniorSecondary
         ? \`No active fee structure exists for \${classRecord.name} - new - \${department}.\`
-        : \`No active fee structure exists for \${classRecord.name} - new.\`
+        : `No active fee structure exists for ${classRecord.name} - new.`
     );
   }
 
