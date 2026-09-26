@@ -107,31 +107,14 @@ export async function getStudents() {
 export async function getStudentContact(studentId) {
   if (!studentId) throw new Error("Student ID is required.");
 
-  const { data, error } = await supabase
-    .from("students")
-    .select(
-      "id, admission_no, first_name, middle_name, last_name, parent_name, parent_relationship, parent_phone, parent_email, address, secondary_parent_name, secondary_parent_phone, emergency_contact_name, emergency_contact_phone"
-    )
-    .eq("id", studentId)
-    .maybeSingle();
+  const { data, error } = await supabase.functions.invoke("student-contact", {
+    body: { studentId },
+  });
 
   if (error) throw error;
   if (!data) throw new Error("Student contact details were not found.");
 
-  return {
-    id: data.id,
-    admissionNo: data.admission_no || "",
-    fullName: [data.first_name, data.middle_name, data.last_name].filter(Boolean).join(" "),
-    parentName: data.parent_name || "",
-    parentRelationship: data.parent_relationship || "",
-    parentPhone: data.parent_phone || "",
-    parentEmail: data.parent_email || "",
-    address: data.address || "",
-    secondaryParentName: data.secondary_parent_name || "",
-    secondaryParentPhone: data.secondary_parent_phone || "",
-    emergencyContactName: data.emergency_contact_name || "",
-    emergencyContactPhone: data.emergency_contact_phone || "",
-  };
+  return data;
 }
 
 export async function getStudentFeeAccounts() {
