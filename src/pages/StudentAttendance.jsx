@@ -2113,9 +2113,7 @@ export default function StudentAttendance() {
                                 color: "#166534",
                                 fontWeight: "600",
                               }}
-                            >
-                              Present
-                            </button>
+                            >P</button>
                           </td>
 
                           <td style={{ textAlign: "center" }}>
@@ -2151,9 +2149,7 @@ export default function StudentAttendance() {
                                 color: "#991b1b",
                                 fontWeight: "600",
                               }}
-                            >
-                              Absent
-                            </button>
+                            >A</button>
                           </td>
                         </tr>
                       );
