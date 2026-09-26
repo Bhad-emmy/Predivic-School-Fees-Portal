@@ -668,6 +668,23 @@ tr:hover {
   .page,
   .dashboard-page {
     padding: 15px 0;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* Prevent wide data tables from pushing the entire mobile page off-screen. */
+  .page-card {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .page-card > table {
+    width: 100%;
+    min-width: 620px;
   }
 
   .table-controls {
@@ -676,7 +693,9 @@ tr:hover {
   }
 
   .search-input {
-    min-width: 100%;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .filter-select {
