@@ -5,14 +5,14 @@
 
 /* Keep the app background light behind mobile browser/system UI. */
 html {
-  background: #F5F7FB;
+  background: #F8FAFC;
 }
 
 @media (max-width: 700px) {
   html,
   body {
     min-height: 100%;
-    background: #F5F7FB;
+    background: #F8FAFC;
   }
 
   body {
@@ -21,7 +21,7 @@ html {
 
   #root {
     min-height: 100vh;
-    background: #F5F7FB;
+    background: #F8FAFC;
   }
 }
 
@@ -64,7 +64,7 @@ html {
 }
 
 body {
-  background: #F5F7FB;
+  background: #F8FAFC;
   color: #1f2937;
 }
 
@@ -122,7 +122,7 @@ textarea::placeholder {
 .sidebar {
   width: 250px;
   height: 100vh;
-  background: #123B7A;
+  background: #0F2A43;
   color: white;
   padding: 30px 20px;
   display: flex;
@@ -144,7 +144,7 @@ textarea::placeholder {
   gap: 3px;
   padding: 10px 12px;
   border-radius: 6px;
-  background: #1D4ED8;
+  background: #D97706;
   font-size: 13px;
 }
 
@@ -170,7 +170,7 @@ textarea::placeholder {
 
 .sidebar button:hover,
 .sidebar button.active {
-  background: #1D4ED8;
+  background: #D97706;
 }
 
 .sidebar::-webkit-scrollbar {
@@ -178,11 +178,11 @@ textarea::placeholder {
 }
 
 .sidebar::-webkit-scrollbar-track {
-  background: #123B7A;
+  background: #0F2A43;
 }
 
 .sidebar::-webkit-scrollbar-thumb {
-  background: #3B82F6;
+  background: #D97706;
   border-radius: 10px;
 }
 
@@ -190,7 +190,7 @@ textarea::placeholder {
   flex: 1;
   min-width: 0;
   padding: 40px;
-  background: #F5F7FB;
+  background: #F8FAFC;
   overflow-x: hidden;
   overflow-y: auto;
 }
@@ -216,7 +216,7 @@ textarea::placeholder {
   line-height: 1.15;
   letter-spacing: normal;
   margin: 0 0 12px;
-  color: #123B7A;
+  color: #0F2A43;
 }
 
 .auth-card p {
@@ -246,7 +246,7 @@ textarea::placeholder {
 }
 
 .page h1 {
-  color: #123B7A;
+  color: #0F2A43;
   margin-bottom: 25px;
   font-size: 32px;
 }
@@ -276,12 +276,12 @@ textarea::placeholder {
 }
 
 .primary-btn {
-  background: #123B7A;
+  background: #0F2A43;
   color: white;
 }
 
 .primary-btn:hover {
-  background: #1D4ED8;
+  background: #D97706;
 }
 
 .secondary-btn {
@@ -450,7 +450,7 @@ tr:hover {
 }
 
 .search-input:focus {
-  border-color: #2563EB;
+  border-color: #D97706;
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.10);
 }
 
@@ -471,7 +471,7 @@ tr:hover {
 }
 
 .filter-select:focus {
-  border-color: #2563EB;
+  border-color: #D97706;
 }
 
 .status-active,
@@ -538,7 +538,7 @@ tr:hover {
 
 .attendance-percentage {
   font-weight: 700;
-  color: #123B7A;
+  color: #0F2A43;
 }
 
 .percentage-good {
@@ -589,7 +589,7 @@ tr:hover {
     width: 100%;
     min-height: 64px;
     padding: 10px 15px;
-    background: #123B7A;
+    background: #0F2A43;
     color: #ffffff;
     position: sticky;
     top: 0;
@@ -935,7 +935,7 @@ tr:hover {
     position: sticky;
     top: 0;
     z-index: 80;
-    background: #F5F7FB;
+    background: #F8FAFC;
     padding: 8px 0 12px;
     margin-bottom: 8px;
   }
@@ -961,7 +961,7 @@ tr:hover {
     position: sticky;
     top: 72px;
     z-index: 79;
-    background: #F5F7FB;
+    background: #F8FAFC;
     padding-bottom: 4px;
     margin-bottom: 14px !important;
   }
@@ -1206,7 +1206,7 @@ tr:hover {
   display: grid;
   place-items: center;
   background: #EFF6FF;
-  color: #123B7A;
+  color: #0F2A43;
   font-size: 22px;
   font-weight: 700;
 }
@@ -1395,14 +1395,14 @@ tr:hover {
   border: 0;
   padding: 0;
   background: transparent;
-  color: #123B7A;
+  color: #0F2A43;
   font-weight: 700;
   cursor: pointer;
   text-decoration: underline;
 }
 
 .link-btn:hover {
-  color: #1D4ED8;
+  color: #D97706;
 }
 
 .auth-success {
@@ -1497,7 +1497,7 @@ tr:hover {
 
 .settings-navigation a:hover,
 .settings-navigation a:focus-visible {
-  color: #123B7A !important;
+  color: #0F2A43 !important;
   background: #EFF6FF !important;
   outline: none;
 }
@@ -1625,7 +1625,7 @@ tr:hover {
 .settings-field input:focus,
 .settings-field select:focus,
 .settings-field textarea:focus {
-  border-color: #2563EB;
+  border-color: #D97706;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10);
 }
 
@@ -1734,7 +1734,7 @@ tr:hover {
   border: 0;
   padding: 0;
   background: transparent;
-  color: #123B7A;
+  color: #0F2A43;
   font: inherit;
   font-weight: 600;
   text-align: left;
@@ -1743,7 +1743,7 @@ tr:hover {
 
 .student-name-link:hover,
 .student-name-link:focus-visible {
-  color: #2563EB;
+  color: #D97706;
   text-decoration: underline;
   outline: none;
 }
@@ -1819,7 +1819,7 @@ tr:hover {
 
 .student-contact-grid input:focus,
 .student-contact-grid textarea:focus {
-  border-color: #2563EB;
+  border-color: #D97706;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10);
 }
 
@@ -1841,5 +1841,97 @@ tr:hover {
 
   .student-contact-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+
+/* =========================================================
+   MEKA SCHOOL VISUAL SYSTEM — NAVY + GOLD
+   Keeps existing component structure and behavior unchanged.
+========================================================= */
+
+:root {
+  --meka-navy: #0F2A43;
+  --meka-gold: #D97706;
+  --meka-bg: #F8FAFC;
+  --meka-card: #FFFFFF;
+  --meka-text: #0F172A;
+  --meka-muted: #64748B;
+  --meka-border: #E5E7EB;
+}
+
+body,
+.content {
+  background: var(--meka-bg);
+  color: var(--meka-text);
+}
+
+.sidebar {
+  background: var(--meka-navy);
+}
+
+.sidebar-user {
+  background: var(--meka-gold);
+}
+
+.sidebar button:hover,
+.sidebar button.active {
+  background: var(--meka-gold);
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: var(--meka-navy);
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: var(--meka-gold);
+}
+
+.mobile-header {
+  background: var(--meka-navy);
+}
+
+.primary-btn {
+  background: var(--meka-navy);
+}
+
+.primary-btn:hover {
+  background: var(--meka-gold);
+}
+
+.page h1,
+.auth-card h1 {
+  color: var(--meka-navy);
+}
+
+.search-input:focus,
+.filter-select:focus,
+.student-contact-grid input:focus,
+.student-contact-grid textarea:focus {
+  border-color: var(--meka-gold);
+}
+
+.dashboard-page h1 {
+  color: var(--meka-text);
+}
+
+.stat-card,
+.table-section,
+.page-card {
+  background: var(--meka-card);
+}
+
+@media (max-width: 700px) {
+  .mobile-header {
+    background: var(--meka-navy);
+  }
+
+  .sidebar {
+    background: var(--meka-navy);
+  }
+
+  .sidebar button:hover,
+  .sidebar button.active {
+    background: var(--meka-gold);
   }
 }
