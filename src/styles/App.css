@@ -1774,11 +1774,12 @@ tr:hover {
   gap: 10px;
 }
 
-.student-contact-grid > div {
+.student-contact-grid > div,
+.student-contact-grid > label {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   padding: 12px 13px;
   background: #F8FAFC;
   border: 1px solid #E2E8F0;
@@ -1788,6 +1789,7 @@ tr:hover {
 .student-contact-grid span {
   color: #64748B;
   font-size: 12px;
+  font-weight: 600;
 }
 
 .student-contact-grid strong {
@@ -1795,6 +1797,41 @@ tr:hover {
   font-size: 14px;
   line-height: 1.4;
   overflow-wrap: anywhere;
+}
+
+.student-contact-grid input,
+.student-contact-grid textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #CBD5E1;
+  border-radius: 7px;
+  background: #FFFFFF;
+  color: #0F172A;
+  padding: 10px 11px;
+  font: inherit;
+  outline: none;
+}
+
+.student-contact-grid textarea {
+  resize: vertical;
+  min-height: 76px;
+}
+
+.student-contact-grid input:focus,
+.student-contact-grid textarea:focus {
+  border-color: #2563EB;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10);
+}
+
+.student-contact-field-full {
+  grid-column: 1 / -1;
+}
+
+.student-contact-edit-note {
+  margin: -4px 0 12px;
+  color: #64748B;
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 @media (max-width: 700px) {
