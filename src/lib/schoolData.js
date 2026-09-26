@@ -1056,6 +1056,13 @@ export async function registerReturningStudent({ studentId, classId }) {
     throw error;
   }
 
+  const { error: updateStudentError } = await supabase
+    .from("students")
+    .update({ student_type: "returning" })
+    .eq("id", studentId);
+
+  if (updateStudentError) throw updateStudentError;
+
   const { data: enrollment, error: enrollmentError } = await supabase
     .from("student_enrollments")
     .insert({
@@ -1071,14 +1078,6 @@ export async function registerReturningStudent({ studentId, classId }) {
 
   if (enrollmentError) throw enrollmentError;
 
-  const { error: updateStudentError } = await supabase
-    .from("students")
-    .update({ student_type: "returning" })
-    .eq("id", studentId);
-
-  if (updateStudentError) {
-    console.error("UPDATE STUDENT TYPE ERROR:", updateStudentError);
-  }
 
   return {
     message: "Returning student registered successfully.",
