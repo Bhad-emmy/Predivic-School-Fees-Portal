@@ -37,6 +37,18 @@ function ProtectedApp() {
   }, [user?.id, staff?.id]);
 
   useEffect(() => {
+    if (mobileNavOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileNavOpen]);
+
+  useEffect(() => {
     if (isRestrictedStaff) {
       setPage((currentPage) =>
         currentPage === "student-attendance" || currentPage === "teacher-attendance"
@@ -112,6 +124,15 @@ function ProtectedApp() {
           <span aria-hidden="true">{mobileNavOpen ? "×" : "☰"}</span>
         </button>
       </header>
+
+      {mobileNavOpen && (
+        <button
+          className="mobile-nav-backdrop"
+          type="button"
+          aria-label="Close navigation"
+          onClick={() => setMobileNavOpen(false)}
+        />
+      )}
 
       <aside className={`sidebar${mobileNavOpen ? " mobile-open" : ""}`}>
         <h2>MEKA School</h2>
