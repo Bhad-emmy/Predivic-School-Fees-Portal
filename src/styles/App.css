@@ -671,7 +671,7 @@ tr:hover {
   .content {
     width: 100%;
     min-height: 0;
-    padding: 15px;
+    padding: 79px 15px 15px;
     overflow-x: visible;
     overflow-y: visible;
   }
