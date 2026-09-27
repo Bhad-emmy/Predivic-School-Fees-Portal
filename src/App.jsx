@@ -34,7 +34,9 @@ function ProtectedApp() {
 
   useEffect(() => {
     if (isRestrictedStaff) {
-      setPage("student-attendance");
+      if (page !== "student-attendance" && page !== "teacher-attendance") {
+        setPage("teacher-attendance");
+      }
     } else if (isSecretary) {
       setPage("students");
     } else if (page === "student-attendance") {
@@ -57,7 +59,7 @@ function ProtectedApp() {
 
   const renderPage = () => {
     if (isRestrictedStaff) {
-      return <StudentAttendance />;
+      return page === "student-attendance" ? <StudentAttendance /> : <TeacherAttendance />;
     }
 
     if (isSecretary && (page === "settings" || page === "dashboard")) {
