@@ -1,0 +1,1 @@
+Vercel redeploy trigger for atomic student-registration deployment. Remove after successful deployment.
