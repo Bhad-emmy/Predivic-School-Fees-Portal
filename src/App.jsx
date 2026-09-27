@@ -33,6 +33,10 @@ function ProtectedApp() {
   const isRestrictedStaff = isTeacherRole && !isAdmin;
 
   useEffect(() => {
+    setMobileNavOpen(false);
+  }, [user?.id, staff?.id]);
+
+  useEffect(() => {
     if (isRestrictedStaff) {
       setPage((currentPage) =>
         currentPage === "student-attendance" || currentPage === "teacher-attendance"
