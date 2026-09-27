@@ -591,9 +591,11 @@ tr:hover {
     padding: 10px 15px;
     background: #0F2A43;
     color: #ffffff;
-    position: sticky;
+    position: fixed;
     top: 0;
-    z-index: 100;
+    left: 0;
+    right: 0;
+    z-index: 210;
     box-shadow: 0 2px 10px rgba(15, 23, 42, 0.12);
   }
 
