@@ -320,13 +320,25 @@ export default function TeacherAttendance() {
         });
       });
 
-      setClockRows(valid);
+      const uniqueRows = [];
+      const seen = new Set();
+      for (const row of valid) {
+        const key = `${row.teacher.id}|${row.date}`;
+        if (seen.has(key)) {
+          errors.push(`Duplicate attendance row for ${fullName(row.teacher)} on ${row.date}; only the first row was kept.`);
+          continue;
+        }
+        seen.add(key);
+        uniqueRows.push(row);
+      }
+
+      setClockRows(uniqueRows);
       setClockPreview({
         total: rawRows.length,
-        valid: valid.length,
+        valid: uniqueRows.length,
         errors,
-        dates: [...new Set(valid.map((row) => row.date))].sort(),
-        late: valid.filter((row) => row.status === "Late").length,
+        dates: [...new Set(uniqueRows.map((row) => row.date))].sort(),
+        late: uniqueRows.filter((row) => row.status === "Late").length,
       });
     } catch (err) {
       setError(err.message || "Unable to read the clock-in file.");
