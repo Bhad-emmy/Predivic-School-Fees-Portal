@@ -24,7 +24,7 @@ function App() {
 
 function ProtectedApp() {
   const { user, staff, loading, signOut, isAdmin, isAttendanceOnly } = useAuth();
-  const [page, setPage] = useState("teacher-attendance");
+  const [page, setPage] = useState("dashboard");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const role = String(staff?.role || "").toLowerCase();
@@ -34,12 +34,14 @@ function ProtectedApp() {
 
   useEffect(() => {
     if (isRestrictedStaff) {
-      if (page !== "student-attendance" && page !== "teacher-attendance") {
-        setPage("teacher-attendance");
-      }
+      setPage((currentPage) =>
+        currentPage === "student-attendance" || currentPage === "teacher-attendance"
+          ? currentPage
+          : "teacher-attendance"
+      );
     } else if (isSecretary) {
       setPage("students");
-    } else if (page === "student-attendance") {
+    } else {
       setPage("dashboard");
     }
   }, [isRestrictedStaff, isSecretary]);
