@@ -24,7 +24,7 @@ function App() {
 
 function ProtectedApp() {
   const { user, staff, loading, signOut, isAdmin, isAttendanceOnly } = useAuth();
-  const [page, setPage] = useState("dashboard");
+  const [page, setPage] = useState("teacher-attendance");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const role = String(staff?.role || "").toLowerCase();
@@ -116,12 +116,20 @@ function ProtectedApp() {
         </div>
 
         {isRestrictedStaff ? (
-          <button
-            className={page === "student-attendance" ? "active" : ""}
-            onClick={() => navigateTo("student-attendance")}
-          >
-            Student Attendance
-          </button>
+          <>
+            <button
+              className={page === "teacher-attendance" ? "active" : ""}
+              onClick={() => navigateTo("teacher-attendance")}
+            >
+              Teacher Attendance
+            </button>
+            <button
+              className={page === "student-attendance" ? "active" : ""}
+              onClick={() => navigateTo("student-attendance")}
+            >
+              Student Attendance
+            </button>
+          </>
         ) : (
           <>
             {!isSecretary && <button className={page === "dashboard" ? "active" : ""} onClick={() => navigateTo("dashboard")}>Dashboard</button>}
