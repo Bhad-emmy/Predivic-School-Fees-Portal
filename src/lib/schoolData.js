@@ -738,6 +738,20 @@ export async function createNewStudent(form) {
   return data;
 }
 
+export async function searchReturningStudents({ admissionNo, firstName, lastName, dateOfBirth, parentPhone }) {
+  if (!admissionNo && !firstName && !lastName && !dateOfBirth && !parentPhone) throw new Error("Enter at least one search field.");
+  let query = supabase.from("students").select("id, admission_no, first_name, middle_name, last_name, gender, date_of_birth, parent_name, parent_relationship, parent_phone, parent_email, address, status, student_type").eq("status", "Active").limit(20);
+  if (admissionNo?.trim()) query = query.eq("admission_no", admissionNo.trim());
+  else {
+    if (firstName?.trim()) query = query.ilike("first_name", `%\${firstName.trim()}%`);
+    if (lastName?.trim()) query = query.ilike("last_name", `%\${lastName.trim()}%`);
+    if (dateOfBirth) query = query.eq("date_of_birth", dateOfBirth);
+    if (parentPhone?.trim()) query = query.ilike("parent_phone", `%\${parentPhone.trim()}%`);
+  }
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+}
 export async function registerReturningStudent({ studentId, classId }) {
   if (!studentId) throw new Error("Student ID is required.");
   if (!classId) throw new Error("Class is required.");
