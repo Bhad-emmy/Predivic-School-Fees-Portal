@@ -52,6 +52,97 @@ const fullName = (teacher) =>
 
 const getMonthString = (date = new Date()) => getDateString(date).slice(0, 7);
 
+const normalizeHeader = (value) =>
+  String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\\s+/g, " ");
+
+const findColumn = (row, aliases) => {
+  const keys = Object.keys(row);
+  const normalized = new Map(keys.map((key) => [normalizeHeader(key), key]));
+  for (const alias of aliases) {
+    const match = normalized.get(normalizeHeader(alias));
+    if (match) return match;
+  }
+  return null;
+};
+
+const normalizeTime = (value) => {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value === "number" && value >= 0 && value < 1) {
+    const totalSeconds = Math.round(value * 24 * 60 * 60);
+    const hours = Math.floor(totalSeconds / 3600) % 24;
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return [hours, minutes, seconds].map((part) => String(part).padStart(2, "0")).join(":");
+  }
+
+  const text = String(value).trim();
+  const match = text.match(/^(\\d{1,2}):(\\d{2})(?::(\\d{2}))?\\s*(AM|PM)?$/i);
+  if (!match) return null;
+
+  let hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  const seconds = Number(match[3] || 0);
+  const meridiem = match[4]?.toUpperCase();
+
+  if (meridiem === "PM" && hours < 12) hours += 12;
+  if (meridiem === "AM" && hours === 12) hours = 0;
+  if (hours > 23 || minutes > 59 || seconds > 59) return null;
+
+  return [hours, minutes, seconds].map((part) => String(part).padStart(2, "0")).join(":");
+};
+
+const normalizeDate = (value) => {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: LAGOS_TIME_ZONE,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(value);
+    const get = (type) => parts.find((part) => part.type === type)?.value;
+    return `${get("year")}-${get("month")}-${get("day")}`;
+  }
+
+  if (typeof value === "number" && value > 20000) {
+    const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+    const date = new Date(excelEpoch.getTime() + value * 86400000);
+    return date.toISOString().slice(0, 10);
+  }
+
+  const text = String(value ?? "").trim();
+  if (!text) return null;
+
+  let match = text.match(/^(\\d{4})[-/.](\\d{1,2})[-/.](\\d{1,2})$/);
+  if (match) {
+    return `${match[1]}-${String(match[2]).padStart(2, "0")}-${String(match[3]).padStart(2, "0")}`;
+  }
+
+  match = text.match(/^(\\d{1,2})[-/.](\\d{1,2})[-/.](\\d{4})$/);
+  if (match) {
+    return `${match[3]}-${String(match[2]).padStart(2, "0")}-${String(match[1]).padStart(2, "0")}`;
+  }
+
+  const parsed = new Date(text);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString().slice(0, 10);
+};
+
+const parseClockFile = async (file) => {
+  if (!window.XLSX) {
+    throw new Error("Spreadsheet importer is unavailable. Please refresh the app and try again.");
+  }
+
+  const buffer = await file.arrayBuffer();
+  const workbook = window.XLSX.read(buffer, { type: "array", cellDates: true });
+  const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+  if (!firstSheet) throw new Error("The uploaded file has no readable worksheet.");
+
+  return window.XLSX.utils.sheet_to_json(firstSheet, { defval: "", raw: true });
+};
+
 export default function TeacherAttendance() {
   const { staff, isAdmin, isAttendanceOnly } = useAuth();
   const role = String(staff?.role || "").toLowerCase();
@@ -69,6 +160,10 @@ export default function TeacherAttendance() {
   const [note, setNote] = useState("");
   const [summary, setSummary] = useState({});
   const [summaryLoading, setSummaryLoading] = useState(false);
+  const [clockFile, setClockFile] = useState(null);
+  const [clockRows, setClockRows] = useState([]);
+  const [clockPreview, setClockPreview] = useState(null);
+  const [importing, setImporting] = useState(false);
 
   const activeTeachers = useMemo(
     () => teachers.filter((teacher) => String(teacher.status).toLowerCase() === "active"),
@@ -152,6 +247,169 @@ export default function TeacherAttendance() {
 
     setSummary(next);
     setSummaryLoading(false);
+  };
+
+
+  const prepareClockRows = async (file) => {
+    setError("");
+    setSuccess("");
+    setClockFile(file);
+    setClockRows([]);
+    setClockPreview(null);
+
+    try {
+      const rawRows = await parseClockFile(file);
+      if (!rawRows.length) throw new Error("The file contains no attendance rows.");
+
+      const sample = rawRows[0];
+      const employeeColumn = findColumn(sample, ["Employee No", "Employee Number", "Employee ID", "Staff ID", "ID"]);
+      const nameColumn = findColumn(sample, ["Teacher", "Teacher Name", "Employee Name", "Staff Name", "Name"]);
+      const dateColumn = findColumn(sample, ["Attendance Date", "Date", "Punch Date", "Work Date"]);
+      const checkInColumn = findColumn(sample, ["Check In", "Check-in", "Clock In", "Clock-in", "In Time", "Punch In", "Time"]);
+      const checkOutColumn = findColumn(sample, ["Check Out", "Check-out", "Clock Out", "Clock-out", "Out Time", "Punch Out"]);
+
+      if (!dateColumn || !checkInColumn || (!employeeColumn && !nameColumn)) {
+        throw new Error(
+          "Required columns are missing. Include Employee No (or Employee ID), Date, and Check In. Teacher Name can be used instead of Employee No."
+        );
+      }
+
+      const teacherByEmployee = new Map(
+        teachers
+          .filter((teacher) => teacher.employee_no)
+          .map((teacher) => [String(teacher.employee_no).trim().toLowerCase(), teacher])
+      );
+      const teacherByName = new Map(
+        teachers.map((teacher) => [fullName(teacher).trim().toLowerCase(), teacher])
+      );
+
+      const valid = [];
+      const errors = [];
+
+      rawRows.forEach((row, index) => {
+        const rowNumber = index + 2;
+        const employeeNo = employeeColumn ? String(row[employeeColumn] ?? "").trim() : "";
+        const teacherName = nameColumn ? String(row[nameColumn] ?? "").trim() : "";
+        const date = normalizeDate(row[dateColumn]);
+        const checkIn = normalizeTime(row[checkInColumn]);
+        const checkOut = checkOutColumn ? normalizeTime(row[checkOutColumn]) : null;
+
+        const teacher =
+          (employeeNo && teacherByEmployee.get(employeeNo.toLowerCase())) ||
+          (teacherName && teacherByName.get(teacherName.toLowerCase()));
+
+        if (!teacher) {
+          errors.push(`Row ${rowNumber}: teacher could not be matched by employee number or exact name.`);
+          return;
+        }
+        if (!date) {
+          errors.push(`Row ${rowNumber}: invalid attendance date.`);
+          return;
+        }
+        if (!checkIn) {
+          errors.push(`Row ${rowNumber}: invalid or missing check-in time.`);
+          return;
+        }
+
+        valid.push({
+          teacher,
+          date,
+          checkIn,
+          checkOut,
+          status: isLate(checkIn) ? "Late" : "Present",
+        });
+      });
+
+      setClockRows(valid);
+      setClockPreview({
+        total: rawRows.length,
+        valid: valid.length,
+        errors,
+        dates: [...new Set(valid.map((row) => row.date))].sort(),
+        late: valid.filter((row) => row.status === "Late").length,
+      });
+    } catch (err) {
+      setError(err.message || "Unable to read the clock-in file.");
+    }
+  };
+
+  const importClockRows = async () => {
+    if (!clockRows.length || !clockPreview) return;
+
+    setImporting(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const dates = clockRows.map((row) => row.date).sort();
+      const start = dates[0];
+      const end = dates[dates.length - 1];
+      const teacherIds = [...new Set(clockRows.map((row) => row.teacher.id))];
+
+      const { data: existing, error: existingError } = await supabase
+        .from("teacher_attendance")
+        .select("id, teacher_id, attendance_date")
+        .gte("attendance_date", start)
+        .lte("attendance_date", end)
+        .in("teacher_id", teacherIds);
+
+      if (existingError) throw existingError;
+
+      const existingMap = new Map(
+        (existing || []).map((record) => [`${record.teacher_id}|${record.attendance_date}`, record.id])
+      );
+
+      const updates = [];
+      const inserts = [];
+
+      for (const row of clockRows) {
+        const payload = {
+          teacher_id: row.teacher.id,
+          teacher_name: fullName(row.teacher),
+          attendance_date: row.date,
+          status: row.status,
+          check_in: row.checkIn,
+          check_out: row.checkOut,
+          note: "Imported from standalone clock-in file",
+          school_id: staff.school_id,
+        };
+
+        const existingId = existingMap.get(`${row.teacher.id}|${row.date}`);
+        if (existingId) {
+          updates.push({ id: existingId, payload });
+        } else {
+          inserts.push(payload);
+        }
+      }
+
+      for (const item of updates) {
+        const { error: updateError } = await supabase
+          .from("teacher_attendance")
+          .update(item.payload)
+          .eq("id", item.id);
+        if (updateError) throw updateError;
+      }
+
+      if (inserts.length) {
+        const { error: insertError } = await supabase
+          .from("teacher_attendance")
+          .insert(inserts);
+        if (insertError) throw insertError;
+      }
+
+      setSuccess(
+        `Imported ${clockRows.length} clock-in record${clockRows.length === 1 ? "" : "s"} across ${clockPreview.dates.length} day${clockPreview.dates.length === 1 ? "" : "s"}. ${clockPreview.late} late arrival${clockPreview.late === 1 ? "" : "s"} detected.`
+      );
+      setClockFile(null);
+      setClockRows([]);
+      setClockPreview(null);
+      await refresh();
+    } catch (err) {
+      console.error("CLOCK FILE IMPORT ERROR:", err);
+      setError(err.message || "Unable to import clock-in records.");
+    } finally {
+      setImporting(false);
+    }
   };
 
   const refresh = async () => {
@@ -363,6 +621,58 @@ export default function TeacherAttendance() {
             <p style={{ color: "#64748b", marginTop: "14px" }}>
               8:00 AM is the punctuality cutoff. A check-in after 8:00 AM is recorded as Late.
             </p>
+          </div>
+
+
+          <div className="page-card">
+            <h2>Import standalone clock-in</h2>
+            <p style={{ color: "#64748b", margin: "6px 0 16px" }}>
+              Upload the weekly Excel or CSV export from the clock-in device. MEKA School stores attendance times and lateness only; no biometric information is imported.
+            </p>
+
+            <input
+              type="file"
+              accept=".csv,.xlsx,.xls"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) prepareClockRows(file);
+                event.target.value = "";
+              }}
+              disabled={importing}
+            />
+
+            <p style={{ color: "#64748b", marginTop: "12px", fontSize: "13px" }}>
+              Required columns: <strong>Employee No</strong>, <strong>Date</strong>, <strong>Check In</strong>. Teacher Name may be used instead of Employee No. Check Out is optional.
+            </p>
+
+            {clockFile && clockPreview && (
+              <div style={{ marginTop: "16px", padding: "14px", background: "#f8fafc", borderRadius: "10px" }}>
+                <strong>{clockFile.name}</strong>
+                <div style={{ color: "#475569", marginTop: "6px" }}>
+                  {clockPreview.valid} valid · {clockPreview.errors.length} skipped · {clockPreview.dates.length} day(s) · {clockPreview.late} late
+                </div>
+
+                {clockPreview.errors.length > 0 && (
+                  <div style={{ marginTop: "10px", color: "#b91c1c", fontSize: "13px", maxHeight: "120px", overflowY: "auto" }}>
+                    {clockPreview.errors.slice(0, 10).map((message) => (
+                      <div key={message}>{message}</div>
+                    ))}
+                    {clockPreview.errors.length > 10 && (
+                      <div>…and {clockPreview.errors.length - 10} more skipped rows.</div>
+                    )}
+                  </div>
+                )}
+
+                <button
+                  className="primary-btn"
+                  disabled={importing || !clockRows.length}
+                  onClick={importClockRows}
+                  style={{ marginTop: "12px" }}
+                >
+                  {importing ? "Importing..." : `Import ${clockRows.length} record${clockRows.length === 1 ? "" : "s"}`}
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="page-card">
