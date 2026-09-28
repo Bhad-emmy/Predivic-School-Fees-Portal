@@ -4,7 +4,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
 const json = (body: unknown, status = 200) =>
@@ -15,7 +15,7 @@ const json = (body: unknown, status = 200) =>
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (req.method !== "GET") return json({ error: "Method not allowed." }, 405);
+  if (!["GET", "POST"].includes(req.method)) return json({ error: "Method not allowed." }, 405);
 
   const secret = Deno.env.get("PAYSTACK_SECRET_KEY");
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
     return json({ error: "Payment confirmation is not configured." }, 500);
   }
 
-  const reference = new URL(req.url).searchParams.get("reference")?.trim() || "";
+  let reference = new URL(req.url).searchParams.get("reference")?.trim() || "";\n  if (req.method === "POST") {\n    try {\n      const body = await req.json();\n      reference = String(body?.reference || reference).trim();\n    } catch {\n      return json({ error: "Invalid request body." }, 400);\n    }\n  }
   if (!/^MEKA-[A-Z0-9-]+$/i.test(reference)) {
     return json({ error: "Invalid payment reference." }, 400);
   }
