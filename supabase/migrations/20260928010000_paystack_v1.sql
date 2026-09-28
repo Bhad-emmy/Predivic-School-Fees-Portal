@@ -127,6 +127,11 @@ begin
   end if;
 
   if v_intent.status = 'paid' and v_intent.paystack_transaction_id is not null then
+    select *
+    into v_account
+    from public.student_fee_accounts
+    where id = v_intent.student_fee_account_id;
+
     select p.id
     into v_existing_payment_id
     from public.payments p
@@ -135,28 +140,35 @@ begin
     order by p.created_at desc
     limit 1;
 
+    select coalesce(sum(p.amount), 0)
+    into v_total_paid
+    from public.payments p
+    where p.student_fee_account_id = v_intent.student_fee_account_id
+      and lower(coalesce(p.status, '')) in ('paid','successful','completed');
+
+    select r.receipt_number
+    into v_receipt_number
+    from public.receipts r
+    where r.payment_id = v_existing_payment_id
+    limit 1;
+
+    v_balance := greatest(v_account.total_amount - v_total_paid, 0);
+    v_account_status := case
+      when v_balance <= 0 then 'paid'
+      when v_total_paid > 0 then 'partial'
+      else 'outstanding'
+    end;
+
     return query
     select
       v_existing_payment_id,
-      r.receipt_number,
+      v_receipt_number,
       v_intent.student_fee_account_id,
       v_intent.amount,
-      coalesce(sum(p2.amount), 0),
-      greatest(v_account.total_amount - coalesce(sum(p2.amount), 0), 0),
-      case
-        when v_account.total_amount - coalesce(sum(p2.amount), 0) <= 0 then 'paid'
-        when coalesce(sum(p2.amount), 0) > 0 then 'partial'
-        else 'outstanding'
-      end,
-      true
-    from public.student_fee_accounts v_account
-    left join public.payments p2
-      on p2.student_fee_account_id = v_account.id
-     and lower(coalesce(p2.status, '')) in ('paid','successful','completed')
-    left join public.receipts r
-      on r.payment_id = v_existing_payment_id
-    where v_account.id = v_intent.student_fee_account_id
-    group by v_account.id, v_account.total_amount, r.receipt_number;
+      v_total_paid,
+      v_balance,
+      v_account_status,
+      true;
     return;
   end if;
 
@@ -246,22 +258,16 @@ begin
       updated_at = now()
   where id = v_account.id;
 
-  v_receipt_number := format(
-    'REC-%s-%s',
-    to_char(coalesce(p_paid_at::date, current_date), 'YYYY'),
-    lpad(nextval('public.payment_receipt_number_seq')::text, 6, '0')
-  );
+  v_receipt_number := public.generate_receipt_number();
 
   insert into public.receipts (
     payment_id,
-    student_id,
     receipt_number,
     issued_at,
     school_id
   )
   values (
     v_payment_id,
-    v_intent.student_id,
     v_receipt_number,
     coalesce(p_paid_at, now()),
     v_account.school_id
