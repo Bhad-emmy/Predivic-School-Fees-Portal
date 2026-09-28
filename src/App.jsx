@@ -9,12 +9,17 @@ import Payments from "./pages/Payments";
 import Receipts from "./pages/Receipts";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
+import ParentPayment from "./pages/ParentPayment";
 import Login from "./pages/Login";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
 import "./styles/App.css";
 
 function App() {
+  if (window.location.pathname === "/pay") {
+    return <ParentPayment />;
+  }
+
   return (
     <AuthProvider>
       <ProtectedApp />
