@@ -1,0 +1,14 @@
+[functions.staff-accounts]
+verify_jwt = true
+
+[functions.student-contact]
+verify_jwt = true
+
+[functions.paystack-links]
+verify_jwt = false
+
+[functions.paystack-initialize]
+verify_jwt = false
+
+[functions.paystack-webhook]
+verify_jwt = false
