@@ -139,6 +139,8 @@ Deno.serve(async (req) => {
         student_id: link.student_id,
         student_fee_account_id: account.id,
       }),
+      subaccount: "ACCT_bj4k4vw46o1swi7",
+      bearer: "subaccount",
     }),
   });
 
