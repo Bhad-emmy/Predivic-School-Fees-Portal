@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import StudentSearchSelect from "../components/StudentSearchSelect";
 import { getStudents, getStudentFeeAccounts, getFeeStructures, createFeeStructure, updateFeeStructure, deleteFeeStructure, assignFeeStructure } from "../lib/schoolData";
+import { createParentPaymentLink } from "../lib/paystack";
 
 const TERM_OPTIONS = [
   "First Term",
@@ -599,6 +600,47 @@ export default function FeeAccounts() {
       selectedSession,
       selectedTerm,
     ]);
+
+  const [paymentLinkLoading, setPaymentLinkLoading] = useState({});
+  const [paymentLink, setPaymentLink] = useState(null);
+
+  const handleGeneratePaymentLink = async (account) => {
+    if (!account?.id || Number(account.balance || 0) <= 0) return;
+
+    try {
+      setPaymentLinkLoading((current) => ({ ...current, [account.id]: true }));
+      setError("");
+
+      const result = await createParentPaymentLink(account.id);
+
+      setPaymentLink({
+        url: result.url,
+        studentName: getStudentName(account),
+        balance: Number(account.balance || 0),
+        expiresAt: result.expires_at || null,
+        copied: false,
+      });
+    } catch (err) {
+      console.error("GENERATE PAYMENT LINK ERROR:", err);
+      setError(err.message || "Unable to generate payment link.");
+    } finally {
+      setPaymentLinkLoading((current) => ({ ...current, [account.id]: false }));
+    }
+  };
+
+  const copyPaymentLink = async () => {
+    if (!paymentLink?.url) return;
+
+    try {
+      await navigator.clipboard.writeText(paymentLink.url);
+      setPaymentLink((current) => current ? { ...current, copied: true } : current);
+      window.setTimeout(() => {
+        setPaymentLink((current) => current ? { ...current, copied: false } : current);
+      }, 1800);
+    } catch {
+      setError("Unable to copy the payment link. Copy it manually from the field.");
+    }
+  };
 
   // =====================================================
   // ASSIGN FORM HANDLERS
@@ -1252,6 +1294,10 @@ export default function FeeAccounts() {
                     <th>
                       Status
                     </th>
+
+                    <th>
+                      Parent Payment
+                    </th>
                   </tr>
                 </thead>
 
@@ -1323,13 +1369,32 @@ export default function FeeAccounts() {
                               account.status
                             }
                           </td>
+
+                          <td>
+                            {Number(account.balance || 0) > 0 ? (
+                              <button
+                                type="button"
+                                className="secondary-btn"
+                                onClick={() => handleGeneratePaymentLink(account)}
+                                disabled={Boolean(paymentLinkLoading[account.id])}
+                              >
+                                {paymentLinkLoading[account.id]
+                                  ? "Generating..."
+                                  : "Generate Link"}
+                              </button>
+                            ) : (
+                              <span style={{ color: "#64748b", fontSize: "13px" }}>
+                                Paid
+                              </span>
+                            )}
+                          </td>
                         </tr>
                       )
                     )
                   ) : (
                     <tr>
                       <td
-                        colSpan="9"
+                        colSpan="10"
                         style={{
                           textAlign:
                             "center",
@@ -1351,6 +1416,73 @@ export default function FeeAccounts() {
             )}
           </div>
         </>
+      )}
+
+      {paymentLink && (
+        <div
+          className="modal-overlay"
+          onClick={() => setPaymentLink(null)}
+        >
+          <div
+            className="modal-card"
+            onClick={(event) => event.stopPropagation()}
+            style={{ maxWidth: "620px" }}
+          >
+            <div className="modal-header">
+              <div>
+                <h2>Parent Payment Link</h2>
+                <p style={{ color: "#64748b", marginTop: "5px", fontSize: "14px" }}>
+                  Share this secure link with {paymentLink.studentName || "the parent"}.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="modal-close"
+                aria-label="Close"
+                onClick={() => setPaymentLink(null)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="form-group">
+              <label>Outstanding balance</label>
+              <strong style={{ display: "block", fontSize: "24px", marginTop: "6px" }}>
+                ₦{formatMoney(paymentLink.balance)}
+              </strong>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="parent-payment-link">Secure payment link</label>
+              <input
+                id="parent-payment-link"
+                type="text"
+                value={paymentLink.url}
+                readOnly
+                style={{ width: "100%" }}
+                onFocus={(event) => event.target.select()}
+              />
+            </div>
+
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="secondary-btn"
+                onClick={() => setPaymentLink(null)}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                className="primary-btn"
+                onClick={copyPaymentLink}
+              >
+                {paymentLink.copied ? "Copied" : "Copy Link"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* =================================================
