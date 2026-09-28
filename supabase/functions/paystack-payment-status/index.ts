@@ -24,7 +24,15 @@ Deno.serve(async (req) => {
     return json({ error: "Payment confirmation is not configured." }, 500);
   }
 
-  let reference = new URL(req.url).searchParams.get("reference")?.trim() || "";\n  if (req.method === "POST") {\n    try {\n      const body = await req.json();\n      reference = String(body?.reference || reference).trim();\n    } catch {\n      return json({ error: "Invalid request body." }, 400);\n    }\n  }
+  let reference = new URL(req.url).searchParams.get("reference")?.trim() || "";
+  if (req.method === "POST") {
+    try {
+      const body = await req.json();
+      reference = String(body?.reference || reference).trim();
+    } catch {
+      return json({ error: "Invalid request body." }, 400);
+    }
+  }
   if (!/^MEKA-[A-Z0-9-]+$/i.test(reference)) {
     return json({ error: "Invalid payment reference." }, 400);
   }
