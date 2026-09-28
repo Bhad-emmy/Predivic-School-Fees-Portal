@@ -54,10 +54,45 @@ export default function ParentPayment() {
   }, [token]);
 
   useEffect(() => {
-    if (reference) {
-      setMessage("Payment submitted. MEKA School will confirm the transaction and update the fee balance.");
-    }
-  }, [reference]);
+    if (!reference || !token) return;
+
+    let mounted = true;
+
+    const confirmPayment = async () => {
+      try {
+        setMessage("Confirming your payment...");
+        const { data, error: invokeError } = await supabase.functions.invoke("paystack-payment-status", {
+          body: { reference },
+        });
+
+        if (invokeError) throw invokeError;
+        if (data?.error) throw new Error(data.error);
+
+        if (data?.status === "paid") {
+          const { data: refreshed, error: refreshError } = await supabase.functions.invoke("paystack-payment-link", {
+            body: { token },
+          });
+
+          if (refreshError) throw refreshError;
+          if (refreshed?.error) throw new Error(refreshed.error);
+
+          if (!mounted) return;
+          setDetails(refreshed);
+          setAmount(String(refreshed.balance || 0));
+          setMessage("Payment confirmed. Your fee balance has been updated.");
+        } else {
+          if (mounted) setMessage("Payment is still being confirmed. Please refresh in a moment.");
+        }
+      } catch (err) {
+        if (mounted) setError(err.message || "Unable to confirm the payment.");
+      }
+    };
+
+    confirmPayment();
+    return () => {
+      mounted = false;
+    };
+  }, [reference, token]);
 
   const handlePay = async (event) => {
     event.preventDefault();
