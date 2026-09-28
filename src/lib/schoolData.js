@@ -305,6 +305,42 @@ export async function getPayments() {
 
 
 
+
+export async function getPaymentsForFeeAccount(studentFeeAccountId) {
+  if (!studentFeeAccountId) throw new Error("Student fee account ID is required.");
+
+  const { data: payments, error } = await supabase
+    .from("payments")
+    .select("id, amount, payment_date, method, reference, status, notes, created_at")
+    .eq("student_fee_account_id", studentFeeAccountId)
+    .order("payment_date", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  if (!payments?.length) return [];
+
+  const paymentIds = payments.map((payment) => payment.id);
+  const { data: receipts, error: receiptError } = await supabase
+    .from("receipts")
+    .select("payment_id, receipt_number, issued_at")
+    .in("payment_id", paymentIds);
+
+  if (receiptError) throw receiptError;
+
+  const receiptMap = new Map((receipts || []).map((receipt) => [receipt.payment_id, receipt]));
+
+  return payments.map((payment) => ({
+    ...payment,
+    amount: Number(payment.amount || 0),
+    receiptNumber: receiptMap.get(payment.id)?.receipt_number || null,
+    receiptIssuedAt: receiptMap.get(payment.id)?.issued_at || null,
+    displayStatus:
+      ["paid", "successful", "completed"].includes(String(payment.status || "").toLowerCase())
+        ? "Paid"
+        : payment.status || "Unknown",
+  }));
+}
+
 async function resolveFeeStructureRefs({ session, term, className }) {
   const normalizedTerm = String(term || "")
     .toLowerCase()
