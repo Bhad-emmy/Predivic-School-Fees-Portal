@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import StudentSearchSelect from "../components/StudentSearchSelect";
-import { getStudents, getStudentFeeAccounts, getFeeStructures, createFeeStructure, updateFeeStructure, deleteFeeStructure, assignFeeStructure } from "../lib/schoolData";
+import { getStudents, getStudentFeeAccounts, getFeeStructures, getPaymentsForFeeAccount, createFeeStructure, updateFeeStructure, deleteFeeStructure, assignFeeStructure } from "../lib/schoolData";
 import { createParentPaymentLink } from "../lib/paystack";
 
 const TERM_OPTIONS = [
@@ -603,6 +603,24 @@ export default function FeeAccounts() {
 
   const [paymentLinkLoading, setPaymentLinkLoading] = useState({});
   const [paymentLink, setPaymentLink] = useState(null);
+  const [payments, setPayments] = useState([]);
+  const [selectedPaymentAccount, setSelectedPaymentAccount] = useState(null);
+  const [paymentHistoryLoading, setPaymentHistoryLoading] = useState(false);
+
+  const loadPaymentHistory = async (account) => {
+    try {
+      setPaymentHistoryLoading(true);
+      setError("");
+      const rows = await getPaymentsForFeeAccount(account.id);
+      setPayments(rows);
+      setSelectedPaymentAccount(account);
+    } catch (err) {
+      console.error("LOAD PAYMENT HISTORY ERROR:", err);
+      setError(err.message || "Unable to load payment history.");
+    } finally {
+      setPaymentHistoryLoading(false);
+    }
+  };
 
   const handleGeneratePaymentLink = async (account) => {
     if (!account?.id || Number(account.balance || 0) <= 0) return;
@@ -1295,9 +1313,8 @@ export default function FeeAccounts() {
                       Status
                     </th>
 
-                    <th>
-                      Parent Payment
-                    </th>
+                    <th>Parent Payment</th>
+                    <th>History</th>
                   </tr>
                 </thead>
 
@@ -1388,13 +1405,18 @@ export default function FeeAccounts() {
                               </span>
                             )}
                           </td>
+                          <td>
+                            <button type="button" className="secondary-btn" onClick={() => loadPaymentHistory(account)}>
+                              Payment History
+                            </button>
+                          </td>
                         </tr>
                       )
                     )
                   ) : (
                     <tr>
                       <td
-                        colSpan="10"
+                        colSpan="11"
                         style={{
                           textAlign:
                             "center",
@@ -1416,6 +1438,46 @@ export default function FeeAccounts() {
             )}
           </div>
         </>
+      )}
+
+      {selectedPaymentAccount && (
+        <div className="modal-overlay" onClick={() => setSelectedPaymentAccount(null)}>
+          <div className="modal-card" onClick={(event) => event.stopPropagation()} style={{ maxWidth: "900px" }}>
+            <div className="modal-header">
+              <div>
+                <h2>Payment History</h2>
+                <p style={{ color: "#64748b", marginTop: "5px", fontSize: "14px" }}>
+                  {getStudentName(selectedPaymentAccount)} — {selectedPaymentAccount.className} — {displayTermName(selectedPaymentAccount.term)}
+                </p>
+              </div>
+              <button type="button" className="modal-close" aria-label="Close" onClick={() => setSelectedPaymentAccount(null)}>×</button>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "12px", marginBottom: "20px" }}>
+              <div style={{ padding: "14px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px" }}><small style={{ color: "#64748b" }}>Total Fee</small><strong style={{ display: "block", marginTop: "4px" }}>₦{formatMoney(selectedPaymentAccount.totalAmount)}</strong></div>
+              <div style={{ padding: "14px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px" }}><small style={{ color: "#64748b" }}>Total Paid</small><strong style={{ display: "block", marginTop: "4px" }}>₦{formatMoney(selectedPaymentAccount.totalPaid)}</strong></div>
+              <div style={{ padding: "14px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px" }}><small style={{ color: "#64748b" }}>Balance</small><strong style={{ display: "block", marginTop: "4px" }}>₦{formatMoney(selectedPaymentAccount.balance)}</strong></div>
+            </div>
+            {paymentHistoryLoading ? <p style={{ color: "#64748b" }}>Loading payment history...</p> : (
+              <div style={{ overflowX: "auto" }}>
+                <table>
+                  <thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Reference</th><th>Receipt</th><th>Status</th></tr></thead>
+                  <tbody>
+                    {payments.length ? payments.map((payment) => (
+                      <tr key={payment.id}>
+                        <td>{payment.payment_date ? new Date(payment.payment_date).toLocaleDateString("en-NG") : "-"}</td>
+                        <td>₦{formatMoney(payment.amount)}</td>
+                        <td>{payment.method || "-"}</td>
+                        <td>{payment.reference || "-"}</td>
+                        <td>{payment.receiptNumber || "-"}</td>
+                        <td>{payment.displayStatus || payment.status || "-"}</td>
+                      </tr>
+                    )) : <tr><td colSpan="6" style={{ textAlign: "center", padding: "30px", color: "#64748b" }}>No payments recorded for this fee account.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {paymentLink && (
