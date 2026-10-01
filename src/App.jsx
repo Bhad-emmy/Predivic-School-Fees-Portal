@@ -11,14 +11,23 @@ import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import ParentPayment from "./pages/ParentPayment";
 import Login from "./pages/Login";
+import LegalPage from "./pages/LegalPage";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
 import "./styles/App.css";
 
 function App() {
-  if (window.location.pathname === "/pay") {
-    return <ParentPayment />;
-  }
+  const publicRoutes = {
+    "/privacy": "privacy",
+    "/terms": "terms",
+    "/refund": "refund",
+    "/cookies": "cookies",
+    "/accessibility": "accessibility",
+  };
+
+  const legalType = publicRoutes[window.location.pathname];
+  if (legalType) return <LegalPage type={legalType} />;
+  if (window.location.pathname === "/pay") return <ParentPayment />;
 
   return (
     <AuthProvider>
