@@ -81,6 +81,22 @@ Deno.serve(async (req) => {
 
   if (accountError || !account) return json({ error: "Fee account not found." }, 404);
 
+  const { data: schoolSettings, error: settingsError } = await admin
+    .from("school_settings")
+    .select("paystack_subaccount_code")
+    .eq("school_id", link.school_id)
+    .maybeSingle();
+
+  if (settingsError) {
+    console.error("PAYSTACK SCHOOL SETTINGS ERROR:", settingsError);
+    return json({ error: "Unable to load school payment configuration." }, 500);
+  }
+
+  const subaccount = String(schoolSettings?.paystack_subaccount_code || "").trim();
+  if (!subaccount) {
+    return json({ error: "This school has no Paystack subaccount configured." }, 503);
+  }
+
   const { data: paidRows, error: paidError } = await admin
     .from("payments")
     .select("amount, status")
@@ -139,7 +155,7 @@ Deno.serve(async (req) => {
         student_id: link.student_id,
         student_fee_account_id: account.id,
       }),
-      subaccount: "ACCT_bj4k4vw46o1swi7",
+      subaccount,
       bearer: "subaccount",
     }),
   });
