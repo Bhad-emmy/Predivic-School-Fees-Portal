@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
+import LegalFooter from "../components/LegalFooter";
 
 const formatNaira = (value) =>
   "₦" + Number(value || 0).toLocaleString("en-NG", { minimumFractionDigits: 2 });
@@ -131,7 +132,8 @@ export default function ParentPayment() {
   };
 
   if (loading) {
-    return <main style={styles.shell}><section style={styles.card}><p>Loading secure payment link...</p></section></main>;
+    return <main style={styles.shell}>
+      <a className="skip-link" href="#payment-form">Skip to payment form</a><section style={styles.card}><p>Loading secure payment link...</p></section></main>;
   }
 
   if (error && !details) {
@@ -154,7 +156,7 @@ export default function ParentPayment() {
         {message && <p style={styles.success}>{message}</p>}
         {error && <p style={styles.error}>{error}</p>}
 
-        <form onSubmit={handlePay}>
+        <form id="payment-form" onSubmit={handlePay}>
           <label style={styles.label}>
             Email
             <input
@@ -191,6 +193,7 @@ export default function ParentPayment() {
         <p style={styles.footer}>
           Your payment is verified by MEKA School before the fee balance is updated.
         </p>
+        <LegalFooter />
       </section>
     </main>
   );
