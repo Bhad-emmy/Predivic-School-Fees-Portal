@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import LegalFooter from "../components/LegalFooter";
 
 export default function Login() {
   const { user, staff, error, signIn, signOut } = useAuth();
@@ -26,6 +27,7 @@ export default function Login() {
 
   return (
     <main className="auth-page">
+      <a className="skip-link" href="#login-form">Skip to sign in</a>
       <section className="auth-card">
         <h1>MEKA School</h1>
         <p>
@@ -44,7 +46,7 @@ export default function Login() {
             </button>
           </>
         ) : (
-          <form onSubmit={handleSubmit}>
+          <form id="login-form" onSubmit={handleSubmit}>
             <label htmlFor="email">Email</label>
             <input
               id="email"
@@ -75,6 +77,7 @@ export default function Login() {
           </form>
         )}
       </section>
+      <LegalFooter />
     </main>
   );
 }
