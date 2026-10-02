@@ -360,16 +360,23 @@ export default function TeacherAttendance() {
         });
       });
 
-      const uniqueRows = [];
-      const seen = new Set();
+      const dailyRows = new Map();
       for (const row of valid) {
         const key = `${row.teacher.id}|${row.date}`;
-        if (seen.has(key)) {
-          errors.push(`Duplicate attendance row for ${fullName(row.teacher)} on ${row.date}; only the first row was kept.`);
-          continue;
+        const existing = dailyRows.get(key);
+        if (!existing || row.checkIn < existing.checkIn) {
+          dailyRows.set(key, row);
         }
-        seen.add(key);
-        uniqueRows.push(row);
+      }
+
+      const uniqueRows = [...dailyRows.values()].sort(
+        (a, b) => `${a.date}|${a.checkIn}`.localeCompare(`${b.date}|${b.checkIn}`)
+      );
+
+      if (valid.length > uniqueRows.length) {
+        errors.push(
+          `${valid.length - uniqueRows.length} duplicate punch row(s) were collapsed to the earliest sign-in for each teacher/day.`
+        );
       }
 
       setClockRows(uniqueRows);
