@@ -47,6 +47,14 @@ const formatTime = (value) => (value ? String(value).slice(0, 5) : "-");
 
 const isLate = (time) => Boolean(time && String(time).slice(0, 5) > LATE_CUTOFF);
 
+const getLateMinutes = (time) => {
+  if (!time) return null;
+  const parts = String(time).slice(0, 8).split(":").map(Number);
+  if (!Number.isFinite(parts[0]) || !Number.isFinite(parts[1])) return null;
+  const cutoff = LATE_CUTOFF.split(":").map(Number);
+  return Math.max(0, (parts[0] * 60 + parts[1]) - (cutoff[0] * 60 + cutoff[1]));
+};
+
 const fullName = (teacher) =>
   [teacher.first_name, teacher.middle_name, teacher.last_name].filter(Boolean).join(" ");
 
@@ -130,7 +138,36 @@ const normalizeDate = (value) => {
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString().slice(0, 10);
 };
 
+const parseClockTextFile = async (file) => {
+  const text = await file.text();
+  const lines = text.split(/\\r?\\n/).filter((line) => line.trim());
+  const rows = lines.map((line) => line.split("\\t"));
+  const hasRawGLogShape =
+    rows.length > 1 &&
+    rows.slice(1, Math.min(rows.length, 8)).some((row) =>
+      /\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}\\s+\\d{1,2}:\\d{2}/.test(String(row[6] || ""))
+    );
+
+  if (hasRawGLogShape) {
+    return rows.slice(1).map((row) => ({
+      "Employee No": String(row[2] || "").trim(),
+      "Teacher Name": String(row[3] || "").trim(),
+      Date: String(row[6] || "").trim().slice(0, 10),
+      "Check In": String(row[6] || "").trim().slice(11),
+    }));
+  }
+
+  const headers = rows[0];
+  return rows.slice(1).map((row) =>
+    Object.fromEntries(headers.map((header, index) => [header, row[index] || ""]))
+  );
+};
+
 const parseClockFile = async (file) => {
+  const lowerName = String(file.name || "").toLowerCase();
+  if (lowerName.endsWith(".txt") || lowerName.endsWith(".dat")) {
+    return parseClockTextFile(file);
+  }
   if (!window.XLSX) {
     throw new Error("Spreadsheet importer is unavailable. Please refresh the app and try again.");
   }
@@ -186,7 +223,7 @@ export default function TeacherAttendance() {
   const loadDailyRecords = async () => {
     const { data, error: queryError } = await supabase
       .from("teacher_attendance")
-      .select("id, teacher_id, teacher_name, attendance_date, status, check_in, check_out, note")
+      .select("id, teacher_id, teacher_name, attendance_date, status, check_in, check_out, late_minutes, note")
       .eq("attendance_date", selectedDate);
 
     if (queryError) throw queryError;
@@ -205,7 +242,7 @@ export default function TeacherAttendance() {
 
     const { data, error: queryError } = await supabase
       .from("teacher_attendance")
-      .select("id, teacher_id, teacher_name, attendance_date, status, check_in, check_out, note")
+      .select("id, teacher_id, teacher_name, attendance_date, status, check_in, check_out, late_minutes, note")
       .eq("teacher_id", staff.id)
       .eq("attendance_date", selectedDate)
       .maybeSingle();
@@ -220,7 +257,7 @@ export default function TeacherAttendance() {
 
     const { data, error: queryError } = await supabase
       .from("teacher_attendance")
-      .select("teacher_id, status, attendance_date, check_in, check_out")
+      .select("teacher_id, status, attendance_date, check_in, check_out, late_minutes")
       .gte("attendance_date", start)
       .lte("attendance_date", end);
 
@@ -238,11 +275,13 @@ export default function TeacherAttendance() {
           Absent: 0,
           Excused: 0,
           total: 0,
+          lateMinutes: 0,
         };
       }
       next[record.teacher_id][record.status] =
         (next[record.teacher_id][record.status] || 0) + 1;
       next[record.teacher_id].total += 1;
+      next[record.teacher_id].lateMinutes += Number(record.late_minutes || 0);
     }
 
     setSummary(next);
@@ -317,6 +356,7 @@ export default function TeacherAttendance() {
           checkIn,
           checkOut,
           status: isLate(checkIn) ? "Late" : "Present",
+          lateMinutes: getLateMinutes(checkIn) || 0,
         });
       });
 
@@ -381,8 +421,9 @@ export default function TeacherAttendance() {
           attendance_date: row.date,
           status: row.status,
           check_in: row.checkIn,
-          check_out: row.checkOut,
-          note: "Imported from standalone clock-in file",
+          check_out: null,
+          late_minutes: row.lateMinutes,
+          note: "Imported from clock-machine sign-in record",
           school_id: staff.school_id,
         };
 
@@ -459,6 +500,9 @@ export default function TeacherAttendance() {
         status,
         check_in: checkIn ?? existing?.check_in ?? null,
         check_out: checkOut ?? existing?.check_out ?? null,
+        late_minutes: checkIn ?? existing?.check_in
+          ? (isLate(checkIn ?? existing?.check_in) ? getLateMinutes(checkIn ?? existing?.check_in) : 0)
+          : null,
         note: note.trim() || existing?.note || null,
         school_id: staff.school_id,
       };
@@ -639,12 +683,12 @@ export default function TeacherAttendance() {
           <div className="page-card">
             <h2>Import standalone clock-in</h2>
             <p style={{ color: "#64748b", margin: "6px 0 16px" }}>
-              Upload the weekly Excel or CSV export from the clock-in device. MEKA School stores attendance times and lateness only; no biometric information is imported.
+              Upload the clock-machine Excel/CSV export or raw GLog text export. MEKA School uses the earliest sign-in for each teacher/day and stores punctuality, lateness and minutes late; no biometric information is imported.
             </p>
 
             <input
               type="file"
-              accept=".csv,.xlsx,.xls"
+              accept=".csv,.xlsx,.xls,.txt,.dat"
               onChange={(event) => {
                 const file = event.target.files?.[0];
                 if (file) prepareClockRows(file);
@@ -654,7 +698,7 @@ export default function TeacherAttendance() {
             />
 
             <p style={{ color: "#64748b", marginTop: "12px", fontSize: "13px" }}>
-              Required columns: <strong>Employee No</strong>, <strong>Date</strong>, <strong>Check In</strong>. Teacher Name may be used instead of Employee No. Check Out is optional.
+              For spreadsheets: <strong>Employee No</strong>, <strong>Date</strong>, <strong>Check In</strong>. Raw GLog <strong>.txt/.dat</strong> files are also supported. Teacher Name may be used instead of Employee No. The earliest punch of each teacher/day is used as sign-in.
             </p>
 
             {clockFile && clockPreview && (
@@ -700,8 +744,9 @@ export default function TeacherAttendance() {
                     <th>Employee</th>
                     <th>Teacher</th>
                     <th>Status</th>
-                    <th>Check-in</th>
-                    <th>Check-out</th>
+                    <th>Sign-in</th>
+                    <th>Punctuality</th>
+                    <th>Minutes late</th>
                     <th>Action</th>
                   </tr>
                 </thead>
@@ -714,7 +759,8 @@ export default function TeacherAttendance() {
                         <td><strong>{fullName(teacher)}</strong></td>
                         <td>{record?.status || "Not marked"}</td>
                         <td>{formatTime(record?.check_in)}</td>
-                        <td>{formatTime(record?.check_out)}</td>
+                        <td>{record?.status === "Late" ? "Late" : record?.status === "Present" ? "Punctual" : "-"}</td>
+                        <td>{record?.status === "Late" ? (record?.late_minutes ?? 0) + " min" : "-"}</td>
                         <td>
                           <div style={{ display: "flex", gap: "7px", flexWrap: "wrap" }}>
                             <button className="primary-btn" disabled={saving} onClick={() => markPresentNow(teacher)}>
@@ -737,7 +783,7 @@ export default function TeacherAttendance() {
                     );
                   })}
                   {!activeTeachers.length && (
-                    <tr><td colSpan="6">No active teachers found.</td></tr>
+                    <tr><td colSpan="7">No active teachers found.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -747,7 +793,7 @@ export default function TeacherAttendance() {
           <div className="page-card">
             <h2>Monthly attendance summary</h2>
             <p style={{ color: "#64748b", margin: "6px 0 18px" }}>
-              {selectedMonth} · Late records are counted separately for punctuality and future salary-deduction rules.
+              {selectedMonth} · Punctuality is based on the 8:00 AM cutoff. Total minutes late is the payroll-ready figure for salary-deduction rules.
             </p>
 
             {summaryLoading ? (
@@ -758,11 +804,11 @@ export default function TeacherAttendance() {
                   <thead>
                     <tr>
                       <th>Teacher</th>
-                      <th>Present</th>
-                      <th>Late</th>
+                      <th>Punctual</th>
+                      <th>Late days</th>
+                      <th>Total minutes late</th>
                       <th>Absent</th>
                       <th>Excused</th>
-                      <th>Total marked</th>
                     </tr>
                   </thead>
                   <tbody>
