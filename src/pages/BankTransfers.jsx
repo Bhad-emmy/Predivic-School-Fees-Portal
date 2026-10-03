@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
-import { getStudentFeeAccounts } from "../lib/schoolData";
 
 const money=(v)=>"₦"+Number(v||0).toLocaleString("en-NG",{minimumFractionDigits:2});
 
