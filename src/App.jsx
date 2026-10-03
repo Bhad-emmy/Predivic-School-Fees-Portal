@@ -10,6 +10,7 @@ import Receipts from "./pages/Receipts";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import ParentPayment from "./pages/ParentPayment";
+import ParentPortal from "./pages/ParentPortal";
 import BankTransfers from "./pages/BankTransfers";
 import Login from "./pages/Login";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -19,6 +20,10 @@ import "./styles/App.css";
 function App() {
   if (window.location.pathname === "/pay") {
     return <ParentPayment />;
+  }
+
+  if (window.location.pathname === "/parent") {
+    return <ParentPortal />;
   }
 
   return (
