@@ -86,6 +86,16 @@ export default function Login() {
               </button>
             </form>
 
+            <div style={{ marginTop: "16px", textAlign: "center" }}>
+              <a
+                href="/parent"
+                className="secondary-btn"
+                style={{ display: "inline-block", textDecoration: "none" }}
+              >
+                Parent Portal
+              </a>
+            </div>
+
             <div className="activation-section">
               <p>
                 <strong>New school?</strong><br />
