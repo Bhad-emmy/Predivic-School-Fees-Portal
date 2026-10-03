@@ -3,7 +3,8 @@ import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
 
 const LAGOS_TIME_ZONE = "Africa/Lagos";
-const LATE_CUTOFF = "08:00";
+const LATE_CUTOFF = "07:20";
+const WORK_END = "17:30";
 
 const getDateString = (date = new Date()) => {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -38,6 +39,13 @@ const formatDate = (value) =>
     : "—";
 
 const isLate = (time) => Boolean(time && String(time).slice(0, 5) > LATE_CUTOFF);
+
+const getEarlyMinutes = (time) => {
+  if (!time) return 0;
+  const [h, m] = String(time).slice(0, 5).split(":").map(Number);
+  const [endH, endM] = WORK_END.split(":").map(Number);
+  return Math.max(0, endH * 60 + endM - (h * 60 + m));
+};
 
 const getLateMinutes = (time) => {
   if (!time) return 0;
@@ -96,7 +104,7 @@ export default function TeacherAttendance() {
             body { font-family: Arial, sans-serif; padding: 32px; color: #111827; }
             h1 { margin-bottom: 4px; }
             p { color: #64748b; }
-            .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 24px 0; }
+            .summary { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin: 24px 0; }
             .box { border: 1px solid #e5e7eb; padding: 14px; border-radius: 8px; }
             .label { color: #64748b; font-size: 12px; }
             .value { font-size: 20px; font-weight: 700; margin-top: 4px; }
@@ -109,12 +117,12 @@ export default function TeacherAttendance() {
         <body>
           <h1>Predivic Schools</h1>
           <h2>Staff Attendance Report</h2>
-          <p>${staffName} · ${month} · Biometric punctuality cutoff: 8:30 AM</p>
+          <p>${staffName} · ${month} · Arrival deadline: 7:20 AM · Scheduled closing: 5:30 PM</p>
           <div class="summary">
             <div class="box"><div class="label">Present</div><div class="value">${selectedSummary?.present_days ?? 0}</div></div>
             <div class="box"><div class="label">Late</div><div class="value">${selectedSummary?.late_days ?? 0}</div></div>
             <div class="box"><div class="label">No Punch</div><div class="value">${selectedSummary?.no_punch_days ?? 0}</div></div>
-            <div class="box"><div class="label">Late Minutes</div><div class="value">${selectedSummary?.total_late_minutes ?? 0}</div></div>
+            <div class="box"><div class="label">Late Minutes</div><div class="value">${selectedSummary?.total_late_minutes ?? 0}</div></div><div class="box"><div class="label">Early Minutes</div><div class="value">${selectedSummary?.total_early_minutes ?? 0}</div></div>
           </div>
           <table>
             <thead><tr><th>Date</th><th>Sign-in</th><th>Sign-out</th><th>Status</th><th>Late</th></tr></thead>
@@ -152,7 +160,7 @@ export default function TeacherAttendance() {
         supabase
           .from("teacher_attendance_summary")
           .select(
-            "device_employee_no, device_staff_name, attendance_date, first_signin, last_signout, status, late_minutes"
+            "device_employee_no, device_staff_name, attendance_date, first_signin, last_signout, status, late_minutes, early_minutes, early_departure"
           )
           .eq("school_id", staff.school_id)
           .gte("attendance_date", monthStart)
@@ -368,7 +376,7 @@ export default function TeacherAttendance() {
           <div className="page-card">
             <h2>Monthly Summary</h2>
             <p style={{ color: "#64748b", margin: "6px 0 18px" }}>
-              {month} · 8:30 AM is the biometric punctuality cutoff.
+              {month} · 7:20 AM is the arrival deadline · 5:30 PM is the scheduled closing time.
             </p>
 
             <div style={{ overflowX: "auto" }}>
@@ -380,6 +388,7 @@ export default function TeacherAttendance() {
                     <th>Late</th>
                     <th>No Punch</th>
                     <th>Late Minutes</th>
+                    <th>Early Minutes</th>
                     <th>First In</th>
                     <th>Last In</th>
                   </tr>
@@ -406,12 +415,13 @@ export default function TeacherAttendance() {
                       <td>{row.late_days}</td>
                       <td>{row.no_punch_days}</td>
                       <td>{row.total_late_minutes}</td>
+                      <td>{row.total_early_minutes}</td>
                       <td>{formatTime(row.earliest_signin)}</td>
                       <td>{formatTime(row.latest_signin)}</td>
                     </tr>
                   ))}
                   {!summary.length && (
-                    <tr><td colSpan="7">No attendance summary for this month.</td></tr>
+                    <tr><td colSpan="8">No attendance summary for this month.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -439,6 +449,7 @@ export default function TeacherAttendance() {
                       <th>Sign-out</th>
                       <th>Status</th>
                       <th>Late</th>
+                      <th>Early</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -449,10 +460,11 @@ export default function TeacherAttendance() {
                         <td>{formatTime(row.last_signout)}</td>
                         <td>{row.status}</td>
                         <td>{row.late_minutes ? `${row.late_minutes} min` : "—"}</td>
+                        <td>{row.early_departure ? `${row.early_minutes} min` : "—"}</td>
                       </tr>
                     ))}
                     {!selectedDaily.length && (
-                      <tr><td colSpan="5">No daily records.</td></tr>
+                      <tr><td colSpan="6">No daily records.</td></tr>
                     )}
                   </tbody>
                 </table>
