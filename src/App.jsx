@@ -10,6 +10,7 @@ import Receipts from "./pages/Receipts";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import ParentPayment from "./pages/ParentPayment";
+import BankTransfers from "./pages/BankTransfers";
 import Login from "./pages/Login";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
@@ -100,6 +101,8 @@ function ProtectedApp() {
         return <FeeAccounts />;
       case "payments":
         return <Payments />;
+      case "bank-transfers":
+        return <BankTransfers />;
       case "receipts":
         return <Receipts />;
       case "reports":
@@ -172,6 +175,7 @@ function ProtectedApp() {
             <button className={page === "teacher-attendance" ? "active" : ""} onClick={() => navigateTo("teacher-attendance")}>Teacher Attendance</button>
             <button className={page === "fees" ? "active" : ""} onClick={() => navigateTo("fees")}>Fee Accounts</button>
             <button className={page === "payments" ? "active" : ""} onClick={() => navigateTo("payments")}>Payments</button>
+            {isAdmin || isSecretary ? <button className={page === "bank-transfers" ? "active" : ""} onClick={() => navigateTo("bank-transfers")}>Bank Transfers</button> : null}
             <button className={page === "receipts" ? "active" : ""} onClick={() => navigateTo("receipts")}>Receipts</button>
             <button className={page === "reports" ? "active" : ""} onClick={() => navigateTo("reports")}>Reports</button>
             {isAdmin && (
