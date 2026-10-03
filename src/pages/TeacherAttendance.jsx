@@ -33,6 +33,7 @@ const formatTime = (value) => (value ? String(value).slice(0, 5) : "—");
 const formatDate = (value) =>
   value
     ? new Date(`${value}T00:00:00`).toLocaleDateString("en-NG", {
+        weekday: "short",
         day: "numeric",
         month: "short",
       })
