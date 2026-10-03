@@ -16,7 +16,7 @@ export default function ParentPortal() {
   const [dataLoading, setDataLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [activeView, setActiveView] = useState("dashboard");
+  const [activeView, setActiveView] = useState("children");
 
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
@@ -222,7 +222,7 @@ export default function ParentPortal() {
   const signOut = async () => {
     await supabase.auth.signOut();
     setSession(null);
-    setActiveView("dashboard");
+    setActiveView("children");
   };
 
   if (loading) {
@@ -291,7 +291,6 @@ export default function ParentPortal() {
 
       <div className="meka-parent-body" style={styles.portalBody}>
         <aside className="meka-parent-nav" style={styles.nav}>
-          <button onClick={() => setActiveView("dashboard")} style={activeView === "dashboard" ? styles.navActive : styles.navButton}>Dashboard</button>
           <button onClick={() => setActiveView("children")} style={activeView === "children" ? styles.navActive : styles.navButton}>My Children</button>
           <button onClick={() => setActiveView("fees")} style={activeView === "fees" ? styles.navActive : styles.navButton}>Fees</button>
           <button onClick={() => setActiveView("payments")} style={activeView === "payments" ? styles.navActive : styles.navButton}>Payment History</button>
@@ -304,38 +303,10 @@ export default function ParentPortal() {
 
           {dataLoading ? (
             <div style={styles.card}><p>Loading your school records...</p></div>
-          ) : activeView === "dashboard" ? (
-            <>
-              <h1 style={styles.pageTitle}>Welcome back</h1>
-              <p style={styles.muted}>{session.user.email}</p>
-
-              <div className="meka-parent-stats" style={styles.stats}>
-                <div style={styles.stat}><span>Children</span><strong>{students.length}</strong></div>
-                <div style={styles.stat}><span>Total paid</span><strong>{money(totalPaid)}</strong></div>
-                <div style={styles.stat}><span>Outstanding</span><strong>{money(totalOutstanding)}</strong></div>
-              </div>
-
-              <div style={styles.section}>
-                <h2>Your children</h2>
-                {students.length === 0 ? (
-                  <p style={styles.muted}>No child is linked to this email yet.</p>
-                ) : (
-                  <div style={styles.grid}>
-                    {students.map((student) => (
-                      <StudentCard
-                        key={student.id}
-                        student={student}
-                        balance={outstandingByStudent(student.id)}
-                        onPay={() => openPayment(student)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </>
           ) : activeView === "children" ? (
             <div style={styles.section}>
               <h1 style={styles.pageTitle}>My Children</h1>
+              <p style={styles.muted}>View your children, outstanding fees, and pay school fees securely.</p>
               <div style={styles.grid}>
                 {students.map((student) => (
                   <StudentCard key={student.id} student={student} balance={outstandingByStudent(student.id)} />
