@@ -280,7 +280,7 @@ export default function ParentPortal() {
 
   return (
     <main style={styles.portalShell}>
-      <style>{`@media (max-width: 760px) { .meka-parent-body { grid-template-columns: 1fr !important; } .meka-parent-nav { display: flex !important; overflow-x: auto; } .meka-parent-nav button { white-space: nowrap; } .meka-parent-stats { grid-template-columns: 1fr !important; } .meka-parent-row { flex-direction: column !important; align-items: flex-start !important; } .meka-parent-row > div:last-child { text-align: left !important; } }`}</style>
+      <style>{`@media (max-width: 760px) { .meka-parent-body { grid-template-columns: 1fr !important; } .meka-parent-nav { display: flex !important; width: 100%; box-sizing: border-box; overflow-x: auto; overflow-y: hidden; gap: 6px; scrollbar-width: none; -webkit-overflow-scrolling: touch; } .meka-parent-nav::-webkit-scrollbar { display: none; } .meka-parent-nav button { flex: 0 0 auto; white-space: nowrap; padding: 11px 14px !important; } .meka-parent-stats { grid-template-columns: 1fr !important; } .meka-parent-row { flex-direction: column !important; align-items: flex-start !important; } .meka-parent-row > div:last-child { text-align: left !important; } }`}</style>
       <header style={styles.topbar}>
         <div>
           <div style={styles.brand}>MEKA School</div>
