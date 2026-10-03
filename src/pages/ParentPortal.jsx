@@ -280,6 +280,7 @@ export default function ParentPortal() {
 
   return (
     <main style={styles.portalShell}>
+      <style>{`@media (max-width: 760px) { .meka-parent-body { grid-template-columns: 1fr !important; } .meka-parent-nav { display: flex !important; overflow-x: auto; } .meka-parent-nav button { white-space: nowrap; } .meka-parent-stats { grid-template-columns: 1fr !important; } .meka-parent-row { flex-direction: column !important; align-items: flex-start !important; } .meka-parent-row > div:last-child { text-align: left !important; } }`}</style>
       <header style={styles.topbar}>
         <div>
           <div style={styles.brand}>MEKA School</div>
@@ -288,8 +289,8 @@ export default function ParentPortal() {
         <button type="button" onClick={signOut} style={styles.signOut}>Sign out</button>
       </header>
 
-      <div style={styles.portalBody}>
-        <aside style={styles.nav}>
+      <div className="meka-parent-body" style={styles.portalBody}>
+        <aside className="meka-parent-nav" style={styles.nav}>
           <button onClick={() => setActiveView("dashboard")} style={activeView === "dashboard" ? styles.navActive : styles.navButton}>Dashboard</button>
           <button onClick={() => setActiveView("children")} style={activeView === "children" ? styles.navActive : styles.navButton}>My Children</button>
           <button onClick={() => setActiveView("fees")} style={activeView === "fees" ? styles.navActive : styles.navButton}>Fees</button>
@@ -308,7 +309,7 @@ export default function ParentPortal() {
               <h1 style={styles.pageTitle}>Welcome back</h1>
               <p style={styles.muted}>{session.user.email}</p>
 
-              <div style={styles.stats}>
+              <div className="meka-parent-stats" style={styles.stats}>
                 <div style={styles.stat}><span>Children</span><strong>{students.length}</strong></div>
                 <div style={styles.stat}><span>Total paid</span><strong>{money(totalPaid)}</strong></div>
                 <div style={styles.stat}><span>Outstanding</span><strong>{money(totalOutstanding)}</strong></div>
@@ -345,7 +346,7 @@ export default function ParentPortal() {
             <div style={styles.section}>
               <h1 style={styles.pageTitle}>Fees</h1>
               {students.map((student) => (
-                <div key={student.id} style={styles.rowCard}>
+                <div key={student.id} className="meka-parent-row" style={styles.rowCard}>
                   <div>
                     <strong>{student.first_name} {student.last_name}</strong>
                     <div style={styles.muted}>Admission No: {student.admission_no || "Not assigned"}</div>
@@ -366,7 +367,7 @@ export default function ParentPortal() {
               {payments.length === 0 ? <p style={styles.muted}>No payments recorded.</p> : payments.map((payment) => {
                 const student = students.find((item) => item.id === payment.student_id);
                 return (
-                  <div key={payment.id} style={styles.rowCard}>
+                  <div key={payment.id} className="meka-parent-row" style={styles.rowCard}>
                     <div>
                       <strong>{student ? `${student.first_name} ${student.last_name}` : "Student"}</strong>
                       <div style={styles.muted}>{payment.method || "Payment"} · {payment.reference || "No reference"}</div>
@@ -384,7 +385,7 @@ export default function ParentPortal() {
             <div style={styles.section}>
               <h1 style={styles.pageTitle}>Receipts</h1>
               {receipts.length === 0 ? <p style={styles.muted}>No receipts available.</p> : receipts.map((receipt) => (
-                <div key={receipt.id} style={styles.rowCard}>
+                <div key={receipt.id} className="meka-parent-row" style={styles.rowCard}>
                   <div>
                     <strong>{receipt.receipt_number || "Receipt"}</strong>
                     <div style={styles.muted}>{receipt.issued_at ? new Date(receipt.issued_at).toLocaleDateString("en-NG") : ""}</div>
