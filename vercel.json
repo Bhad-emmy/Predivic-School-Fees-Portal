@@ -3,6 +3,10 @@
     {
       "source": "/pay",
       "destination": "/index.html"
+    },
+    {
+      "source": "/parent",
+      "destination": "/index.html"
     }
   ]
 }
