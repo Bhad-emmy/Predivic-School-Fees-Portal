@@ -70,6 +70,63 @@ export default function TeacherAttendance() {
     [summary, selectedStaff]
   );
 
+  const exportReport = () => {
+    const staffName = selectedSummary?.device_staff_name || "Staff";
+    const rows = selectedDaily.map((row) => `
+      <tr>
+        <td>${formatDate(row.attendance_date)}</td>
+        <td>${formatTime(row.first_signin)}</td>
+        <td>${formatTime(row.last_signout)}</td>
+        <td>${row.status}</td>
+        <td>${row.late_minutes ? `${row.late_minutes} min` : "—"}</td>
+      </tr>`).join("");
+
+    const popup = window.open("", "_blank", "width=900,height=700");
+    if (!popup) {
+      setError("Allow pop-ups to export the report.");
+      return;
+    }
+
+    popup.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <title>Predivic Staff Attendance - ${staffName} - ${month}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 32px; color: #111827; }
+            h1 { margin-bottom: 4px; }
+            p { color: #64748b; }
+            .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 24px 0; }
+            .box { border: 1px solid #e5e7eb; padding: 14px; border-radius: 8px; }
+            .label { color: #64748b; font-size: 12px; }
+            .value { font-size: 20px; font-weight: 700; margin-top: 4px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #e5e7eb; padding: 9px; text-align: left; }
+            th { background: #f8fafc; }
+            @media print { body { padding: 0; } }
+          </style>
+        </head>
+        <body>
+          <h1>Predivic Schools</h1>
+          <h2>Staff Attendance Report</h2>
+          <p>${staffName} · ${month} · Biometric punctuality cutoff: 8:30 AM</p>
+          <div class="summary">
+            <div class="box"><div class="label">Present</div><div class="value">${selectedSummary?.present_days ?? 0}</div></div>
+            <div class="box"><div class="label">Late</div><div class="value">${selectedSummary?.late_days ?? 0}</div></div>
+            <div class="box"><div class="label">No Punch</div><div class="value">${selectedSummary?.no_punch_days ?? 0}</div></div>
+            <div class="box"><div class="label">Late Minutes</div><div class="value">${selectedSummary?.total_late_minutes ?? 0}</div></div>
+          </div>
+          <table>
+            <thead><tr><th>Date</th><th>Sign-in</th><th>Sign-out</th><th>Status</th><th>Late</th></tr></thead>
+            <tbody>${rows || '<tr><td colspan="5">No daily records.</td></tr>'}</tbody>
+          </table>
+          <script>window.onload = () => window.print();</script>
+        </body>
+      </html>
+    `);
+    popup.document.close();
+  };
+
   const selectedDaily = useMemo(
     () =>
       daily
@@ -364,9 +421,14 @@ export default function TeacherAttendance() {
           {selectedSummary && (
             <div className="page-card">
               <h2>{selectedSummary.device_staff_name}</h2>
-              <p style={{ color: "#64748b", margin: "6px 0 18px" }}>
-                Daily sign-in details for {month}
-              </p>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+                <p style={{ color: "#64748b", margin: "6px 0 18px" }}>
+                  Daily sign-in details for {month}
+                </p>
+                <button type="button" className="primary-btn" onClick={exportReport}>
+                  Download PDF
+                </button>
+              </div>
 
               <div style={{ overflowX: "auto" }}>
                 <table>
