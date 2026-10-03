@@ -1980,3 +1980,27 @@ body,
   font-size: 13px;
   letter-spacing: .04em;
 }
+
+
+/* Login activation contacts */
+.activation-section {
+  margin-top: 20px;
+}
+
+.activation-section p {
+  margin-bottom: 12px;
+}
+
+.activation-button {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  text-align: center;
+  text-decoration: none;
+  white-space: normal;
+  line-height: 1.35;
+}
+
+.activation-button + .activation-button {
+  margin-top: 10px;
+}
