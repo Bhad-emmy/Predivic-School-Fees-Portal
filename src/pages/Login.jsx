@@ -1,6 +1,17 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
+const ACTIVATION_CONTACTS = [
+  {
+    label: "WhatsApp — 0906 692 9361",
+    url: "https://wa.me/2349066929361?text=Hello%20MEKA%20LOGIC%2C%20I%20would%20like%20to%20activate%20MEKA%20School%20for%20my%20school.",
+  },
+  {
+    label: "WhatsApp — 0906 463 6239",
+    url: "https://wa.me/2349064636239?text=Hello%20MEKA%20LOGIC%2C%20I%20would%20like%20to%20activate%20MEKA%20School%20for%20my%20school.",
+  },
+];
+
 export default function Login() {
   const { user, staff, error, signIn, signOut } = useAuth();
   const [email, setEmail] = useState("");
@@ -44,35 +55,56 @@ export default function Login() {
             </button>
           </>
         ) : (
-          <form onSubmit={handleSubmit}>
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-              autoComplete="email"
-            />
+          <>
+            <form onSubmit={handleSubmit}>
+              <label htmlFor="email">Email</label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+                autoComplete="email"
+              />
 
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-              autoComplete="current-password"
-            />
+              <label htmlFor="password">Password</label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
+                autoComplete="current-password"
+              />
 
-            {(formError || error) && (
-              <p className="auth-error">{formError || error}</p>
-            )}
+              {(formError || error) && (
+                <p className="auth-error">{formError || error}</p>
+              )}
 
-            <button type="submit" className="primary-btn" disabled={submitting}>
-              {submitting ? "Signing in..." : "Sign in"}
-            </button>
-          </form>
+              <button type="submit" className="primary-btn" disabled={submitting}>
+                {submitting ? "Signing in..." : "Sign in"}
+              </button>
+            </form>
+
+            <div className="activation-section">
+              <p>
+                <strong>New school?</strong><br />
+                Contact MEKA LOGIC to activate your school before signing in.
+              </p>
+
+              {ACTIVATION_CONTACTS.map((contact) => (
+                <a
+                  key={contact.url}
+                  className="secondary-btn activation-button"
+                  href={contact.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {contact.label}
+                </a>
+              ))}
+            </div>
+          </>
         )}
       </section>
     </main>
