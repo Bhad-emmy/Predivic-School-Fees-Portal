@@ -30,14 +30,15 @@ const getMonthString = () => getDateString().slice(0, 7);
 
 const formatTime = (value) => (value ? String(value).slice(0, 5) : "—");
 
-const formatDate = (value) =>
-  value
-    ? new Date(`${value}T00:00:00`).toLocaleDateString("en-NG", {
-        weekday: "short",
-        day: "numeric",
-        month: "short",
-      })
-    : "—";
+const formatDate = (value) => {
+  if (!value) return "—";
+  const [year, month, day] = String(value).slice(0, 10).split("-").map(Number);
+  if (!year || !month || !day) return "—";
+  const date = new Date(year, month - 1, day);
+  const weekday = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][date.getDay()];
+  const monthName = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][month - 1];
+  return weekday + ", " + day + " " + monthName + " " + year;
+};
 
 const isLate = (time) => Boolean(time && String(time).slice(0, 5) > LATE_CUTOFF);
 
