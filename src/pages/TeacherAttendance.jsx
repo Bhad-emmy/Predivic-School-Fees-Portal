@@ -87,6 +87,7 @@ export default function TeacherAttendance() {
         <td>${formatTime(row.last_signout)}</td>
         <td>${row.status}</td>
         <td>${row.late_minutes ? `${row.late_minutes} min` : "—"}</td>
+        <td>${row.early_departure ? `${row.early_minutes} min` : "—"}</td>
       </tr>`).join("");
 
     const popup = window.open("", "_blank", "width=900,height=700");
@@ -125,8 +126,8 @@ export default function TeacherAttendance() {
             <div class="box"><div class="label">Late Minutes</div><div class="value">${selectedSummary?.total_late_minutes ?? 0}</div></div><div class="box"><div class="label">Early Minutes</div><div class="value">${selectedSummary?.total_early_minutes ?? 0}</div></div>
           </div>
           <table>
-            <thead><tr><th>Date</th><th>Sign-in</th><th>Sign-out</th><th>Status</th><th>Late</th></tr></thead>
-            <tbody>${rows || '<tr><td colspan="5">No daily records.</td></tr>'}</tbody>
+            <thead><tr><th>Date</th><th>Sign-in</th><th>Sign-out</th><th>Status</th><th>Late</th><th>Early</th></tr></thead>
+            <tbody>${rows || '<tr><td colspan="6">No daily records.</td></tr>'}</tbody>
           </table>
           <script>window.onload = () => window.print();</script>
         </body>
