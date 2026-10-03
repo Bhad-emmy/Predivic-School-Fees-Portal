@@ -46,6 +46,7 @@ export default function Dashboard() {
   const [activeStudentCount, setActiveStudentCount] = useState(0);
   const [feeAccounts, setFeeAccounts] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [paymentsTodayAmount, setPaymentsTodayAmount] = useState(0);
   const [attendance, setAttendance] = useState([]);
 
   const [loading, setLoading] = useState(true);
@@ -229,9 +230,17 @@ export default function Dashboard() {
         };
       });
 
+      const paymentsTodayTotal = paymentRows
+        .filter((payment) => isToday(payment.payment_date))
+        .reduce(
+          (sum, payment) => sum + Number(payment.amount || 0),
+          0
+        );
+
       setActiveStudentCount(studentsResult.count || 0);
       setFeeAccounts(dashboardFeeAccounts);
       setPayments(enrichedPayments);
+      setPaymentsTodayAmount(paymentsTodayTotal);
       setAttendance(attendanceResult.data || []);
     } catch (err) {
       console.error("DASHBOARD LOAD ERROR:", err);
@@ -272,16 +281,7 @@ export default function Dashboard() {
     );
   }, [feeAccounts]);
 
-  const paymentsToday = useMemo(
-    () =>
-      payments
-        .filter((payment) => isToday(payment.paymentDate))
-        .reduce(
-          (sum, payment) => sum + Number(payment.amount || 0),
-          0
-        ),
-    [payments]
-  );
+  const paymentsToday = paymentsTodayAmount;
 
   /* =====================================================
      ATTENDANCE METRICS
