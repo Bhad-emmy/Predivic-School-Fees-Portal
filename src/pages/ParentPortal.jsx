@@ -23,6 +23,7 @@ export default function ParentPortal() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   const loadParentData = async () => {
     setDataLoading(true);
@@ -187,6 +188,37 @@ export default function ParentPortal() {
     }
   };
 
+  const openPayment = async (student) => {
+    const candidate = (accountByStudent.get(student.id) || []).find((account) => {
+      const paid = paidByAccount.get(account.id) || 0;
+      return Math.max(Number(account.total_amount || 0) - paid, 0) > 0;
+    });
+
+    if (!candidate) {
+      setError("This student has no outstanding fee balance.");
+      return;
+    }
+
+    try {
+      setPaymentLoading(true);
+      setError("");
+      const { data, error: invokeError } = await supabase.functions.invoke("paystack-links", {
+        body: {
+          studentId: student.id,
+          studentFeeAccountId: candidate.id,
+        },
+      });
+      if (invokeError) throw invokeError;
+      if (data?.error) throw new Error(data.error);
+      if (!data?.url) throw new Error("Unable to create the secure payment page.");
+      window.location.assign(data.url);
+    } catch (err) {
+      setError(err.message || "Unable to open the payment page.");
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setSession(null);
@@ -293,9 +325,7 @@ export default function ParentPortal() {
                         key={student.id}
                         student={student}
                         balance={outstandingByStudent(student.id)}
-                        onPay={() => {
-                          window.location.assign("/pay");
-                        }}
+                        onPay={() => openPayment(student)}
                       />
                     ))}
                   </div>
@@ -324,7 +354,7 @@ export default function ParentPortal() {
                     <span style={styles.muted}>Outstanding</span>
                     <strong style={{ display: "block", fontSize: 20 }}>{money(outstandingByStudent(student.id))}</strong>
                     {outstandingByStudent(student.id) > 0 && (
-                      <button type="button" onClick={() => window.location.assign("/pay")} style={styles.smallButton}>Pay fees</button>
+                      <button type="button" onClick={() => openPayment(student)} disabled={paymentLoading} style={styles.smallButton}>Pay fees</button>
                     )}
                   </div>
                 </div>
