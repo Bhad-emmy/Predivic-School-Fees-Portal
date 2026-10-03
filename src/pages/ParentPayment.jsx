@@ -15,6 +15,7 @@ export default function ParentPayment() {
   const [method, setMethod] = useState("paystack");
   const [senderName, setSenderName] = useState("");
   const [transferReference, setTransferReference] = useState("");
+  const [proofFile, setProofFile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
   const [submittingTransfer, setSubmittingTransfer] = useState(false);
@@ -131,22 +132,26 @@ export default function ParentPayment() {
       setError("Enter the bank transfer reference.");
       return;
     }
+    if (!proofFile) {
+      setError("Upload your transfer receipt or proof.");
+      return;
+    }
 
     try {
       setSubmittingTransfer(true);
-      const { data, error: invokeError } = await supabase.functions.invoke("bank-transfer-submit", {
-        body: {
-          token,
-          amount: numericAmount,
-          senderName: senderName.trim(),
-          transferReference: transferReference.trim(),
-        },
-      });
+      const form = new FormData();
+      form.append("token", token);
+      form.append("amount", String(numericAmount));
+      form.append("senderName", senderName.trim());
+      form.append("transferReference", transferReference.trim());
+      form.append("proof", proofFile);
+      const { data, error: invokeError } = await supabase.functions.invoke("bank-transfer-submit", { body: form });
       if (invokeError) throw invokeError;
       if (data?.error) throw new Error(data.error);
       setMessage("Bank transfer submitted. The school will verify the transfer before the fee balance is updated.");
       setTransferReference("");
       setSenderName("");
+      setProofFile(null);
     } catch (err) {
       setError(err.message || "Unable to submit the bank transfer.");
     } finally {
@@ -233,6 +238,11 @@ export default function ParentPayment() {
             <label style={styles.label}>
               Transfer reference
               <input type="text" value={transferReference} onChange={(e) => setTransferReference(e.target.value)} placeholder="Bank transaction/reference number" required style={styles.input} disabled={submittingTransfer || !bankConfigured} />
+            </label>
+            <label style={styles.label}>
+              Transfer proof
+              <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(e) => setProofFile(e.target.files?.[0] || null)} required style={styles.input} disabled={submittingTransfer || !bankConfigured} />
+              <small style={{color:"#64748b",fontWeight:400}}>JPG, PNG, WEBP or PDF. Maximum 10MB.</small>
             </label>
             <button type="submit" disabled={submittingTransfer || !bankConfigured} style={styles.button}>
               {submittingTransfer ? "Submitting..." : "Submit Transfer for Verification"}
