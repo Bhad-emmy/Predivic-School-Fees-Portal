@@ -11,15 +11,11 @@ const getStaffRecord = async (userId) => {
     .maybeSingle();
 
   if (error) throw error;
-
   return data;
 };
 
 const validateActiveStaffAndSchool = async (staffRecord) => {
-  if (!staffRecord) {
-    throw new Error("Your account is not authorized as school staff.");
-  }
-
+  if (!staffRecord) throw new Error("Your account is not authorized as school staff.");
   if (String(staffRecord.status || "").toLowerCase() !== "active") {
     throw new Error("Your staff account is inactive. Contact a school administrator.");
   }
@@ -31,7 +27,6 @@ const validateActiveStaffAndSchool = async (staffRecord) => {
     .maybeSingle();
 
   if (error) throw error;
-
   if (!school || String(school.status || "").toLowerCase() !== "active") {
     throw new Error("This school account is inactive. Contact the school administrator.");
   }
@@ -45,58 +40,72 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const loadSession = async (nextSession) => {
-    setSession(nextSession);
-
-    if (!nextSession?.user) {
-      setStaff(null);
-      setError("");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const record = await getStaffRecord(nextSession.user.id);
-      const activeRecord = await validateActiveStaffAndSchool(record);
-      setStaff(activeRecord);
-      setError("");
-    } catch (err) {
-      console.error("STAFF PROFILE LOAD ERROR:", err);
-      setStaff(null);
-      setError(err.message || "Unable to load the staff profile.");
-      // Keep the Supabase session. A temporary profile/network failure
-      // must not force the user to sign in again.
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Only the session state changes here. Do not make Supabase database calls
+  // inside onAuthStateChange; doing so can race with token refresh/initial load.
   useEffect(() => {
     let mounted = true;
 
     supabase.auth.getSession().then(({ data, error: sessionError }) => {
       if (!mounted) return;
-
       if (sessionError) {
         setError(sessionError.message);
         setLoading(false);
         return;
       }
-
-      loadSession(data.session);
+      setSession(data.session ?? null);
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, nextSession) => {
-        if (mounted) loadSession(nextSession);
-      }
-    );
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (!mounted) return;
+      setSession(nextSession ?? null);
+    });
 
     return () => {
       mounted = false;
       listener.subscription.unsubscribe();
     };
   }, []);
+
+  // Load staff separately whenever the authenticated user changes.
+  // A token refresh should not kick the user back to the login screen.
+  useEffect(() => {
+    let cancelled = false;
+    const userId = session?.user?.id;
+
+    if (!userId) {
+      setStaff(null);
+      setError("");
+      setLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setLoading(true);
+
+    (async () => {
+      try {
+        const record = await getStaffRecord(userId);
+        const activeRecord = await validateActiveStaffAndSchool(record);
+        if (cancelled) return;
+        setStaff(activeRecord);
+        setError("");
+      } catch (err) {
+        if (cancelled) return;
+        console.error("STAFF PROFILE LOAD ERROR:", err);
+        setStaff(null);
+        setError(err.message || "Unable to load the staff profile.");
+        // Never revoke a valid Supabase session because a profile/network
+        // request failed.
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user?.id]);
 
   const signIn = async (email, password) => {
     setError("");
@@ -115,7 +124,7 @@ export function AuthProvider({ children }) {
   };
 
   const signOut = async () => {
-    const { error: signOutError } = await supabase.auth.signOut();
+    const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
     if (signOutError) throw signOutError;
   };
 
@@ -142,10 +151,6 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider.");
-  }
-
+  if (!context) throw new Error("useAuth must be used within an AuthProvider.");
   return context;
 }
