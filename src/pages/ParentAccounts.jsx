@@ -10,7 +10,7 @@ export default function ParentAccounts() {
 
   const filteredGroups=useMemo(()=>{const q=search.trim().toLowerCase();if(!q)return groups;return groups.filter(g=>[g.parentName,g.phone,...(g.students||[]).map(s=>s.name)].some(v=>String(v||"").toLowerCase().includes(q)));},[groups,search]);
 
-  const action=async(type,p)=>{setBusy(true);setError("");setMessage("");try{const body={action:type,phone:p.phone};if(type==="create"){if(!/^\d{6}$/.test(pin))throw new Error("PIN must be exactly 6 digits.");body.pin=pin;body.parentName=parentName.trim();}const {data,error}=await supabase.functions.invoke("parent-accounts",{body});if(error)throw error;if(data?.error)throw new Error(data.error);if(data?.pin)setMessage((type==="create"?"Temporary PIN: ":"New PIN: ")+data.pin);else setMessage("Parent account updated.");setPin("");setParentName("");await load();}catch(e){setError(e.message||"Action failed.");}finally{setBusy(false);}};
+  const action=async(type,p)=>{setBusy(true);setError("");setMessage("");try{const body={action:type,phone:p.phone};if(type==="create"){if(pin.length!==6||/[^0-9]/.test(pin))throw new Error("PIN must be exactly 6 digits.");body.pin=pin;body.parentName=parentName.trim();}const {data,error}=await supabase.functions.invoke("parent-accounts",{body});if(error)throw error;if(data?.error)throw new Error(data.error);if(data?.pin)setMessage((type==="create"?"Temporary PIN: ":"New PIN: ")+data.pin);else setMessage("Parent account updated.");setPin("");setParentName("");await load();}catch(e){setError(e.message||"Action failed.");}finally{setBusy(false);}};
 
   return <div className="page">
     <style>{"@media(max-width:700px){.meka-parent-settings-grid{grid-template-columns:1fr!important}.meka-parent-security-row{flex-direction:column!important;align-items:flex-start!important}.meka-parent-actions{width:100%!important}.meka-parent-actions button{flex:1!important}.meka-parent-settings-section{padding:16px!important}.meka-parent-settings-header{gap:8px!important}.meka-parent-settings-header h2{font-size:18px!important}.meka-parent-search{width:100%!important}}"}</style>
@@ -22,7 +22,7 @@ export default function ParentAccounts() {
       <div className="settings-form-grid meka-parent-settings-grid">
         <div className="settings-field"><label>Parent phone</label><input value={phone} onChange={e=>setPhone(e.target.value)} placeholder="08012345678"/></div>
         <div className="settings-field"><label>Parent name</label><input value={parentName} onChange={e=>setParentName(e.target.value)} /></div>
-        <div className="settings-field"><label>6-digit PIN</label><input value={pin} onChange={e=>setPin(e.target.value.replace(/\D/g,"").slice(0,6))} maxLength={6} inputMode="numeric"/></div>
+        <div className="settings-field"><label>6-digit PIN</label><input value={pin} onChange={e=>setPin(e.target.value.replace(/[^0-9]/g,"").slice(0,6))} maxLength={6} inputMode="numeric"/></div>
       </div>
       <div className="settings-editor-actions"><button className="primary-btn" disabled={busy} onClick={()=>action("create",{phone})}>{busy?"Working...":"Create Parent Account"}</button></div>
     </section>
