@@ -2,7 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 
 const money = (v) => "₦" + Number(v || 0).toLocaleString("en-NG", { minimumFractionDigits: 2 });
-const phone = (v) => { const d=String(v||"").replace(/\D/g,""); return d.startsWith("0")?"+234"+d.slice(1):d.startsWith("234")?"+"+d:"+"+d; };
+const normalizePhone = (v) => {
+  const d = String(v || "").replace(/\D/g, "");
+  return d.startsWith("0") ? "234" + d.slice(1) : d;
+};
+const parentAuthEmail = (v) => `parent-${normalizePhone(v)}@mekaschool.com.ng`;
 
 export default function ParentPortal() {
   const [session,setSession]=useState(null),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false);
@@ -24,7 +28,7 @@ export default function ParentPortal() {
             .maybeSingle();
           if(accountError) throw accountError;
           if(!parentAccount){
-            await supabase.auth.signOut();
+            await supabase.auth.signOut({scope:"local"});
             if(mounted) setSession(null);
           }else if(mounted){
             setSession(current);
@@ -49,7 +53,7 @@ export default function ParentPortal() {
   const balance=(sid)=>accounts.filter(a=>a.student_id===sid).reduce((n,a)=>n+Math.max(Number(a.total_amount||0)-(paid.get(a.id)||0),0),0);
   const login=async e=>{e.preventDefault();setBusy(true);setError("");try{
     if(!/^\d{6}$/.test(pin)) throw new Error("Enter a valid 6-digit PIN.");
-    const {data,error}=await supabase.auth.signInWithPassword({phone:phone(phoneNo),password:pin});
+    const {data,error}=await supabase.auth.signInWithPassword({email:parentAuthEmail(phoneNo),password:pin});
     if(error) throw error;
     const {data:parentAccount,error:accountError}=await supabase
       .from("parent_accounts")
