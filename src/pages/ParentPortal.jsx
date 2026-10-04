@@ -9,14 +9,66 @@ export default function ParentPortal() {
   const [phoneNo,setPhoneNo]=useState(""),[pin,setPin]=useState(""),[error,setError]=useState("");
   const [students,setStudents]=useState([]),[accounts,setAccounts]=useState([]),[payments,setPayments]=useState([]),[receipts,setReceipts]=useState([]);
   const [view,setView]=useState("children"),[payBusy,setPayBusy]=useState(false);
-  useEffect(()=>{let mounted=true;supabase.auth.getSession().then(({data,error})=>{if(!mounted)return;if(error)setError(error.message);setSession(data.session||null);setLoading(false);});const {data:l}=supabase.auth.onAuthStateChange((_e,s)=>mounted&&setSession(s));return()=>{mounted=false;l.subscription.unsubscribe();};},[]);
+  useEffect(()=>{let mounted=true;
+    (async()=>{
+      try{
+        const {data,error}=await supabase.auth.getSession();
+        if(error) throw error;
+        const current=data.session;
+        if(current?.user){
+          const {data:parentAccount,error:accountError}=await supabase
+            .from("parent_accounts")
+            .select("id")
+            .eq("auth_user_id",current.user.id)
+            .eq("status","Active")
+            .maybeSingle();
+          if(accountError) throw accountError;
+          if(!parentAccount){
+            await supabase.auth.signOut();
+            if(mounted) setSession(null);
+          }else if(mounted){
+            setSession(current);
+          }
+        }
+      }catch(e){
+        if(mounted) setError(e.message||"Unable to verify parent account.");
+      }finally{
+        if(mounted) setLoading(false);
+      }
+    })();
+    const {data:l}=supabase.auth.onAuthStateChange((_e,s)=>{
+      if(!mounted)return;
+      if(!s) setSession(null);
+      // Session validation is performed outside the auth callback to avoid
+      // trusting an existing staff/admin session as a parent session.
+    });
+    return()=>{mounted=false;l.subscription.unsubscribe();};
+  },[]);
   useEffect(()=>{if(!session?.user)return;(async()=>{try{const [s,a,p,r]=await Promise.all([supabase.from("students").select("id,admission_no,first_name,middle_name,last_name").order("first_name"),supabase.from("student_fee_accounts").select("id,student_id,total_amount,status,updated_at").order("updated_at",{ascending:false}),supabase.from("payments").select("id,student_id,student_fee_account_id,amount,payment_date,method,reference,status").order("payment_date",{ascending:false}),supabase.from("receipts").select("id,payment_id,receipt_number,issued_at").order("issued_at",{ascending:false})]);if(s.error)throw s.error;if(a.error)throw a.error;if(p.error)throw p.error;if(r.error)throw r.error;setStudents(s.data||[]);setAccounts(a.data||[]);setPayments(p.data||[]);setReceipts(r.data||[]);}catch(e){setError(e.message||"Unable to load records.");}})();},[session?.user?.id]);
   const paid=useMemo(()=>{const m=new Map();payments.forEach(p=>{if(["paid","successful","completed"].includes(String(p.status||"").toLowerCase()))m.set(p.student_fee_account_id,(m.get(p.student_fee_account_id)||0)+Number(p.amount||0));});return m;},[payments]);
   const balance=(sid)=>accounts.filter(a=>a.student_id===sid).reduce((n,a)=>n+Math.max(Number(a.total_amount||0)-(paid.get(a.id)||0),0),0);
-  const login=async e=>{e.preventDefault();setBusy(true);setError("");try{if(!/^\d{6}$/.test(pin))throw new Error();const {data,error}=await supabase.auth.signInWithPassword({phone:phone(phoneNo),password:pin});if(error)throw error;setSession(data.session);}catch{setError("Phone number or PIN is incorrect.");}finally{setBusy(false);}};
+  const login=async e=>{e.preventDefault();setBusy(true);setError("");try{
+    if(!/^\d{6}$/.test(pin)) throw new Error("Enter a valid 6-digit PIN.");
+    const {data,error}=await supabase.auth.signInWithPassword({phone:phone(phoneNo),password:pin});
+    if(error) throw error;
+    const {data:parentAccount,error:accountError}=await supabase
+      .from("parent_accounts")
+      .select("id")
+      .eq("auth_user_id",data.user.id)
+      .eq("status","Active")
+      .maybeSingle();
+    if(accountError) throw accountError;
+    if(!parentAccount){
+      await supabase.auth.signOut();
+      throw new Error("This account is not registered as an active parent account.");
+    }
+    setSession(data.session);
+  }catch(e){
+    setError(e.message==="This account is not registered as an active parent account."?e.message:"Phone number or PIN is incorrect.");
+  }finally{setBusy(false);}};
   const pay=async s=>{const a=accounts.find(x=>x.student_id===s.id&&Math.max(Number(x.total_amount||0)-(paid.get(x.id)||0),0)>0);if(!a)return;setPayBusy(true);setError("");try{const {data,error}=await supabase.functions.invoke("paystack-links",{body:{studentId:s.id,studentFeeAccountId:a.id}});if(error)throw error;if(data?.error)throw new Error(data.error);window.location.assign(data.url);}catch(e){setError(e.message||"Unable to open payment page.");}finally{setPayBusy(false);}};
   if(loading)return <main style={css.shell}><section style={css.card}>Loading MEKA School...</section></main>;
-  if(!session?.user)return <main style={css.shell}><section className="meka-parent-auth" style={css.auth}><b style={css.brand}>MEKA School</b><h1>Parent Portal</h1><p style={css.muted}>Sign in with the phone number registered with the school and your 6-digit PIN.</p>{error&&<p style={css.err}>{error}</p>}<form onSubmit={login}><label>Phone number<input style={css.input} value={phoneNo} onChange={e=>setPhoneNo(e.target.value)} placeholder="08012345678" inputMode="tel" required/></label><label>6-digit PIN<input style={css.input} value={pin} onChange={e=>setPin(e.target.value.replace(/\D/g,"").slice(0,6))} maxLength={6} inputMode="numeric" required/></label><button style={css.primary} disabled={busy}>{busy?"Signing in...":"Sign in"}</button></form><div style={css.note}><b>Forgot your PIN?</b><br/>Contact the school secretary or administrator. They can reset it. Your old PIN is never displayed.</div><p style={css.note}>Parent accounts are created by the school. There is no parent self-registration.</p></section></main>;
+  if(!session?.user)return <main style={css.shell}><section className="meka-parent-auth" style={css.auth}><b style={css.brand}>MEKA School</b><h1>Parent Portal</h1><p style={css.muted}>Sign in with the phone number registered with the school and your 6-digit PIN. A valid parent account is required.</p>{error&&<p style={css.err}>{error}</p>}<form onSubmit={login}><label>Phone number<input style={css.input} value={phoneNo} onChange={e=>setPhoneNo(e.target.value)} placeholder="08012345678" inputMode="tel" required/></label><label>6-digit PIN<input style={css.input} value={pin} onChange={e=>setPin(e.target.value.replace(/\D/g,"").slice(0,6))} maxLength={6} inputMode="numeric" required/></label><button style={css.primary} disabled={busy}>{busy?"Signing in...":"Sign in"}</button></form><div style={css.note}><b>Forgot your PIN?</b><br/>Contact the school secretary or administrator. They can reset it. Your old PIN is never displayed.</div><p style={css.note}>Parent accounts are created by the school. There is no parent self-registration.</p></section></main>;
   return <main style={css.portal}><style>{`@media(max-width:700px){.meka-parent-top{padding:12px 16px!important;min-height:64px!important}.meka-parent-body{display:block!important;padding:14px!important}.meka-parent-nav{display:flex!important;overflow-x:auto!important;gap:6px!important;padding:7px!important;margin-bottom:14px!important;white-space:nowrap!important;-webkit-overflow-scrolling:touch}.meka-parent-nav button{width:auto!important;flex:0 0 auto!important;padding:9px 12px!important}.meka-parent-main{padding:16px!important}.meka-parent-main h1{font-size:24px!important}.meka-parent-row{flex-direction:column!important;align-items:flex-start!important}.meka-parent-row>div:last-child{width:100%!important;text-align:left!important}.meka-parent-pay{width:100%!important}.meka-parent-auth{padding:22px!important;margin:12px!important}.meka-parent-auth input{font-size:16px!important}}`}</style><header className="meka-parent-top" style={css.top}><div><b style={css.brand}>MEKA School</b><div>Parent Portal</div></div><button onClick={()=>supabase.auth.signOut()}>Sign out</button></header><div className="meka-parent-body" style={css.body}><nav className="meka-parent-nav" style={css.nav}>{[["children","My Children"],["fees","Fees"],["payments","Payment History"],["receipts","Receipts"]].map(([k,l])=><button key={k} onClick={()=>setView(k)} style={view===k?css.active:css.navBtn}>{l}</button>)}</nav><section className="meka-parent-main" style={css.main}>{error&&<p style={css.err}>{error}</p>}{view==="children"&&<><h1>My Children</h1><p style={css.muted}>Only children linked to your parent account are shown.</p>{students.map(s=><article className="meka-parent-row" style={css.row} key={s.id}><div><b>{s.first_name} {s.middle_name||""} {s.last_name}</b><div style={css.muted}>{s.admission_no||"No admission number"}</div></div><div><b>{money(balance(s.id))}</b>{balance(s.id)>0&&<button disabled={payBusy} onClick={()=>pay(s)} className="meka-parent-pay" style={css.pay}>Pay fees</button>}</div></article>)}{!students.length&&<p style={css.muted}>No children are linked to this account. Contact the school office.</p>}</>}{view==="fees"&&<><h1>Fees</h1>{students.map(s=><article style={css.row} key={s.id}><div><b>{s.first_name} {s.last_name}</b><div style={css.muted}>{s.admission_no||""}</div></div><div><b>{money(balance(s.id))}</b>{balance(s.id)>0&&<button disabled={payBusy} onClick={()=>pay(s)} style={css.pay}>Pay fees</button>}</div></article>)}</>}{view==="payments"&&<><h1>Payment History</h1>{payments.map(p=>{const s=students.find(x=>x.id===p.student_id);return <article className="meka-parent-row" style={css.row} key={p.id}><div><b>{s?s.first_name+" "+s.last_name:"Student"}</b><div style={css.muted}>{p.method||"Payment"} · {p.reference||"No reference"}</div></div><div><b>{money(p.amount)}</b><div style={css.muted}>{p.payment_date?new Date(p.payment_date).toLocaleDateString("en-NG"):""}</div></div></article>})}{!payments.length&&<p style={css.muted}>No payments recorded.</p>}</>}{view==="receipts"&&<><h1>Receipts</h1>{receipts.map(r=><article className="meka-parent-row" style={css.row} key={r.id}><div><b>{r.receipt_number||"Receipt"}</b><div style={css.muted}>{r.issued_at?new Date(r.issued_at).toLocaleDateString("en-NG"):""}</div></div></article>)}{!receipts.length&&<p style={css.muted}>No receipts available.</p>}</>}</section></div></main>;
 }
 const css={shell:{minHeight:"100vh",display:"grid",placeItems:"center",padding:24,background:"#F8FAFC",fontFamily:"Inter,system-ui,sans-serif"},auth:{width:"100%",maxWidth:440,background:"#FFFFFF",padding:30,borderRadius:18,border:"1px solid #E2E8F0"},card:{padding:24},brand:{color:"#D97706",fontWeight:800},muted:{color:"#64748B"},input:{display:"block",width:"100%",boxSizing:"border-box",padding:12,margin:"7px 0 15px",border:"1px solid #CBD5E1",borderRadius:9},primary:{width:"100%",padding:13,border:0,borderRadius:9,background:"#0F2A43",color:"#fff",fontWeight:800},err:{padding:12,borderRadius:9,background:"#FEF2F2",color:"#991B1B"},note:{fontSize:13,color:"#64748B",lineHeight:1.5,marginTop:18},portal:{minHeight:"100vh",background:"#F8FAFC",fontFamily:"Arial,Helvetica,sans-serif"},top:{minHeight:72,padding:"0 28px",display:"flex",alignItems:"center",justifyContent:"space-between",background:"#0F2A43",color:"#FFFFFF",borderBottom:"3px solid #D97706",boxShadow:"0 4px 14px rgba(15,42,67,.12)"},body:{maxWidth:1100,margin:"0 auto",padding:24,display:"grid",gridTemplateColumns:"200px 1fr",gap:22},nav:{background:"#FFFFFF",padding:9,borderRadius:14,border:"1px solid #E2E8F0",height:"fit-content",boxShadow:"0 5px 18px rgba(15,23,42,.05)"},navBtn:{display:"block",width:"100%",textAlign:"left",padding:11,border:0,background:"transparent"},active:{display:"block",width:"100%",textAlign:"left",padding:11,border:0,borderRadius:8,background:"#FFF7ED",color:"#B45309",fontWeight:800},main:{background:"#FFFFFF",padding:28,borderRadius:16,border:"1px solid #E2E8F0",boxShadow:"0 6px 22px rgba(15,23,42,.05)"},row:{display:"flex",justifyContent:"space-between",gap:16,padding:16,borderBottom:"1px solid #E2E8F0"},pay:{display:"block",marginTop:9,padding:"9px 14px",border:0,borderRadius:9,background:"#D97706",color:"#fff",fontWeight:700,cursor:"pointer"}};
