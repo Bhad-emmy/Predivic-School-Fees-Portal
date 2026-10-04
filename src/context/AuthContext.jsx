@@ -64,7 +64,8 @@ export function AuthProvider({ children }) {
       console.error("STAFF PROFILE LOAD ERROR:", err);
       setStaff(null);
       setError(err.message || "Unable to load the staff profile.");
-      await supabase.auth.signOut();
+      // Keep the Supabase session. A temporary profile/network failure
+      // must not force the user to sign in again.
     } finally {
       setLoading(false);
     }
