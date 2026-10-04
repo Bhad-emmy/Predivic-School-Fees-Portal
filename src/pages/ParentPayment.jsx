@@ -128,10 +128,6 @@ export default function ParentPayment() {
       setError("Amount cannot exceed the outstanding balance.");
       return;
     }
-    if (!transferReference.trim()) {
-      setError("Enter the bank transfer reference.");
-      return;
-    }
     if (!proofFile) {
       setError("Upload your transfer receipt or proof.");
       return;
@@ -143,7 +139,9 @@ export default function ParentPayment() {
       form.append("token", token);
       form.append("amount", String(numericAmount));
       form.append("senderName", senderName.trim());
-      form.append("transferReference", transferReference.trim());
+      if (transferReference.trim()) {
+        form.append("transferReference", transferReference.trim());
+      }
       form.append("proof", proofFile);
       const { data, error: invokeError } = await supabase.functions.invoke("bank-transfer-submit", { body: form });
       if (invokeError) throw invokeError;
@@ -187,15 +185,9 @@ export default function ParentPayment() {
         </div>
 
         <div style={styles.methodRow}>
-          <button type="button" onClick={() => { setMethod("paystack"); setError(""); setMessage(""); }} style={method === "paystack" ? styles.methodActive : styles.method}>
-            Pay Online
-          </button>
-          <button type="button" onClick={() => { setMethod("bank"); setError(""); setMessage(""); }} style={method === "bank" ? styles.methodActive : styles.method}>
-            Bank Transfer
-          </button>
-          <button type="button" onClick={() => { setMethod("pos"); setError(""); setMessage(""); }} style={method === "pos" ? styles.methodActive : styles.method}>
-            Pay at School
-          </button>
+          <button type="button" onClick={() => { setMethod("paystack"); setError(""); setMessage(""); }} style={method === "paystack" ? styles.methodActive : styles.method}>Pay Online</button>
+          <button type="button" onClick={() => { setMethod("bank"); setError(""); setMessage(""); }} style={method === "bank" ? styles.methodActive : styles.method}>Bank Transfer</button>
+          <button type="button" onClick={() => { setMethod("pos"); setError(""); setMessage(""); }} style={method === "pos" ? styles.methodActive : styles.method}>Pay at School</button>
         </div>
 
         {message && <p style={styles.success}>{message}</p>}
@@ -236,13 +228,14 @@ export default function ParentPayment() {
               <input type="text" value={senderName} onChange={(e) => setSenderName(e.target.value)} placeholder="Name on the bank transfer" style={styles.input} disabled={submittingTransfer || !bankConfigured} />
             </label>
             <label style={styles.label}>
-              Transfer reference
-              <input type="text" value={transferReference} onChange={(e) => setTransferReference(e.target.value)} placeholder="Bank transaction/reference number" required style={styles.input} disabled={submittingTransfer || !bankConfigured} />
+              Transfer reference <span style={styles.optional}>(optional)</span>
+              <input type="text" value={transferReference} onChange={(e) => setTransferReference(e.target.value)} placeholder="Enter if available" style={styles.input} disabled={submittingTransfer || !bankConfigured} />
+              <small style={styles.hint}>You can leave this blank and upload the transfer receipt instead.</small>
             </label>
             <label style={styles.label}>
               Transfer proof
               <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(e) => setProofFile(e.target.files?.[0] || null)} required style={styles.input} disabled={submittingTransfer || !bankConfigured} />
-              <small style={{color:"#64748b",fontWeight:400}}>JPG, PNG, WEBP or PDF. Maximum 10MB.</small>
+              <small style={styles.hint}>JPG, PNG, WEBP or PDF. Maximum 10MB.</small>
             </label>
             <button type="submit" disabled={submittingTransfer || !bankConfigured} style={styles.button}>
               {submittingTransfer ? "Submitting..." : "Submit Transfer for Verification"}
@@ -276,6 +269,8 @@ const styles = {
   methodActive:{border:"1px solid #2563eb",background:"#eff6ff",borderRadius:"9px",padding:"10px 8px",fontWeight:700,color:"#1d4ed8"},
   label:{display:"grid",gap:"7px",marginBottom:"16px",fontWeight:600,color:"#334155"},
   input:{width:"100%",boxSizing:"border-box",padding:"12px",border:"1px solid #cbd5e1",borderRadius:"10px",fontSize:"16px"},
+  optional:{fontWeight:500,color:"#64748b",fontSize:"13px"},
+  hint:{color:"#64748b",fontWeight:400},
   button:{width:"100%",border:0,borderRadius:"10px",padding:"13px 16px",background:"#2563eb",color:"#fff",fontWeight:700,cursor:"pointer"},
   bankBox:{display:"grid",gap:"7px",padding:"15px",marginBottom:"18px",borderRadius:"12px",background:"#eff6ff",color:"#1e3a8a"},
   warning:{padding:"12px",marginBottom:"18px",borderRadius:"10px",background:"#fff7ed",color:"#9a3412"},
