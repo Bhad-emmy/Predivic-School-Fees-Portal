@@ -2307,3 +2307,385 @@ body,
     min-height: 46px;
   }
 }
+
+
+/* =========================================================
+   iPHONE / iOS MOBILE OPTIMIZATION
+   Optimized for 320–430px screens, Safari safe areas and
+   touch interaction without changing application behavior.
+========================================================= */
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overscroll-behavior-x: none;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 700px) {
+  :root {
+    --mobile-gutter: 14px;
+    --mobile-header-height: 62px;
+  }
+
+  html,
+  body,
+  #root {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    min-height: 100dvh;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .app {
+    width: 100%;
+    min-height: 100dvh;
+    height: auto;
+  }
+
+  /* iPhone notch / Dynamic Island safe area */
+  .mobile-header {
+    min-height: calc(var(--mobile-header-height) + env(safe-area-inset-top));
+    padding:
+      env(safe-area-inset-top)
+      max(var(--mobile-gutter), env(safe-area-inset-right))
+      0
+      max(var(--mobile-gutter), env(safe-area-inset-left));
+    align-items: center;
+  }
+
+  .mobile-brand {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .mobile-brand strong {
+    max-width: calc(100vw - 120px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mobile-menu-button {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    flex: 0 0 44px;
+    font-size: 27px;
+  }
+
+  .content {
+    width: 100%;
+    max-width: 100%;
+    padding:
+      calc(var(--mobile-header-height) + env(safe-area-inset-top) + 8px)
+      max(var(--mobile-gutter), env(safe-area-inset-right))
+      calc(18px + env(safe-area-inset-bottom))
+      max(var(--mobile-gutter), env(safe-area-inset-left));
+  }
+
+  .page,
+  .dashboard-page,
+  .attendance-page,
+  .settings-page {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .page h1,
+  .dashboard-page h1 {
+    font-size: 25px;
+    line-height: 1.2;
+    margin-bottom: 16px;
+  }
+
+  .page-card,
+  .table-section,
+  .stat-card,
+  .settings-section {
+    max-width: 100%;
+    min-width: 0;
+    border-radius: 12px;
+  }
+
+  /* Prevent iOS Safari from zooming into form controls. */
+  input,
+  select,
+  textarea,
+  button {
+    font-size: 16px;
+  }
+
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+  }
+
+  button,
+  .primary-btn,
+  .secondary-btn {
+    min-height: 44px;
+  }
+
+  .primary-btn,
+  .secondary-btn {
+    padding: 10px 14px;
+  }
+
+  /* Dashboard */
+  .stats-grid {
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .stat-card {
+    padding: 17px;
+  }
+
+  .stat-card h2 {
+    font-size: 25px;
+  }
+
+  .dashboard-section-grid {
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  .attendance-summary {
+    gap: 10px;
+  }
+
+  .attendance-box {
+    padding: 14px;
+  }
+
+  .attendance-box strong {
+    font-size: 22px;
+  }
+
+  /* Headers/actions stack cleanly instead of squeezing horizontally. */
+  .page-header,
+  .attendance-header,
+  .settings-section-header {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .page-header > button,
+  .attendance-header > button {
+    max-width: 100%;
+  }
+
+  /* Tables stay inside their card and scroll horizontally, never the page. */
+  .page-card,
+  .attendance-table,
+  .table-section,
+  .receipt-list-card {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  .page-card > table,
+  .attendance-table table,
+  .table-section > table {
+    min-width: 620px;
+  }
+
+  .receipt-list-wrapper {
+    overflow-x: auto;
+    max-width: 100%;
+  }
+
+  /* Search/filter controls use the full iPhone width. */
+  .table-controls,
+  .attendance-controls {
+    width: 100%;
+    gap: 10px;
+    margin: 16px 0;
+  }
+
+  .search-input,
+  .filter-select {
+    width: 100%;
+    min-width: 0;
+    min-height: 46px;
+  }
+
+  /* Navigation drawer: keep controls comfortably tappable. */
+  .sidebar {
+    width: min(88vw, 360px);
+    max-width: 360px;
+    padding:
+      calc(72px + env(safe-area-inset-top))
+      14px
+      calc(18px + env(safe-area-inset-bottom))
+      max(14px, env(safe-area-inset-left));
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  .sidebar button {
+    min-height: 46px;
+    padding: 12px 13px;
+    font-size: 16px;
+  }
+
+  .sidebar-user {
+    padding: 11px 12px;
+  }
+
+  .sidebar-developer-credit {
+    padding-bottom: 6px;
+  }
+
+  /* Modals fit inside small iPhone screens. */
+  .modal-overlay {
+    padding:
+      calc(10px + env(safe-area-inset-top))
+      max(10px, env(safe-area-inset-right))
+      calc(10px + env(safe-area-inset-bottom))
+      max(10px, env(safe-area-inset-left));
+    align-items: flex-start;
+  }
+
+  .modal-card {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 17px;
+    border-radius: 14px;
+  }
+
+  .modal-header {
+    gap: 10px;
+  }
+
+  .modal-close {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .modal-actions {
+    gap: 8px;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Settings */
+  .settings-navigation {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .settings-section {
+    overflow: hidden;
+  }
+
+  /* Long phone/email/reference values must wrap instead of widening cards. */
+  td,
+  th,
+  .settings-item strong,
+  .student-contact-grid strong {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  /* Login */
+  .auth-page {
+    width: 100%;
+    min-height: 100dvh;
+    padding:
+      calc(20px + env(safe-area-inset-top))
+      max(16px, env(safe-area-inset-right))
+      calc(20px + env(safe-area-inset-bottom))
+      max(16px, env(safe-area-inset-left));
+  }
+
+  .auth-card {
+    width: 100%;
+    max-width: 430px;
+    padding: 24px 18px;
+    border-radius: 14px;
+  }
+
+  .auth-card h1 {
+    font-size: 28px;
+  }
+
+  .auth-card input {
+    min-height: 48px;
+    margin-bottom: 6px;
+  }
+
+  /* Parent portal/payment pages often run outside .app. */
+  .parent-portal,
+  .parent-payment,
+  [class*="parent-portal"],
+  [class*="parent-payment"] {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+}
+
+/* Extra-small iPhones such as 320px-wide devices. */
+@media (max-width: 360px) {
+  .mobile-brand strong {
+    font-size: 18px;
+  }
+
+  .page h1,
+  .dashboard-page h1 {
+    font-size: 23px;
+  }
+
+  .stat-card {
+    padding: 14px;
+  }
+
+  .settings-section {
+    padding: 14px;
+  }
+
+  .modal-card {
+    padding: 14px;
+  }
+}
+
+/* Landscape iPhone: preserve usable vertical space. */
+@media (max-width: 900px) and (orientation: landscape) {
+  .mobile-header {
+    min-height: 54px;
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .content {
+    padding-top: calc(62px + env(safe-area-inset-top));
+  }
+
+  .sidebar {
+    padding-top: calc(64px + env(safe-area-inset-top));
+  }
+}
