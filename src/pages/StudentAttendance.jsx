@@ -1689,7 +1689,7 @@ export default function StudentAttendance() {
       {/* DAILY CONTROLS */}
 
       <div
-        className="page-card"
+        className="page-card attendance-daily-controls"
         style={{
           marginBottom:
             "20px",
@@ -1814,13 +1814,14 @@ export default function StudentAttendance() {
 
       {selectedClass && (
         <div
-          className="page-card"
+          className="page-card attendance-daily-card"
           style={{
             marginBottom:
               "25px",
           }}
         >
           <div
+            className="attendance-daily-header"
             style={{
               display:
                 "flex",
@@ -1859,9 +1860,9 @@ export default function StudentAttendance() {
             </div>
 
             <div
+              className="attendance-daily-actions"
               style={{
-                display:
-                  "flex",
+                display: "flex",
                 gap: "10px",
               }}
             >
@@ -1898,14 +1899,12 @@ export default function StudentAttendance() {
           {/* COUNTS */}
 
           <div
+            className="attendance-counts"
             style={{
-              display:
-                "flex",
+              display: "flex",
               gap: "15px",
-              marginBottom:
-                "20px",
-              flexWrap:
-                "wrap",
+              marginBottom: "20px",
+              flexWrap: "wrap",
             }}
           >
             <div
@@ -1978,6 +1977,7 @@ export default function StudentAttendance() {
           {classStudents.length > 0 ? (
             <>
               <div
+                className="attendance-daily-table"
                 style={{
                   width: "100%",
                   overflowX: "hidden",
@@ -2172,13 +2172,14 @@ export default function StudentAttendance() {
 
           {classStudents.length > 0 && (
             <div
+              className="attendance-save-wrap"
               style={{
                 marginTop: "25px",
               }}
             >
               <button
                 type="button"
-                className="primary-btn"
+                className="primary-btn attendance-save-btn"
                 onClick={handleSaveAttendance}
                 disabled={
                   saving ||
