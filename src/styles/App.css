@@ -2004,3 +2004,306 @@ body,
 .activation-button + .activation-button {
   margin-top: 10px;
 }
+
+
+/* =========================================================
+   IPHONE / SMALL-SCREEN POLISH
+   Touch-first layout for 320–430px viewports.
+========================================================= */
+@media (max-width: 700px) {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
+  }
+
+  button,
+  .primary-btn,
+  .secondary-btn {
+    min-height: 44px;
+  }
+
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+    font-size: 16px; /* prevents iOS Safari zoom on focus */
+  }
+
+  .content {
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  }
+
+  .page,
+  .dashboard-page,
+  .attendance-page,
+  .settings-page {
+    width: 100%;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .page h1,
+  .dashboard-page h1 {
+    font-size: 25px;
+    line-height: 1.2;
+    margin-bottom: 16px;
+  }
+
+  .page-card,
+  .table-section,
+  .stat-card,
+  .settings-section {
+    border-radius: 12px;
+  }
+
+  .page-card,
+  .table-section {
+    padding: 15px;
+  }
+
+  .stats-grid {
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .stat-card {
+    padding: 17px;
+  }
+
+  .stat-card h2 {
+    font-size: 25px;
+  }
+
+  .dashboard-section-grid {
+    gap: 14px;
+  }
+
+  .attendance-summary {
+    gap: 10px;
+  }
+
+  .attendance-box {
+    padding: 14px;
+  }
+
+  .attendance-header,
+  .page-header {
+    margin-bottom: 14px;
+  }
+
+  .attendance-controls {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .attendance-controls > * {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .table-controls {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin: 16px 0;
+  }
+
+  .search-input,
+  .filter-select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Keep wide data tables inside their own scroll area. */
+  .attendance-table,
+  .fee-account-table-wrapper,
+  .fee-accounts-table-wrapper,
+  .fee-structures-table-wrapper,
+  .receipt-list-wrapper,
+  .settings-table-wrapper,
+  .staff-accounts-table {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+
+  .attendance-table table,
+  .fee-account-table-wrapper table,
+  .fee-accounts-table-wrapper table,
+  .settings-table-wrapper table,
+  .staff-accounts-table table {
+    min-width: 680px;
+  }
+
+  .receipt-list-wrapper table {
+    min-width: 760px;
+  }
+
+  /* Don't let long names/references expand cards. */
+  td,
+  th {
+    overflow-wrap: anywhere;
+  }
+
+  .page-header > button,
+  .page-header > a {
+    min-height: 44px;
+  }
+
+  /* Full-width actions are easier to use with one hand. */
+  .modal-actions,
+  .settings-form-actions,
+  .receipt-actions {
+    gap: 8px;
+  }
+
+  .modal-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .modal-actions button,
+  .settings-form-actions button,
+  .receipt-actions button {
+    width: 100%;
+  }
+
+  .modal-overlay {
+    padding: max(10px, env(safe-area-inset-top)) 10px
+             max(10px, env(safe-area-inset-bottom)) 10px;
+  }
+
+  .modal-card {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - 20px);
+    border-radius: 14px;
+    padding: 16px;
+  }
+
+  .auth-page {
+    min-height: 100dvh;
+    padding:
+      max(18px, env(safe-area-inset-top))
+      16px
+      max(18px, env(safe-area-inset-bottom));
+  }
+
+  .auth-card {
+    width: 100%;
+    padding: 24px 18px;
+    border-radius: 14px;
+  }
+
+  .auth-card h1 {
+    font-size: 27px;
+  }
+
+  /* Mobile drawer respects iPhone safe areas. */
+  .mobile-header {
+    min-height: calc(64px + env(safe-area-inset-top));
+    padding-top: calc(10px + env(safe-area-inset-top));
+  }
+
+  .content {
+    padding-top: calc(79px + env(safe-area-inset-top));
+  }
+
+  .sidebar {
+    padding-top: calc(78px + env(safe-area-inset-top));
+    padding-bottom: calc(18px + env(safe-area-inset-bottom));
+  }
+
+  .mobile-nav-backdrop {
+    height: 100dvh;
+  }
+
+  /* Avoid sticky controls covering content on small screens. */
+  .fee-account-header {
+    top: calc(64px + env(safe-area-inset-top));
+  }
+
+  .fee-account-tabs {
+    top: calc(136px + env(safe-area-inset-top));
+  }
+
+  .settings-navigation {
+    top: calc(6px + env(safe-area-inset-top));
+  }
+
+  /* Improve horizontal scrolling affordance without changing desktop UI. */
+  .attendance-table::-webkit-scrollbar,
+  .fee-account-table-wrapper::-webkit-scrollbar,
+  .fee-accounts-table-wrapper::-webkit-scrollbar,
+  .fee-structures-table-wrapper::-webkit-scrollbar,
+  .receipt-list-wrapper::-webkit-scrollbar,
+  .settings-table-wrapper::-webkit-scrollbar {
+    height: 5px;
+  }
+
+  .attendance-table::-webkit-scrollbar-thumb,
+  .fee-account-table-wrapper::-webkit-scrollbar-thumb,
+  .fee-accounts-table-wrapper::-webkit-scrollbar-thumb,
+  .fee-structures-table-wrapper::-webkit-scrollbar-thumb,
+  .receipt-list-wrapper::-webkit-scrollbar-thumb,
+  .settings-table-wrapper::-webkit-scrollbar-thumb {
+    background: #CBD5E1;
+    border-radius: 10px;
+  }
+}
+
+@media (max-width: 380px) {
+  .content {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .mobile-header strong {
+    font-size: 18px;
+  }
+
+  .meka-logo-mark {
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
+  }
+
+  .page h1,
+  .dashboard-page h1 {
+    font-size: 23px;
+  }
+
+  .page-card,
+  .table-section,
+  .stat-card,
+  .settings-section {
+    padding: 13px;
+  }
+
+  .sidebar button {
+    min-height: 46px;
+  }
+}
