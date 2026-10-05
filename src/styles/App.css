@@ -2966,3 +2966,164 @@ textarea {
     font-size: 13px;
   }
 }
+
+
+/* =========================================================
+   GENERAL MOBILE — STUDENT ATTENDANCE
+   Touch-first layout for Android and other mobile browsers.
+========================================================= */
+@media (max-width: 700px) {
+  .attendance-page {
+    padding-top: 10px;
+  }
+
+  .attendance-page .page-header {
+    margin-bottom: 12px;
+  }
+
+  .attendance-page .page-header h1 {
+    font-size: 24px;
+  }
+
+  .attendance-page .page-header p {
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .attendance-daily-controls {
+    overflow: visible;
+  }
+
+  .attendance-daily-controls > div {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .attendance-daily-controls input,
+  .attendance-daily-controls select {
+    width: 100% !important;
+    min-height: 46px;
+  }
+
+  .attendance-daily-card {
+    overflow: visible;
+  }
+
+  .attendance-daily-header {
+    align-items: flex-start !important;
+  }
+
+  .attendance-daily-header > div:first-child {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .attendance-daily-header h2 {
+    font-size: 20px;
+  }
+
+  .attendance-daily-actions {
+    width: 100%;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px !important;
+  }
+
+  .attendance-daily-actions button {
+    width: 100%;
+    min-height: 46px;
+    padding: 10px 8px !important;
+  }
+
+  .attendance-counts {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .attendance-counts > div {
+    min-width: 0;
+    padding: 10px 11px !important;
+    font-size: 13px;
+  }
+
+  .attendance-daily-table {
+    border-radius: 10px !important;
+  }
+
+  .attendance-daily-table table {
+    table-layout: fixed !important;
+  }
+
+  .attendance-daily-table th,
+  .attendance-daily-table td {
+    padding: 9px 6px !important;
+    font-size: 13px;
+  }
+
+  .attendance-daily-table th:first-child,
+  .attendance-daily-table td:first-child {
+    width: 52% !important;
+  }
+
+  .attendance-daily-table th:nth-child(2),
+  .attendance-daily-table td:nth-child(2),
+  .attendance-daily-table th:nth-child(3),
+  .attendance-daily-table td:nth-child(3) {
+    width: 24% !important;
+  }
+
+  .attendance-daily-table td strong {
+    display: block;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+
+  .attendance-daily-table td button {
+    min-height: 44px !important;
+    width: calc(100% - 2px) !important;
+    padding: 9px 4px !important;
+    font-size: 16px;
+  }
+
+  .attendance-save-wrap {
+    margin-top: 14px !important;
+    position: sticky;
+    bottom: 8px;
+    z-index: 20;
+  }
+
+  .attendance-save-btn {
+    width: 100%;
+    min-height: 50px !important;
+    font-size: 16px;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.16);
+  }
+
+  /* Weekly/term reports remain scrollable inside their cards rather than
+     widening the entire mobile page. */
+  .attendance-page .page-card {
+    max-width: 100%;
+  }
+
+  .attendance-page .page-card table {
+    max-width: none;
+  }
+}
+
+@media (max-width: 380px) {
+  .attendance-daily-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .attendance-counts {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .attendance-daily-table th,
+  .attendance-daily-table td {
+    padding-left: 5px !important;
+    padding-right: 5px !important;
+  }
+}
