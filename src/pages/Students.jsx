@@ -428,6 +428,14 @@ export default function Students() {
 
     const selectedClassName = String(form.className || "").trim().toUpperCase();
     const isSeniorSecondary = selectedClassName === "SS 2" || selectedClassName === "SS 3";
+
+    // Department is only valid for SS2/SS3.
+    // Clear stale draft data if a user moves back to JSS/other classes.
+    if (!isSeniorSecondary && form.department) {
+      setNewStudent((current) => ({ ...current, department: "" }));
+      setShowDepartmentAllocator(false);
+    }
+
     if (isSeniorSecondary && !form.department) {
       setError("Please select a department for SS2/SS3.");
       return;
