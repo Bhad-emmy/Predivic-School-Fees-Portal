@@ -38,21 +38,19 @@ const getLocalDateKey = () => {
 };
 
 const getAttendanceRange = () => {
-  const days = [];
-  const date = new Date();
-  date.setHours(12, 0, 0, 0);
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
 
-  // Show the latest five weekdays, skipping Saturday and Sunday.
-  while (days.length < 5) {
-    const weekday = date.getDay();
-    if (weekday >= 1 && weekday <= 5) {
-      days.push(new Date(date));
-    }
-    date.setDate(date.getDate() - 1);
-  }
+  // Find Monday of the current week, then build Monday through Friday in order.
+  const monday = new Date(today);
+  const dayOfWeek = monday.getDay();
+  monday.setDate(monday.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
 
-  // Dates were collected newest-to-oldest; reverse for Monday-to-Friday display.
-  days.reverse();
+  const days = Array.from({ length: 5 }, (_, index) => {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + index);
+    return date;
+  });
 
   const key = (value) =>
     [value.getFullYear(), String(value.getMonth() + 1).padStart(2, "0"), String(value.getDate()).padStart(2, "0")].join("-");
