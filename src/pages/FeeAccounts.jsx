@@ -1452,29 +1452,32 @@ export default function FeeAccounts() {
               </div>
               <button type="button" className="modal-close" aria-label="Close" onClick={() => setSelectedPaymentAccount(null)}>×</button>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "12px", marginBottom: "20px" }}>
-              <div style={{ padding: "14px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px" }}><small style={{ color: "#64748b" }}>Total Fee</small><strong style={{ display: "block", marginTop: "4px" }}>₦{formatMoney(selectedPaymentAccount.totalAmount)}</strong></div>
-              <div style={{ padding: "14px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px" }}><small style={{ color: "#64748b" }}>Total Paid</small><strong style={{ display: "block", marginTop: "4px" }}>₦{formatMoney(selectedPaymentAccount.totalPaid)}</strong></div>
-              <div style={{ padding: "14px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px" }}><small style={{ color: "#64748b" }}>Balance</small><strong style={{ display: "block", marginTop: "4px" }}>₦{formatMoney(selectedPaymentAccount.balance)}</strong></div>
+            <div className="payment-history-summary">
+              <div><small>Total Fee</small><strong>₦{formatMoney(selectedPaymentAccount.totalAmount)}</strong></div>
+              <div><small>Total Paid</small><strong>₦{formatMoney(selectedPaymentAccount.totalPaid)}</strong></div>
+              <div><small>Balance</small><strong>₦{formatMoney(selectedPaymentAccount.balance)}</strong></div>
             </div>
             {paymentHistoryLoading ? <p style={{ color: "#64748b" }}>Loading payment history...</p> : (
-              <div style={{ overflowX: "auto" }}>
-                <table>
-                  <thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Reference</th><th>Receipt</th><th>Status</th></tr></thead>
-                  <tbody>
-                    {payments.length ? payments.map((payment) => (
-                      <tr key={payment.id}>
-                        <td>{payment.payment_date ? new Date(payment.payment_date).toLocaleDateString("en-NG") : "-"}</td>
-                        <td>₦{formatMoney(payment.amount)}</td>
-                        <td>{payment.method || "-"}</td>
-                        <td>{payment.reference || "-"}</td>
-                        <td>{payment.receiptNumber || "-"}</td>
-                        <td>{payment.displayStatus || payment.status || "-"}</td>
-                      </tr>
-                    )) : <tr><td colSpan="6" style={{ textAlign: "center", padding: "30px", color: "#64748b" }}>No payments recorded for this fee account.</td></tr>}
-                  </tbody>
-                </table>
-              </div>
+              <>
+                <div className="payment-history-table-wrap">
+                  <table className="payment-history-table">
+                    <thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Reference</th><th>Receipt</th><th>Status</th></tr></thead>
+                    <tbody>
+                      {payments.length ? payments.map((payment) => (
+                        <tr key={payment.id}>
+                          <td>{payment.payment_date ? new Date(payment.payment_date).toLocaleDateString("en-NG") : "-"}</td>
+                          <td className="payment-history-amount">₦{formatMoney(payment.amount)}</td>
+                          <td>{payment.method || "-"}</td>
+                          <td>{payment.reference || "-"}</td>
+                          <td>{payment.receiptNumber || "-"}</td>
+                          <td>{payment.displayStatus || payment.status || "-"}</td>
+                        </tr>
+                      )) : <tr><td colSpan="6" style={{ textAlign: "center", padding: "30px", color: "#64748b" }}>No payments recorded for this fee account.</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="payment-history-scroll-hint">Swipe horizontally to view all payment details.</p>
+              </>
             )}
           </div>
         </div>
