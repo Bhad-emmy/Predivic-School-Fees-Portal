@@ -3609,3 +3609,66 @@ textarea {
   .collection-chart-track { width: min(100%, 30px); }
   .fee-progress-summary { margin-top: 18px; }
 }
+
+
+/* WEEKLY ATTENDANCE CHART */
+.weekly-attendance-chart {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
+  gap: 10px;
+  height: 190px;
+  padding: 16px 2px 0;
+}
+.weekly-attendance-column {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+}
+.weekly-attendance-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  flex: 1 1 auto;
+  border-bottom: 1px solid #e2e8f0;
+}
+.weekly-attendance-bar {
+  width: min(34%, 18px);
+  min-height: 0;
+  border-radius: 5px 5px 0 0;
+}
+.weekly-attendance-bar.present { background: #16a34a; }
+.weekly-attendance-bar.absent { background: #ef4444; }
+.attendance-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 14px;
+  color: #64748b;
+  font-size: 12px;
+}
+.attendance-chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.attendance-legend-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.attendance-legend-dot.present { background: #16a34a; }
+.attendance-legend-dot.absent { background: #ef4444; }
+@media (max-width: 768px) {
+  .weekly-attendance-chart { height: 170px; gap: 5px; }
+  .weekly-attendance-column { font-size: 11px; }
+}

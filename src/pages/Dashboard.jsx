@@ -259,12 +259,29 @@ export default function Dashboard() {
         if (month) month.total += Number(payment.amount || 0);
       }
 
+      const attendanceRows = attendanceResult.data || [];
+      const weekDays = Array.from({ length: 7 }, (_, index) => {
+        const date = new Date();
+        date.setDate(date.getDate() - 6 + index);
+        const key = [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
+        return { key, label: date.toLocaleDateString("en-NG", { weekday: "short" }), present: 0, absent: 0 };
+      });
+      const dayMap = new Map(weekDays.map((day) => [day.key, day]));
+      for (const record of attendanceRows) {
+        const day = dayMap.get(record.attendance_date);
+        if (!day) continue;
+        const status = String(record.status || "").toLowerCase();
+        if (status === "present") day.present += 1;
+        if (status === "absent") day.absent += 1;
+      }
+
+      setWeeklyAttendance(weekDays);
       setMonthlyCollections(months);
       setActiveStudentCount(studentsResult.count || 0);
       setFeeAccounts(dashboardFeeAccounts);
       setPayments(enrichedPayments);
       setPaymentsTodayAmount(paymentsTodayTotal);
-      setAttendance(attendanceResult.data || []);
+      setAttendance(attendanceRows.filter((record) => record.attendance_date === getLocalDateKey()));
     } catch (err) {
       console.error("DASHBOARD LOAD ERROR:", err);
       setError(err.message || "Unable to load dashboard data.");
@@ -483,6 +500,37 @@ export default function Dashboard() {
               No successful payment data available for the last six months.
             </div>
           )}
+        </section>
+
+        <section className="table-section dashboard-chart-card attendance-chart-card">
+          <div className="section-heading">
+            <div>
+              <h2>Weekly Attendance</h2>
+              <p>Present and absent records over the last seven days</p>
+            </div>
+          </div>
+          {weeklyAttendance.some((day) => day.present + day.absent > 0) ? (
+            <div className="weekly-attendance-chart" role="img" aria-label="Present and absent attendance counts for the last seven days">
+              {weeklyAttendance.map((day) => {
+                const maxCount = Math.max(...weeklyAttendance.map((item) => Math.max(item.present, item.absent)), 1);
+                return (
+                  <div className="weekly-attendance-column" key={day.key}>
+                    <div className="weekly-attendance-bars">
+                      <div className="weekly-attendance-bar present" style={{ height: (day.present / maxCount * 100) + "%" }} title={"Present: " + day.present} />
+                      <div className="weekly-attendance-bar absent" style={{ height: (day.absent / maxCount * 100) + "%" }} title={"Absent: " + day.absent} />
+                    </div>
+                    <span>{day.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="dashboard-chart-empty">No attendance records found for the last seven days.</div>
+          )}
+          <div className="attendance-chart-legend">
+            <span><i className="attendance-legend-dot present" /> Present</span>
+            <span><i className="attendance-legend-dot absent" /> Absent</span>
+          </div>
         </section>
 
         <section className="table-section dashboard-chart-card">
