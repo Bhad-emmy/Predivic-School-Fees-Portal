@@ -3485,3 +3485,127 @@ textarea {
     font-size: 19px;
   }
 }
+
+
+/* DASHBOARD CHARTS */
+.dashboard-charts-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 18px;
+  margin: 0 0 20px;
+  min-width: 0;
+}
+.dashboard-chart-card { min-width: 0; }
+.collection-chart {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 10px;
+  height: 230px;
+  padding: 18px 4px 0;
+}
+.collection-chart-column {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.collection-chart-value {
+  max-width: 100%;
+  color: #64748b;
+  font-size: 10px;
+  line-height: 1.25;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.collection-chart-track {
+  display: flex;
+  align-items: flex-end;
+  width: min(100%, 34px);
+  flex: 1 1 auto;
+  overflow: hidden;
+  border-radius: 8px 8px 3px 3px;
+  background: #eef2f7;
+}
+.collection-chart-bar {
+  width: 100%;
+  min-height: 0;
+  border-radius: 8px 8px 3px 3px;
+  background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+  transition: height 250ms ease;
+}
+.collection-chart-label {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+}
+.dashboard-chart-empty {
+  display: grid;
+  min-height: 180px;
+  place-items: center;
+  padding: 20px;
+  color: #64748b;
+  font-size: 14px;
+  text-align: center;
+}
+.fee-progress-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 26px 0 16px;
+}
+.fee-progress-summary strong {
+  color: #15803d;
+  font-size: 36px;
+  line-height: 1.1;
+}
+.fee-progress-summary span { color: #64748b; font-size: 13px; }
+.fee-progress-track {
+  width: 100%;
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #fee2e2;
+}
+.fee-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: #16a34a;
+  transition: width 250ms ease;
+}
+.fee-progress-legend {
+  display: grid;
+  gap: 14px;
+  margin-top: 22px;
+}
+.fee-progress-legend > div {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-size: 13px;
+}
+.fee-progress-legend strong {
+  color: #0f172a;
+  font-size: 13px;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.fee-legend-dot { width: 9px; height: 9px; border-radius: 50%; }
+.fee-legend-dot.collected { background: #16a34a; }
+.fee-legend-dot.outstanding { background: #ef4444; }
+
+@media (max-width: 768px) {
+  .dashboard-charts-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+  .collection-chart { height: 205px; gap: 6px; padding-top: 14px; }
+  .collection-chart-value { font-size: 9px; }
+  .collection-chart-track { width: min(100%, 30px); }
+  .fee-progress-summary { margin-top: 18px; }
+}
