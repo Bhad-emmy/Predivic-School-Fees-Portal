@@ -345,6 +345,10 @@ begin
 end;
 $$;
 
+-- Internal helpers are not callable by client roles. Their owning functions can still invoke them.
+revoke all on function private.cashless_is_school_admin(uuid) from public, anon, authenticated;
+revoke all on function private.cashless_can_operate(uuid) from public, anon, authenticated;
+
 -- SECURITY DEFINER RPCs are explicitly closed to PUBLIC/anon and exposed only
 -- to authenticated users; each function independently checks auth.uid() and role.
 revoke all on function public.cashless_set_cashier(uuid, boolean) from public, anon;
