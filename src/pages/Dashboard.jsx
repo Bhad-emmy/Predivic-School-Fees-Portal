@@ -48,6 +48,7 @@ export default function Dashboard() {
   const [payments, setPayments] = useState([]);
   const [paymentsTodayAmount, setPaymentsTodayAmount] = useState(0);
   const [monthlyCollections, setMonthlyCollections] = useState([]);
+  const [weeklyAttendance, setWeeklyAttendance] = useState([]);
   const [attendance, setAttendance] = useState([]);
 
   const [loading, setLoading] = useState(true);
