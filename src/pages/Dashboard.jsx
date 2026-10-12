@@ -37,6 +37,26 @@ const getLocalDateKey = () => {
   ].join("-");
 };
 
+const getAttendanceRange = () => {
+  const days = [];
+  const date = new Date();
+  date.setHours(12, 0, 0, 0);
+
+  // Show the latest five weekdays, skipping Saturday and Sunday.
+  while (days.length < 5) {
+    const weekday = date.getDay();
+    if (weekday >= 1 && weekday <= 5) {
+      days.unshift(new Date(date));
+    }
+    date.setDate(date.getDate() - 1);
+  }
+
+  const key = (value) =>
+    [value.getFullYear(), String(value.getMonth() + 1).padStart(2, "0"), String(value.getDate()).padStart(2, "0")].join("-");
+
+  return { days, start: key(days[0]), end: key(days[days.length - 1]) };
+};
+
 const isSuccessfulPayment = (status) =>
   ["paid", "successful", "completed"].includes(
     String(status || "").toLowerCase()
@@ -85,7 +105,8 @@ export default function Dashboard() {
         supabase
           .from("student_attendance")
           .select("id, student_id, class_id, attendance_date, status")
-          .eq("attendance_date", getLocalDateKey()),
+          .gte("attendance_date", getAttendanceRange().start)
+          .lte("attendance_date", getAttendanceRange().end),
       ]);
 
       if (studentsResult.error) throw studentsResult.error;
@@ -261,9 +282,8 @@ export default function Dashboard() {
       }
 
       const attendanceRows = attendanceResult.data || [];
-      const weekDays = Array.from({ length: 7 }, (_, index) => {
-        const date = new Date();
-        date.setDate(date.getDate() - 6 + index);
+      const attendanceRange = getAttendanceRange();
+      const weekDays = attendanceRange.days.map((date) => {
         const key = [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
         return { key, label: date.toLocaleDateString("en-NG", { weekday: "short" }), present: 0, absent: 0 };
       });
