@@ -83,6 +83,12 @@ export default function Dashboard() {
       // Dashboard-specific queries only. Avoid loading full student,
       // fee-account, payment, and attendance datasets just to calculate
       // a small set of dashboard metrics.
+      const attendanceRange = getAttendanceRange();
+      const todayKey = getLocalDateKey();
+      // Never count future-dated attendance, even if records exist in the database.
+      const attendanceEnd =
+        attendanceRange.end < todayKey ? attendanceRange.end : todayKey;
+
       const [
         studentsResult,
         feeAccountsResult,
@@ -106,8 +112,8 @@ export default function Dashboard() {
         supabase
           .from("student_attendance")
           .select("id, student_id, class_id, attendance_date, status")
-          .gte("attendance_date", getAttendanceRange().start)
-          .lte("attendance_date", getAttendanceRange().end),
+          .gte("attendance_date", attendanceRange.start)
+          .lte("attendance_date", attendanceEnd),
       ]);
 
       if (studentsResult.error) throw studentsResult.error;
@@ -283,7 +289,6 @@ export default function Dashboard() {
       }
 
       const attendanceRows = attendanceResult.data || [];
-      const attendanceRange = getAttendanceRange();
       const weekDays = attendanceRange.days.map((date) => {
         const key = [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
         return { key, label: date.toLocaleDateString("en-NG", { weekday: "short" }), present: 0, absent: 0 };
