@@ -486,7 +486,7 @@ export default function Dashboard() {
           RECENT PAYMENTS
       ================================================= */}
 
-      <div className="table-section">
+      <div className="table-section recent-payments-section">
         <div className="section-heading">
           <div>
             <h2>Recent Payments</h2>
@@ -494,8 +494,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div style={{ overflowX: "auto" }}>
-          <table>
+        <div className="recent-payments-table-wrap" role="region" aria-label="Recent payments table" tabIndex={0}>
+          <table className="recent-payments-table">
             <thead>
               <tr>
                 <th>Student</th>
@@ -545,6 +545,7 @@ export default function Dashboard() {
             </tbody>
           </table>
         </div>
+        <p className="recent-payments-scroll-hint">Swipe horizontally to view all payment details.</p>
       </div>
 
       {/* =================================================

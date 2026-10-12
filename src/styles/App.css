@@ -3239,3 +3239,98 @@ textarea {
     display: block;
   }
 }
+
+
+/* DASHBOARD RECENT PAYMENTS — KEEP COLUMNS READABLE ON MOBILE */
+.recent-payments-section {
+  min-width: 0;
+}
+
+.recent-payments-table-wrap {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  overscroll-behavior-x: contain;
+}
+
+.recent-payments-table {
+  width: 100%;
+  min-width: 760px;
+  table-layout: auto;
+  border-collapse: collapse;
+}
+
+.recent-payments-table th,
+.recent-payments-table td {
+  white-space: nowrap;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+}
+
+.recent-payments-table th:first-child,
+.recent-payments-table td:first-child {
+  min-width: 190px;
+}
+
+.recent-payments-table th:nth-child(2),
+.recent-payments-table td:nth-child(2) {
+  min-width: 95px;
+}
+
+.recent-payments-table th:nth-child(3),
+.recent-payments-table td:nth-child(3) {
+  min-width: 115px;
+}
+
+.recent-payments-table th:nth-child(4),
+.recent-payments-table td:nth-child(4) {
+  min-width: 135px;
+}
+
+.recent-payments-table th:nth-child(5),
+.recent-payments-table td:nth-child(5) {
+  min-width: 115px;
+}
+
+.recent-payments-table th:nth-child(6),
+.recent-payments-table td:nth-child(6) {
+  min-width: 90px;
+}
+
+.recent-payments-scroll-hint {
+  display: none;
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+@media (max-width: 700px) {
+  .recent-payments-section {
+    overflow: hidden;
+  }
+
+  .recent-payments-table {
+    min-width: 760px !important;
+  }
+
+  .recent-payments-table th,
+  .recent-payments-table td {
+    padding: 12px 14px;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .recent-payments-table td strong {
+    white-space: nowrap;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+  }
+
+  .recent-payments-scroll-hint {
+    display: block;
+  }
+}
