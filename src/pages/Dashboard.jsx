@@ -47,6 +47,7 @@ export default function Dashboard() {
   const [feeAccounts, setFeeAccounts] = useState([]);
   const [payments, setPayments] = useState([]);
   const [paymentsTodayAmount, setPaymentsTodayAmount] = useState(0);
+  const [monthlyCollections, setMonthlyCollections] = useState([]);
   const [attendance, setAttendance] = useState([]);
 
   const [loading, setLoading] = useState(true);
@@ -237,6 +238,28 @@ export default function Dashboard() {
           0
         );
 
+      // Build a six-month trend from successful recorded payments.
+      const now = new Date();
+      const months = Array.from({ length: 6 }, (_, index) => {
+        const monthDate = new Date(now.getFullYear(), now.getMonth() - 5 + index, 1);
+        const key = String(monthDate.getFullYear()) + "-" + String(monthDate.getMonth() + 1).padStart(2, "0");
+        return {
+          key,
+          label: monthDate.toLocaleDateString("en-NG", { month: "short" }),
+          total: 0,
+        };
+      });
+      const monthTotals = new Map(months.map((month) => [month.key, month]));
+      for (const payment of paymentRows) {
+        if (!isSuccessfulPayment(payment.status) || !payment.payment_date) continue;
+        const date = new Date(payment.payment_date);
+        if (Number.isNaN(date.getTime())) continue;
+        const key = String(date.getFullYear()) + "-" + String(date.getMonth() + 1).padStart(2, "0");
+        const month = monthTotals.get(key);
+        if (month) month.total += Number(payment.amount || 0);
+      }
+
+      setMonthlyCollections(months);
       setActiveStudentCount(studentsResult.count || 0);
       setFeeAccounts(dashboardFeeAccounts);
       setPayments(enrichedPayments);
@@ -422,6 +445,69 @@ export default function Dashboard() {
           </h2>
           <p>Today's collections</p>
         </div>
+      </div>
+
+      {/* =================================================
+          COLLECTION TRENDS
+      ================================================= */}
+
+      <div className="dashboard-charts-grid">
+        <section className="table-section dashboard-chart-card">
+          <div className="section-heading">
+            <div>
+              <h2>Monthly Fee Collections</h2>
+              <p>Successful payments recorded over the last six months</p>
+            </div>
+          </div>
+
+          {monthlyCollections.some((month) => month.total > 0) ? (
+            <div className="collection-chart" role="img" aria-label="Monthly successful payment totals for the last six months">
+              {monthlyCollections.map((month) => {
+                const maxTotal = Math.max(...monthlyCollections.map((item) => item.total), 1);
+                const height = Math.max((month.total / maxTotal) * 100, month.total > 0 ? 5 : 0);
+                return (
+                  <div className="collection-chart-column" key={month.key}>
+                    <span className="collection-chart-value">
+                      {month.total > 0 ? formatMoney(month.total) : "₦0"}
+                    </span>
+                    <div className="collection-chart-track">
+                      <div className="collection-chart-bar" style={{ height: height + "%" }} />
+                    </div>
+                    <span className="collection-chart-label">{month.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="dashboard-chart-empty">
+              No successful payment data available for the last six months.
+            </div>
+          )}
+        </section>
+
+        <section className="table-section dashboard-chart-card">
+          <div className="section-heading">
+            <div>
+              <h2>Fee Collection Progress</h2>
+              <p>Collected against total expected fees</p>
+            </div>
+          </div>
+
+          <div className="fee-progress-summary">
+            <strong>{financials.expected > 0 ? Math.min(Math.round((financials.collected / financials.expected) * 100), 100) : 0}%</strong>
+            <span>of expected fees collected</span>
+          </div>
+          <div className="fee-progress-track" aria-label="Percentage of expected fees collected">
+            <div
+              className="fee-progress-fill"
+              style={{ width: (financials.expected > 0 ? Math.min((financials.collected / financials.expected) * 100, 100) : 0) + "%" }}
+            />
+          </div>
+          <div className="fee-progress-legend">
+            <div><span className="fee-legend-dot collected" /> <span>Collected</span><strong>{formatMoney(financials.collected)}</strong></div>
+            <div><span className="fee-legend-dot outstanding" /> <span>Outstanding</span><strong>{formatMoney(financials.outstanding)}</strong></div>
+          </div>
+        </section>
       </div>
 
       {/* =================================================
