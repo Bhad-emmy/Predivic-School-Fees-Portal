@@ -1284,6 +1284,7 @@ export default function StudentAttendance() {
 
     setOverrideTarget({
       attendanceId,
+      studentId: student.id,
       studentName:
         student.fullName ||
         student.studentNumber ||
@@ -1325,12 +1326,43 @@ export default function StudentAttendance() {
       setError("");
       setSuccess("");
 
+      // Re-fetch the row immediately before overriding. This avoids using
+      // a stale/mismatched ID from the page's cached attendance map.
+      const {
+        data: currentRecord,
+        error: lookupError,
+      } = await supabase
+        .from("student_attendance")
+        .select("id, status")
+        .eq("student_id", overrideTarget.studentId)
+        .eq("class_id", selectedClass)
+        .eq("session_id", academicSession.id)
+        .eq("term_id", activeTerm.id)
+        .eq("attendance_date", attendanceDate)
+        .maybeSingle();
+
+      if (lookupError) {
+        throw lookupError;
+      }
+
+      if (!currentRecord) {
+        throw new Error(
+          "Could not reload this student's saved attendance record. Refresh the page and try again."
+        );
+      }
+
+      if (currentRecord.status !== overrideTarget.currentStatus) {
+        throw new Error(
+          "This attendance record changed after the override dialog opened. Refresh the page and try again."
+        );
+      }
+
       const { error: overrideError } =
         await supabase.rpc(
           "override_student_attendance",
           {
             p_attendance_id:
-              overrideTarget.attendanceId,
+              currentRecord.id,
             p_new_status:
               overrideStatus,
             p_reason:
