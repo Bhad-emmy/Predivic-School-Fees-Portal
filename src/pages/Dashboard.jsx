@@ -46,10 +46,13 @@ const getAttendanceRange = () => {
   while (days.length < 5) {
     const weekday = date.getDay();
     if (weekday >= 1 && weekday <= 5) {
-      days.unshift(new Date(date));
+      days.push(new Date(date));
     }
     date.setDate(date.getDate() - 1);
   }
+
+  // Dates were collected newest-to-oldest; reverse for Monday-to-Friday display.
+  days.reverse();
 
   const key = (value) =>
     [value.getFullYear(), String(value.getMonth() + 1).padStart(2, "0"), String(value.getDate()).padStart(2, "0")].join("-");
