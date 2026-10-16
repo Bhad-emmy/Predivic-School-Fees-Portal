@@ -382,24 +382,36 @@ export default function TeacherAttendance() {
               {month} · 7:20 AM is the arrival deadline · 5:30 PM is the scheduled closing time.
             </p>
 
-            <div style={{ overflowX: "auto" }}>
-              <table>
+            <div
+              className="teacher-attendance-summary-table-wrap"
+              style={{
+                width: "100%",
+                maxWidth: "100%",
+                overflowX: "auto",
+                overflowY: "hidden",
+                WebkitOverflowScrolling: "touch",
+              }}
+            >
+              <table
+                className="teacher-attendance-summary-table"
+                style={{ width: "100%", minWidth: "900px", tableLayout: "auto" }}
+              >
                 <thead>
                   <tr>
-                    <th>Staff</th>
-                    <th>Present</th>
-                    <th>Late</th>
-                    <th>No Punch</th>
-                    <th>Late Minutes</th>
-                    <th>Early Minutes</th>
-                    <th>First In</th>
-                    <th>Last In</th>
+                    <th style={{ minWidth: "190px", whiteSpace: "nowrap" }}>Staff</th>
+                    <th style={{ whiteSpace: "nowrap" }}>Present</th>
+                    <th style={{ whiteSpace: "nowrap" }}>Late</th>
+                    <th style={{ whiteSpace: "nowrap" }}>No Punch</th>
+                    <th style={{ whiteSpace: "nowrap" }}>Late Minutes</th>
+                    <th style={{ whiteSpace: "nowrap" }}>Early Minutes</th>
+                    <th style={{ whiteSpace: "nowrap" }}>First In</th>
+                    <th style={{ whiteSpace: "nowrap" }}>Last In</th>
                   </tr>
                 </thead>
                 <tbody>
                   {summary.map((row) => (
                     <tr key={row.device_employee_no}>
-                      <td>
+                      <td style={{ minWidth: "190px", whiteSpace: "nowrap" }}>
                         <button
                           type="button"
                           onClick={() => setSelectedStaff(row.device_employee_no)}
