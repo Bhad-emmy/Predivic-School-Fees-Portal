@@ -455,27 +455,39 @@ export default function TeacherAttendance() {
                 </button>
               </div>
 
-              <div style={{ overflowX: "auto" }}>
-                <table>
+              <div
+                className="teacher-attendance-daily-table-wrap"
+                style={{
+                  width: "100%",
+                  maxWidth: "100%",
+                  overflowX: "auto",
+                  overflowY: "hidden",
+                  WebkitOverflowScrolling: "touch",
+                }}
+              >
+                <table
+                  className="teacher-attendance-daily-table"
+                  style={{ width: "100%", minWidth: "760px", tableLayout: "auto" }}
+                >
                   <thead>
                     <tr>
-                      <th>Date</th>
-                      <th>Sign-in</th>
-                      <th>Sign-out</th>
-                      <th>Status</th>
-                      <th>Late</th>
-                      <th>Early</th>
+                      <th style={{ whiteSpace: "nowrap", minWidth: "210px" }}>Date</th>
+                      <th style={{ whiteSpace: "nowrap" }}>Sign-in</th>
+                      <th style={{ whiteSpace: "nowrap" }}>Sign-out</th>
+                      <th style={{ whiteSpace: "nowrap" }}>Status</th>
+                      <th style={{ whiteSpace: "nowrap" }}>Late</th>
+                      <th style={{ whiteSpace: "nowrap" }}>Early</th>
                     </tr>
                   </thead>
                   <tbody>
                     {selectedDaily.map((row) => (
                       <tr key={row.attendance_date}>
-                        <td>{formatDate(row.attendance_date)}</td>
-                        <td>{formatTime(row.first_signin)}</td>
-                        <td>{formatTime(row.last_signout)}</td>
-                        <td>{row.status}</td>
-                        <td>{row.late_minutes ? `${row.late_minutes} min` : "—"}</td>
-                        <td>{row.early_departure ? `${row.early_minutes} min` : "—"}</td>
+                        <td style={{ whiteSpace: "nowrap", minWidth: "210px" }}>{formatDate(row.attendance_date)}</td>
+                        <td style={{ whiteSpace: "nowrap" }}>{formatTime(row.first_signin)}</td>
+                        <td style={{ whiteSpace: "nowrap" }}>{formatTime(row.last_signout)}</td>
+                        <td style={{ whiteSpace: "nowrap" }}>{row.status}</td>
+                        <td style={{ whiteSpace: "nowrap" }}>{row.late_minutes ? `${row.late_minutes} min` : "—"}</td>
+                        <td style={{ whiteSpace: "nowrap" }}>{row.early_departure ? `${row.early_minutes} min` : "—"}</td>
                       </tr>
                     ))}
                     {!selectedDaily.length && (
