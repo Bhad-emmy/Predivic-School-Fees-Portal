@@ -63,19 +63,34 @@ export default function StudentSearchSelect({
     setQuery(getLabel(selectedOption));
   }, [selectedOption, getLabel]);
 
+  const sortedOptions = useMemo(
+    () =>
+      [...options].sort((a, b) =>
+        String(a?.firstName || a?.fullName || "").localeCompare(
+          String(b?.firstName || b?.fullName || ""),
+          "en",
+          { sensitivity: "base" }
+        ) ||
+        String(a?.lastName || "").localeCompare(String(b?.lastName || ""), "en", {
+          sensitivity: "base",
+        })
+      ),
+    [options]
+  );
+
   const filteredOptions = useMemo(() => {
     const normalizedQuery = normalize(query);
 
     if (!normalizedQuery || (selectedOption && getLabel(selectedOption) === query)) {
-      return options.slice(0, 10);
+      return sortedOptions.slice(0, 10);
     }
 
-    return options
+    return sortedOptions
       .filter((option) =>
         normalize(getSearchText(option)).includes(normalizedQuery)
       )
       .slice(0, 10);
-  }, [options, query, selectedOption, getSearchText, getLabel]);
+  }, [sortedOptions, query, selectedOption, getSearchText, getLabel]);
 
   useEffect(() => {
     setHighlightedIndex(0);
