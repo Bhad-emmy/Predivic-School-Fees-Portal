@@ -26,6 +26,11 @@ const STUDENT_FIELDS = [
   "updated_at",
 ].join(", ");
 
+const compareStudentNames = (a, b) =>
+  String(a?.firstName || "").localeCompare(String(b?.firstName || ""), "en", { sensitivity: "base" }) ||
+  String(a?.lastName || "").localeCompare(String(b?.lastName || ""), "en", { sensitivity: "base" }) ||
+  String(a?.middleName || "").localeCompare(String(b?.middleName || ""), "en", { sensitivity: "base" });
+
 const toStudent = (student, enrollment, classMap) => ({
   id: student.id,
   admissionNo: student.admission_no || "",
@@ -99,9 +104,9 @@ export async function getStudents() {
     (enrollmentResult.data || []).map((item) => [item.student_id, item])
   );
 
-  return (students || []).map((student) =>
-    toStudent(student, enrollmentMap.get(student.id), classMap)
-  );
+  return (students || [])
+    .map((student) => toStudent(student, enrollmentMap.get(student.id), classMap))
+    .sort(compareStudentNames);
 }
 
 export async function getStudentContact(studentId) {
@@ -233,7 +238,7 @@ export async function getStudentFeeAccounts() {
       createdAt: account.created_at,
       updatedAt: account.updated_at,
     };
-  });
+  }).sort((a, b) => compareStudentNames(a.student, b.student));
 }
 
 export async function getPayments() {
