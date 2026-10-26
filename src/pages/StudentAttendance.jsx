@@ -561,15 +561,17 @@ export default function StudentAttendance() {
 
   const classStudents =
     useMemo(() => {
-      return students.filter(
-        (student) =>
-          student.classId ===
-          selectedClass
-      );
-    }, [
-      students,
-      selectedClass,
-    ]);
+      return students
+        .filter((student) => student.classId === selectedClass)
+        .sort((a, b) =>
+          String(a?.firstName || "").localeCompare(String(b?.firstName || ""), "en", {
+            sensitivity: "base",
+          }) ||
+          String(a?.lastName || "").localeCompare(String(b?.lastName || ""), "en", {
+            sensitivity: "base",
+          })
+        );
+    }, [students, selectedClass]);
 
   // =========================================================
   // WEEK
