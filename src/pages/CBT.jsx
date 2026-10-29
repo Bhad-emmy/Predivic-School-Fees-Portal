@@ -1,4 +1,5 @@
 import ModuleWorkspace from "../components/ModuleWorkspace";
+import CBTStudentInvites from "../components/CBTStudentInvites";
 
 const tabs = [
   {
@@ -68,7 +69,12 @@ const tabs = [
 ];
 
 export default function CBT() {
-  return <ModuleWorkspace eyebrow="MEKA School • Academic tools" title="CBT & Learning Centre"
-    subtitle="School examinations, study materials, WAEC and JAMB practice — built into your school's workspace."
-    tabs={tabs} />;
+  return (
+    <div style={{ display: "grid", gap: 24 }}>
+      <ModuleWorkspace eyebrow="MEKA School • Academic tools" title="CBT & Learning Centre"
+        subtitle="School examinations, study materials, WAEC and JAMB practice — for school students and independent learners."
+        tabs={tabs} />
+      <CBTStudentInvites />
+    </div>
+  );
 }
