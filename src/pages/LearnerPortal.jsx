@@ -3,9 +3,9 @@ import { supabase } from "../lib/supabase";
 import "../styles/LearnerPortal.css";
 
 const learnerFeatures = [
-  { title: "Study Materials", description: "Find notes and revision guides by subject and topic." },
-  { title: "WAEC Practice", description: "Revise with authorized past questions and original exam-style practice." },
-  { title: "JAMB Practice", description: "Prepare for UTME with timed mock tests and subject combinations." },
+  { title: "Study Materials", description: "Read WAEC and JAMB revision notes, explanations and worked examples." },
+  { title: "WAEC Mock Tests", description: "Practise with authorized past questions and original WAEC-style questions." },
+  { title: "JAMB Mock Tests", description: "Take UTME-style timed mocks with your chosen subject combination." },
   { title: "My Progress", description: "Review scores and revision areas once practice is enabled." },
 ];
 
@@ -148,7 +148,7 @@ export default function LearnerPortal() {
         <section className="meka-learn-intro">
           <p className="meka-learn-overline">MEKA School • CBT</p>
           <h1>Learn, practise and prepare.</h1>
-          <p>For registered school students and independent WAEC/JAMB learners — on one platform, with separate academic records.</p>
+          <p>For registered school students and independent learners — prepare for WAEC and JAMB using mock questions, revision materials and progress tracking.</p>
         </section>
 
         {error && <p className="meka-learn-error" role="alert">{error}</p>}
@@ -207,20 +207,17 @@ export default function LearnerPortal() {
               <span>Profile active</span>
             </div>
             <div className="meka-learn-message" role="status">
-              Your learner account is ready. The study library and examination engine have not been enabled yet.
-              School-only examinations and official results will only be available to linked school students.
+              Your learner account is ready. The mock question bank, study library and practice engine have not been enabled yet.
+              Your practice scores will not affect school term results or count as official WAEC/JAMB results.
             </div>
             <div className="meka-learn-features">
-              {profile.learner_type === "school" && (
-                <article><h3>My School Exams</h3><p>Assigned school CBT assessments and results will appear here after release.</p><span>Coming soon</span></article>
-              )}
               {learnerFeatures.map((feature) => (
                 <article key={feature.title}><h3>{feature.title}</h3><p>{feature.description}</p><span>Coming soon</span></article>
               ))}
             </div>
           </section>
         )}
-        <footer className="meka-learn-footer">Powered by MEKA LOGIC · Independent practice results are not official WAEC or JAMB results.</footer>
+        <footer className="meka-learn-footer">Powered by MEKA LOGIC · All CBT marks are mock scores only, not official WAEC, JAMB or school examination results.</footer>
       </div>
     </main>
   );
