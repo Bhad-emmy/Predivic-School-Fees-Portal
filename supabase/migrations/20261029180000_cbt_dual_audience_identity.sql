@@ -507,3 +507,252 @@ grant execute on function public.issue_verified_opay_cbt_pin(text)
 -- after the operator has supplied and verified the correct OPay recipient.
 -- Provision operators by trusted admin SQL after validating auth_user_id.
 -- NEVER allow a public signup to add rows to private.cbt_platform_operators.
+
+
+-- WAEC/JAMB objective question bank (operator-reviewed; original or licensed).
+-- Correct options and explanations reside in a non-exposed private schema.
+-- All content is DRAFT by default. No copyrighted questions are bundled here.
+create table public.cbt_questions (
+  id uuid primary key default gen_random_uuid(),
+  exam_type text not null check (exam_type in ('WAEC','JAMB')),
+  subject text not null check (char_length(btrim(subject)) between 2 and 80),
+  topic text not null check (char_length(btrim(topic)) between 2 and 120),
+  question_text text not null check (char_length(btrim(question_text)) between 10 and 6000),
+  option_a text not null check (char_length(btrim(option_a)) between 1 and 2000),
+  option_b text not null check (char_length(btrim(option_b)) between 1 and 2000),
+  option_c text not null check (char_length(btrim(option_c)) between 1 and 2000),
+  option_d text not null check (char_length(btrim(option_d)) between 1 and 2000),
+  content_origin text not null check (content_origin in ('original','licensed')),
+  license_reference text,
+  is_free_preview boolean not null default false,
+  is_published boolean not null default false,
+  created_by uuid not null references auth.users(id),
+  created_at timestamptz not null default now(),
+  published_at timestamptz,
+  constraint cbt_question_license_metadata check (
+    content_origin = 'original'
+    or nullif(btrim(license_reference), '') is not null
+  )
+);
+create index cbt_questions_published_search_idx
+  on public.cbt_questions (exam_type, subject, topic)
+  where is_published = true;
+alter table public.cbt_questions enable row level security;
+revoke all on public.cbt_questions from public, anon, authenticated;
+grant select on public.cbt_questions to authenticated;
+
+create table private.cbt_question_keys (
+  question_id uuid primary key references public.cbt_questions(id) on delete cascade,
+  correct_option text not null check (correct_option in ('A','B','C','D')),
+  explanation text not null check (char_length(btrim(explanation)) between 5 and 6000)
+);
+alter table private.cbt_question_keys enable row level security;
+revoke all on private.cbt_question_keys from public, anon, authenticated;
+
+-- RLS: a learner can see approved free samples, or approved premium content
+-- with an unexpired server-side grant. Operators can preview unpublished items.
+create policy "CBT operator can review question drafts"
+on public.cbt_questions for select to authenticated
+using (public.is_cbt_platform_operator());
+
+create policy "CBT learners can read entitled practice questions"
+on public.cbt_questions for select to authenticated
+using (
+  is_published = true
+  and exists (
+    select 1 from public.cbt_learners l
+    where l.auth_user_id = (select auth.uid())
+  )
+  and (
+    is_free_preview = true
+    or exists (
+      select 1 from public.cbt_access_grants g
+      where g.auth_user_id = (select auth.uid())
+        and g.expires_at > now()
+    )
+  )
+);
+
+-- Only a vetted MEKA CBT operator can author or publish bank content.
+-- The client never inserts questions or answer keys directly.
+create function public.create_cbt_practice_question(
+  p_exam_type text,
+  p_subject text,
+  p_topic text,
+  p_question_text text,
+  p_option_a text,
+  p_option_b text,
+  p_option_c text,
+  p_option_d text,
+  p_correct_option text,
+  p_explanation text,
+  p_content_origin text,
+  p_license_reference text default null,
+  p_is_free_preview boolean default false
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+begin
+  if not public.is_cbt_platform_operator() then
+    raise exception 'Only authorized MEKA CBT operators may add questions'
+      using errcode = '42501';
+  end if;
+  if upper(btrim(coalesce(p_correct_option,''))) not in ('A','B','C','D') then
+    raise exception 'Answer must be A, B, C or D';
+  end if;
+
+  insert into public.cbt_questions (
+    exam_type, subject, topic, question_text,
+    option_a, option_b, option_c, option_d,
+    content_origin, license_reference, is_free_preview, created_by
+  )
+  values (
+    upper(btrim(p_exam_type)), btrim(p_subject), btrim(p_topic),
+    btrim(p_question_text), btrim(p_option_a), btrim(p_option_b),
+    btrim(p_option_c), btrim(p_option_d),
+    lower(btrim(p_content_origin)), nullif(btrim(p_license_reference), ''),
+    coalesce(p_is_free_preview, false), (select auth.uid())
+  )
+  returning id into v_id;
+
+  insert into private.cbt_question_keys (question_id, correct_option, explanation)
+  values (
+    v_id, upper(btrim(p_correct_option)), btrim(p_explanation)
+  );
+  return v_id;
+end;
+$$;
+revoke all on function public.create_cbt_practice_question(
+  text,text,text,text,text,text,text,text,text,text,text,text,boolean
+) from public, anon;
+grant execute on function public.create_cbt_practice_question(
+  text,text,text,text,text,text,text,text,text,text,text,text,boolean
+) to authenticated;
+
+create function public.set_cbt_question_published(
+  p_question_id uuid,
+  p_published boolean
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.is_cbt_platform_operator() then
+    raise exception 'Only authorized MEKA CBT operators may publish questions'
+      using errcode = '42501';
+  end if;
+  update public.cbt_questions q
+    set is_published = p_published,
+        published_at = case when p_published then now() else null end
+    where q.id = p_question_id
+      and exists (
+        select 1 from private.cbt_question_keys k
+        where k.question_id = q.id
+      );
+  if not found then
+    raise exception 'Question or answer key not found';
+  end if;
+  return true;
+end;
+$$;
+revoke all on function public.set_cbt_question_published(uuid,boolean)
+  from public, anon;
+grant execute on function public.set_cbt_question_published(uuid,boolean)
+  to authenticated;
+
+-- Practice submissions are scored server-side; students never query keys.
+-- WAEC and JAMB scores here are unofficial practice only.
+create table public.cbt_practice_attempts (
+  id uuid primary key default gen_random_uuid(),
+  learner_id uuid not null references public.cbt_learners(auth_user_id) on delete cascade,
+  question_id uuid not null references public.cbt_questions(id),
+  chosen_option text not null check (chosen_option in ('A','B','C','D')),
+  is_correct boolean not null,
+  submitted_at timestamptz not null default now()
+);
+create index cbt_practice_attempts_learner_idx
+  on public.cbt_practice_attempts (learner_id, submitted_at desc);
+alter table public.cbt_practice_attempts enable row level security;
+create policy "learners read own CBT practice history"
+on public.cbt_practice_attempts for select to authenticated
+using (learner_id = (select auth.uid()));
+revoke all on public.cbt_practice_attempts from public, anon, authenticated;
+grant select on public.cbt_practice_attempts to authenticated;
+
+-- Atomically record practice and reveal the correction for that question.
+-- This is topic practice, not yet a timed, anti-cheating exam engine.
+create function public.submit_cbt_practice_answer(
+  p_question_id uuid,
+  p_chosen_option text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user uuid := (select auth.uid());
+  v_correct_option text;
+  v_explanation text;
+  v_chosen text := upper(btrim(coalesce(p_chosen_option, '')));
+  v_attempt_id uuid;
+begin
+  if v_user is null or not exists (
+    select 1 from public.cbt_learners l where l.auth_user_id = v_user
+  ) then
+    raise exception 'Sign in to a learner account first' using errcode = '42501';
+  end if;
+  if v_chosen not in ('A','B','C','D') then
+    raise exception 'Choose answer A, B, C or D';
+  end if;
+  if not exists (
+    select 1 from public.cbt_questions q
+    where q.id = p_question_id
+      and q.is_published = true
+      and (
+        q.is_free_preview
+        or exists (
+          select 1 from public.cbt_access_grants g
+          where g.auth_user_id = v_user
+            and g.expires_at > now()
+        )
+      )
+  ) then
+    raise exception 'Question unavailable or subscription inactive'
+      using errcode = '42501';
+  end if;
+
+  select k.correct_option, k.explanation
+  into v_correct_option, v_explanation
+  from private.cbt_question_keys k
+  where k.question_id = p_question_id;
+
+  if v_correct_option is null then
+    raise exception 'Question answer key is unavailable';
+  end if;
+
+  insert into public.cbt_practice_attempts
+    (learner_id, question_id, chosen_option, is_correct)
+  values
+    (v_user, p_question_id, v_chosen, v_chosen = v_correct_option)
+  returning id into v_attempt_id;
+
+  return jsonb_build_object(
+    'attempt_id', v_attempt_id,
+    'is_correct', v_chosen = v_correct_option,
+    'correct_option', v_correct_option,
+    'explanation', v_explanation
+  );
+end;
+$$;
+revoke all on function public.submit_cbt_practice_answer(uuid,text)
+  from public, anon;
+grant execute on function public.submit_cbt_practice_answer(uuid,text)
+  to authenticated;
