@@ -44,9 +44,9 @@ export default function CBTStudentInvites() {
   return (
     <section style={{ background: "var(--card-background, #fff)", border: "1px solid var(--border-color, #e2e8f0)", borderRadius: 14, padding: 22, display: "grid", gap: 14 }}>
       <div>
-        <h2 style={{ margin: "0 0 6px", fontSize: 20 }}>School CBT student access</h2>
+        <h2 style={{ margin: "0 0 6px", fontSize: 20 }}>School student access to WAEC/JAMB mocks</h2>
         <p style={{ color: "#64748b", lineHeight: 1.6, margin: 0 }}>
-          Invite a student to activate their own CBT login at <strong>/learn</strong>.
+          Invite a school student to access WAEC/JAMB mock tests and study materials at <strong>/learn</strong>.
           The invitation is valid for 48 hours and can be redeemed only once.
         </p>
       </div>
