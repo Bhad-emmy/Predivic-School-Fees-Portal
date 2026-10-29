@@ -75,23 +75,37 @@ Question bank, study materials, WAEC/JAMB question content, mock attempt submiss
 ## Activation-PIN purchase and signup flow (Myschool-inspired, MEKA-specific)
 1. **Free registration:** email/password account and learner profile. No PIN required to sign up. Everyone can create a free public learner account, including a school student.
 2. **Limited free sample:** only approved preview practice items, once the mock question bank is operational. **Not implemented yet.**
-3. **Purchase an activation PIN:** through a verified online payment (Paystack webhook verification required), school-sponsored bulk purchase, or approved reseller/manual payment. **Purchasing, automated fulfillment and pricing are NOT implemented yet.**
+3. **Purchase an activation PIN:** proposed retail price **₦1,500 for 30 days**. The offer is stored in `cbt_subscription_plans` with `sales_enabled = false` until verified checkout is built. PINs may later be sold via verified Paystack payment, authorized agents, or school bulk purchases. **Purchasing and fulfillment are NOT implemented yet.**
 4. **Redeem PIN after sign-in:** learner enters the code on `/learn`. A single server-side transaction validates a stored SHA-256 digest, enforces single use and grants the entitled account access. The raw PIN is not stored.
-5. **Full unlocked access:** after a real WAEC/JAMB question library and mock engine are released, enforce `cbt_access_grants` on the server for paid content. The frontend state is only a display, never the authorization source.
+5. **Full unlocked access:** one redeemed PIN adds 30 × 24 hours to the learner's account. If redeemed before expiry, it extends the current expiry by 30 days; if redeemed after expiry, it starts from redemption time. Enforce `cbt_access_grants` on the server for paid content after the real WAEC/JAMB question library and mock engine are released. The frontend state is only a display, never the authorization source.
 6. **Optional school linking:** a school invitation is **different** from the paid CBT activation PIN. School affiliation does not automatically waive the activation requirement unless MEKA explicitly issues school-sponsored PINs. Public practice history remains tied to the same Auth user.
 
 ### Product decisions / safeguards
 - Myschool's app offers a demo and device-bound lifetime activation. MEKA web activation is **per user account**, not per browser/device; users can sign in across devices while one code cannot unlock multiple accounts.
-- The database supports either **lifetime activation** (`access_days IS NULL`) or a duration in days. No MEKA price or entitlement duration has been finalized; do not promise one until approved.
+- **Proposed launch plan: ₦1,500 for 30 days, prepaid, one PIN per renewal.** A paid subscription is per account (not per device). There is no lifetime activation. `cbt_subscription_plans` holds the proposed price in kobo (`150000`), `duration_days = 30`, and `sales_enabled = false` until the verified purchase flow is approved and launched.
 - The `private.issue_cbt_activation_pin` SQL function is only executable by trusted `service_role` callers (or privileged DB admins); **never expose the service-role key to the browser**.
 - For automatic delivery: verify Paystack payment from a trusted server-side webhook before generating and sending a PIN; validate exact amount, order status, customer, reference, and idempotency.
 - For manual bank transfer: a trusted administrator must verify credit independently, not rely on a screenshot alone. Issue only after confirmation.
-- Redeemed PINs cannot be reused; unused pins can be revoked administratively. An expired account can be reactivated with a different PIN while retaining the same learner identity/history.
+- Redeemed PINs cannot be reused; unused PINs can be revoked administratively. **Early renewals** add 30 days to the existing expiry; renewals after expiry start a new 30-day period. A renewing account retains learner identity and practice history.
 - Implement attempted-code throttling, fraud monitoring, privacy/child-safety controls, secure pin delivery, support, refund policies, and agent reconciliation before broad release.
 - Never publish a real paid content library until server-side entitlement enforcement and content-rights review are complete.
-- The rollout must include tests for bypass attempts: no unauthenticated redemption, no user-supplied paid flag, no reusing a redeemed PIN, concurrent claims, expired-account renewal and cross-account/tenant access.
+- The rollout must include tests for bypass attempts: no unauthenticated redemption, no user-supplied paid flag, no reusing a redeemed PIN, concurrent claims, active-account early renewal preserving remaining days, expired-account renewal, and cross-account/tenant access.
 
 ### Two distinct codes
 - **MEKA CBT activation PIN:** paid or sponsored, unlocks the learner account's study/mock entitlement.
 - **School invitation code:** issued by a verified school admin, links the existing learner account to that school's student record. It is not payment or proof of CBT purchase.
 
+
+## Confirmed proposed retail offer — 29 October 2026
+- **Retail subscription:** ₦1,500 (NGN 150000 kobo) per 30-day access period.
+- **Payment model:** prepaid. A learner can obtain and redeem a new PIN for each renewal; there is no automatic recurring debit.
+- **Renewal rule:** Early renewal extends the current expiration by exactly 30 days; late renewal starts from the new redemption timestamp.
+- **Access continuity:** expiry disables premium content until renewed; the learner profile and practice history remain saved.
+- **Verification:** before selling PINs, enforce the authoritative server-side plan price, payment currency, payment confirmation, and one-fulfillment-per-order rules. Client-side constants are display-only.
+- **Sales status:** proposed only. No live checkout, purchase button, verified webhook fulfillment or paid-content gate has been deployed. The `sales_enabled` column is explicitly false.
+- **Open items:** payment gateway configuration, PIN purchase receipt/delivery, returns/refunds, affiliate/agent commissions, and paid-content entitlement enforcement.
+
+## Examples of 30-day renewal math
+- Activate today: access expires 30 × 24 hours later.
+- Renew 5 days before expiry: access expires 35 days after renewal (the remaining 5 days plus new 30).
+- Renew 5 days after expiry: access expires 30 days after the new redemption (expired days are not credited).
