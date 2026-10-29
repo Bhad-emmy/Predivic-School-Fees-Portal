@@ -48,3 +48,12 @@
 .meka-learn-link-school label { display: grid; gap: 7px; font-size: 13px; font-weight: 700; }
 .meka-learn-link-school input { min-width: 0; width: 100%; box-sizing: border-box; padding: 12px; font: inherit; border: 1px solid #cbd5e1; border-radius: 9px; }
 .meka-learn-link-school .meka-learn-primary { justify-self: start; }
+
+.meka-learn-activation { display: grid; gap: 12px; margin: 16px 0 24px; border: 1px solid #fcd34d; background: #fffbeb; border-radius: 12px; padding: 20px; }
+.meka-learn-activation h3 { margin: 0; font-size: 18px; color: #78350f; }
+.meka-learn-activation .meka-learn-muted { margin: 0; }
+.meka-learn-activation-form { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; }
+.meka-learn-activation-form label { display: grid; gap: 7px; flex: 1 1 260px; font-weight: 700; font-size: 13px; }
+.meka-learn-activation-form input { min-width: 0; width: 100%; box-sizing: border-box; padding: 12px; font: inherit; border-radius: 9px; border: 1px solid #cbd5e1; }
+.meka-learn-activation-form button { flex: 0 0 auto; }
+@media(max-width:600px) { .meka-learn-activation-form button { flex: 1 1 100%; } }
