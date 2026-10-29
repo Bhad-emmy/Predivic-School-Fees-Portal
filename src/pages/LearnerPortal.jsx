@@ -29,6 +29,7 @@ export default function LearnerPortal() {
   const [activationReady, setActivationReady] = useState(false);
   const [activationPin, setActivationPin] = useState("");
   const [activating, setActivating] = useState(false);
+  const [opaySalesOpen, setOpaySalesOpen] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -205,6 +206,16 @@ export default function LearnerPortal() {
     !activation.expires_at || new Date(activation.expires_at).getTime() > Date.now()
   ));
 
+
+  useEffect(() => {
+    let mounted = true;
+    if (!profile?.auth_user_id) return () => { mounted = false; };
+    supabase.rpc("cbt_opay_sales_enabled").then(({ data, error: salesError }) => {
+      if (mounted && !salesError) setOpaySalesOpen(Boolean(data));
+    });
+    return () => { mounted = false; };
+  }, [profile?.auth_user_id]);
+
   const signOut = async () => {
     setError("");
     const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
@@ -291,8 +302,20 @@ export default function LearnerPortal() {
                 {formatCbtPrice()} <span>/ {CBT_MONTHLY_PLAN.durationDays} days</span>
               </p>
               <p className="meka-learn-muted">
-                Proposed monthly price. Online PIN purchases are not open yet, and no payment is taken here.
+                Pay manually by OPay transfer only after receiving the correct recipient details from official MEKA CBT support.
+                Then send the transaction reference on WhatsApp. An operator must verify the credit in OPay before sending a PIN.
               </p>
+              {opaySalesOpen ? (
+                <a className="meka-learn-contact-link"
+                  href={`https://wa.me/${import.meta.env.VITE_CBT_WHATSAPP_NUMBER || "2349064636239"}?text=${encodeURIComponent("Hello MEKA CBT support. I would like to pay ₦1,500 via OPay for a 30-day WAEC/JAMB mock activation PIN. Please share the verified OPay account details and payment instructions. I will send my transaction reference for confirmation.")}`}
+                  target="_blank" rel="noopener noreferrer">
+                  Contact MEKA CBT on WhatsApp for OPay details
+                </a>
+              ) : (
+                <p className="meka-learn-muted">
+                  Manual OPay PIN sales are not open yet. Do not send money until MEKA confirms the activation service is ready.
+                </p>
+              )}
               {!activationReady ? (
                 <p className="meka-learn-muted">Checking activation status...</p>
               ) : (
@@ -319,9 +342,9 @@ export default function LearnerPortal() {
                     </button>
                   </form>
                   <p className="meka-learn-muted">
-                    PIN issuance and payment checkout are still under development. Only redeem a PIN provided
-                    through a verified MEKA channel after activation sales are officially enabled.
-                    A code works once, on one account, and never resets your practice history.
+                    Online checkout is not part of this manual-payment version.
+                    Each PIN works only once and activates one learner account.
+                    OPay transaction screenshots alone are not confirmation, and renewal never resets your practice history.
                   </p>
                 </>
               )}
