@@ -57,3 +57,6 @@
 .meka-learn-activation-form input { min-width: 0; width: 100%; box-sizing: border-box; padding: 12px; font: inherit; border-radius: 9px; border: 1px solid #cbd5e1; }
 .meka-learn-activation-form button { flex: 0 0 auto; }
 @media(max-width:600px) { .meka-learn-activation-form button { flex: 1 1 100%; } }
+
+.meka-learn-plan-price { margin: 0; font-size: 27px; font-weight: 850; color: #0f2a43; }
+.meka-learn-plan-price span { font-size: 15px; font-weight: 600; color: #64748b; }
