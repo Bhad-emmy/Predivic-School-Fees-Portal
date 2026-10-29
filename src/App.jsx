@@ -14,6 +14,8 @@ import ParentPortal from "./pages/ParentPortal";
 import BankTransfers from "./pages/BankTransfers";
 import ParentAccounts from "./pages/ParentAccounts";
 import Cashless from "./pages/Cashless";
+import CBT from "./pages/CBT";
+import ResultChecker from "./pages/ResultChecker";
 import Login from "./pages/Login";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
@@ -118,6 +120,10 @@ function ProtectedApp() {
         return <Receipts />;
       case "reports":
         return <Reports />;
+      case "cbt":
+        return isAdmin ? <CBT /> : <Students />;
+      case "result-checker":
+        return isAdmin ? <ResultChecker /> : <Students />;
       case "settings":
         return <Settings />;
       case "dashboard":
@@ -191,6 +197,8 @@ function ProtectedApp() {
             {isAdmin || isSecretary ? <button className={page === "cashless" ? "active" : ""} onClick={() => navigateTo("cashless")}>School Cashless</button> : null}
             <button className={page === "receipts" ? "active" : ""} onClick={() => navigateTo("receipts")}>Receipts</button>
             <button className={page === "reports" ? "active" : ""} onClick={() => navigateTo("reports")}>Reports</button>
+            {isAdmin && <button className={page === "cbt" ? "active" : ""} onClick={() => navigateTo("cbt")}>CBT & Learning Centre</button>}
+            {isAdmin && <button className={page === "result-checker" ? "active" : ""} onClick={() => navigateTo("result-checker")}>Result Management</button>}
             {isAdmin && (
               <button className={page === "settings" ? "active" : ""} onClick={() => navigateTo("settings")}>Settings</button>
             )}
