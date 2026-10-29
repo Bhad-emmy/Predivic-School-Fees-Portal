@@ -18,12 +18,24 @@ This implementation adds the identity and enrollment layer for two CBT audiences
 - Only the current learner and the relevant school's active admin can select a learner profile; all other data must have its own RLS policies.
 - No question, mark, or academic report data is exposed by this migration.
 
-## Future question/content model
-- Shared platform practice question bank for properly licensed or original WAEC/JAMB-style material; authorized external and school learners may access it.
-- School-owned questions, class exams, teacher resources, student grades: visible only within their school, with author/editor permissions enforced by RLS or server functions.
-- Correct answers must be kept separate from browser-accessible question rows; marking must occur server-side.
-- Mock practice attempts are never imported into official school results.
-- A school term result is only published to a verified school-linked student/parent after admin approval.
+## Product scope: WAEC and JAMB mocks only
+- The initial CBT launch is for **WAEC and JAMB exam preparation**, not actual school term examinations or quizzes.
+- Both independently registered learners and verified school-linked students can access the same rights-cleared WAEC/JAMB question bank, mock exams, corrections and study materials.
+- Study materials may be shared globally when licensed, or restricted to a particular school. Private student/school information remains isolated.
+- Start with objective questions, timed practice, topic practice, explanations, scoring and weak-topic reports.
+- Store exam type (WAEC/JAMB), subject, syllabus topic, year (if authentic and known), original/licensed source classification, permissions and review status.
+- Legitimate past questions may be distributed only with sufficient rights; never imply access to unreleased upcoming papers. Original exam-style practice questions are permitted.
+- Correct answers must never be sent with the pre-submission question payload. Calculate marks server-side after submission.
+- **All CBT attempts and scores are practice-only**. There is no integration with school term results; the separate Result Checker manages official school results independently.
+- School staff may eventually review their own linked learners' aggregate/mock progress, subject to appropriate authorization; they cannot see outside learners' records.
+
+## Suggested implementation sequence
+1. Verify existing migration and registration flow for both audience types in staging, including RLS and school invitation redemption.
+2. Create rights-aware subject, topic, question, choice, answer and revision-material schemas with safe access policies.
+3. Add an admin-reviewed question import/content authoring flow; do not scrape or import copyrighted question banks without rights.
+4. Implement server-controlled timed WAEC/JAMB practice, answer saving, submission, grading and explanations.
+5. Expose learner history, correction review and optional authorized school-cohort progress reporting.
+6. Keep the separate Result Management & Checker workflow independent.
 
 ## Deployment prerequisites
 1. Review and apply `supabase/migrations/20261029180000_cbt_dual_audience_identity.sql` in a safe test environment and verify all policies and functions.
@@ -44,4 +56,4 @@ This implementation adds the identity and enrollment layer for two CBT audiences
 - Existing school student, teacher, fee and attendance workflows stay unchanged.
 
 ## Not implemented yet
-Question bank, student study materials, WAEC/JAMB content, exams, submissions, scoring, performance analytics, payments, and official result checker. The learner dashboard labels these features clearly as coming soon.
+Question bank, study materials, WAEC/JAMB question content, mock attempt submission, grading, performance analytics, payments, and the separate school result checker. The learner dashboard labels mock features clearly as coming soon.
