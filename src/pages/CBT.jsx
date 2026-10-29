@@ -1,5 +1,6 @@
 import ModuleWorkspace from "../components/ModuleWorkspace";
 import CBTStudentInvites from "../components/CBTStudentInvites";
+import CBTOpayPinDesk from "../components/CBTOpayPinDesk";
 
 const tabs = [
   {
@@ -76,6 +77,7 @@ export default function CBT() {
         subtitle="Past-question revision, timed practice tests and study materials for school students and independent learners. No official school exams."
         tabs={tabs} />
       <CBTStudentInvites />
+      <CBTOpayPinDesk />
     </div>
   );
 }
