@@ -204,13 +204,34 @@ revoke all on function public.redeem_cbt_school_invite(text) from public, anon;
 grant execute on function public.redeem_cbt_school_invite(text) to authenticated;
 
 
+-- Proposed MEKA CBT subscription offer; not available for purchase yet.
+-- Currency is stored in NGN minor units (kobo). 150000 kobo = NGN 1500.
+create table public.cbt_subscription_plans (
+  code text primary key,
+  title text not null,
+  currency text not null check (currency = 'NGN'),
+  price_kobo integer not null check (price_kobo > 0),
+  duration_days integer not null check (duration_days > 0),
+  sales_enabled boolean not null default false,
+  created_at timestamptz not null default now()
+);
+insert into public.cbt_subscription_plans
+  (code, title, currency, price_kobo, duration_days, sales_enabled)
+values
+  ('monthly_30', 'MEKA CBT 30-Day Access', 'NGN', 150000, 30, false);
+alter table public.cbt_subscription_plans enable row level security;
+revoke all on table public.cbt_subscription_plans from public, anon, authenticated;
+grant select on table public.cbt_subscription_plans to service_role;
+
 -- A learner can register for free and redeem a paid activation PIN later.
 -- PIN issuance requires a trusted service or manually verified administrator.
 -- The web client receives no INSERT/UPDATE/SELECT access to raw PIN hashes.
 create table public.cbt_activation_pins (
   id uuid primary key default gen_random_uuid(),
   code_hash bytea not null unique,
-  access_days integer check (access_days between 1 and 1825),
+  plan_code text not null default 'monthly_30'
+    references public.cbt_subscription_plans(code),
+  access_days integer not null default 30 check (access_days = 30),
   issued_via text not null default 'manual'
     check (issued_via in ('manual','verified_payment','agent','school')),
   order_reference text,
@@ -225,13 +246,13 @@ create index cbt_activation_pins_order_reference_idx
 alter table public.cbt_activation_pins enable row level security;
 revoke all on table public.cbt_activation_pins from public, anon, authenticated;
 
--- Access is per learner account, not per device. Null expires_at = lifetime.
+-- Access is for 30 days per PIN, per learner account, not per device.
 create table public.cbt_access_grants (
   auth_user_id uuid primary key references public.cbt_learners(auth_user_id) on delete cascade,
   activation_pin_id uuid not null unique references public.cbt_activation_pins(id),
   activated_at timestamptz not null default now(),
-  expires_at timestamptz,
-  constraint cbt_access_grant_expiry check (expires_at is null or expires_at > activated_at)
+  expires_at timestamptz not null,
+  constraint cbt_access_grant_expiry check (expires_at > activated_at)
 );
 alter table public.cbt_access_grants enable row level security;
 create policy "learners can read own CBT activation"
@@ -242,9 +263,9 @@ grant select on public.cbt_access_grants to authenticated;
 
 -- This issuer is strictly for trusted backend / admin workflows.
 -- NEVER send the service_role key or issue_cbt_activation_pin to a browser.
--- A null duration creates lifetime access; other durations expire in days.
+-- This launch offers only 30-day PINs. Lifetime PINs are not supported.
 create function private.issue_cbt_activation_pin(
-  p_access_days integer default null,
+  p_access_days integer default 30,
   p_issued_via text default 'manual',
   p_order_reference text default null
 )
@@ -256,9 +277,8 @@ as $$
 declare
   v_pin text;
 begin
-  if p_access_days is not null and
-    (p_access_days < 1 or p_access_days > 1825) then
-    raise exception 'Invalid PIN duration';
+  if p_access_days is distinct from 30 then
+    raise exception 'Only 30-day MEKA CBT activation PINs are supported';
   end if;
   if p_issued_via not in ('manual','verified_payment','agent','school') then
     raise exception 'Invalid PIN source';
@@ -293,6 +313,8 @@ declare
   v_user uuid;
   v_pin public.cbt_activation_pins%rowtype;
   v_grant public.cbt_access_grants%rowtype;
+  v_existing_expiry timestamptz;
+  v_new_expiry timestamptz;
 begin
   v_user := (select auth.uid());
   if v_user is null then
@@ -302,7 +324,7 @@ begin
     raise exception 'Invalid or used activation code';
   end if;
 
-  -- Serialize activations for one learner to prevent simultaneous redemption.
+  -- Serialize first activations and early renewals for one account.
   perform 1 from public.cbt_learners l
     where l.auth_user_id = v_user
     for update;
@@ -310,13 +332,12 @@ begin
     raise exception 'Complete learner registration first' using errcode = '42501';
   end if;
 
-  if exists (
-    select 1 from public.cbt_access_grants g
-    where g.auth_user_id = v_user
-      and (g.expires_at is null or g.expires_at > now())
-  ) then
-    raise exception 'This learner account already has active access';
-  end if;
+  -- Renewals are allowed before expiry. Preserve any unused paid days by
+  -- extending the existing expiry instead of restarting it from today.
+  select g.expires_at into v_existing_expiry
+    from public.cbt_access_grants g
+   where g.auth_user_id = v_user
+    for update;
 
   select p.* into v_pin
   from public.cbt_activation_pins p
@@ -329,19 +350,18 @@ begin
     raise exception 'Invalid or used activation code';
   end if;
 
+  -- For a renewal purchased before expiry, add exactly 30 days to the
+  -- existing expiration. For an expired or first-time account, start now.
+  v_new_expiry := greatest(now(), coalesce(v_existing_expiry, now()))
+    + make_interval(days => v_pin.access_days);
+
   update public.cbt_activation_pins
     set redeemed_at = now(), redeemed_by = v_user
     where id = v_pin.id;
 
   insert into public.cbt_access_grants
     (auth_user_id, activation_pin_id, activated_at, expires_at)
-  values (
-    v_user, v_pin.id, now(),
-    case
-      when v_pin.access_days is null then null
-      else now() + make_interval(days => v_pin.access_days)
-    end
-  )
+  values (v_user, v_pin.id, now(), v_new_expiry)
   on conflict (auth_user_id) do update
     set activation_pin_id = excluded.activation_pin_id,
         activated_at = excluded.activated_at,
