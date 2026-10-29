@@ -71,3 +71,27 @@ Question bank, study materials, WAEC/JAMB question content, mock attempt submiss
 - An independent learner can redeem a valid same-school invitation later and retain the same auth_user_id; verify prior mock attempt records stay intact once mock attempts exist.
 - Replay of a used invitation, forging school_id, claiming someone else's student_id and linking to a second school all fail.
 - Public learner sessions cannot read school finance, attendance, private exam notes, another learner's practice activity, private school materials, or staff-only data.
+
+## Activation-PIN purchase and signup flow (Myschool-inspired, MEKA-specific)
+1. **Free registration:** email/password account and learner profile. No PIN required to sign up. Everyone can create a free public learner account, including a school student.
+2. **Limited free sample:** only approved preview practice items, once the mock question bank is operational. **Not implemented yet.**
+3. **Purchase an activation PIN:** through a verified online payment (Paystack webhook verification required), school-sponsored bulk purchase, or approved reseller/manual payment. **Purchasing, automated fulfillment and pricing are NOT implemented yet.**
+4. **Redeem PIN after sign-in:** learner enters the code on `/learn`. A single server-side transaction validates a stored SHA-256 digest, enforces single use and grants the entitled account access. The raw PIN is not stored.
+5. **Full unlocked access:** after a real WAEC/JAMB question library and mock engine are released, enforce `cbt_access_grants` on the server for paid content. The frontend state is only a display, never the authorization source.
+6. **Optional school linking:** a school invitation is **different** from the paid CBT activation PIN. School affiliation does not automatically waive the activation requirement unless MEKA explicitly issues school-sponsored PINs. Public practice history remains tied to the same Auth user.
+
+### Product decisions / safeguards
+- Myschool's app offers a demo and device-bound lifetime activation. MEKA web activation is **per user account**, not per browser/device; users can sign in across devices while one code cannot unlock multiple accounts.
+- The database supports either **lifetime activation** (`access_days IS NULL`) or a duration in days. No MEKA price or entitlement duration has been finalized; do not promise one until approved.
+- The `private.issue_cbt_activation_pin` SQL function is only executable by trusted `service_role` callers (or privileged DB admins); **never expose the service-role key to the browser**.
+- For automatic delivery: verify Paystack payment from a trusted server-side webhook before generating and sending a PIN; validate exact amount, order status, customer, reference, and idempotency.
+- For manual bank transfer: a trusted administrator must verify credit independently, not rely on a screenshot alone. Issue only after confirmation.
+- Redeemed PINs cannot be reused; unused pins can be revoked administratively. An expired account can be reactivated with a different PIN while retaining the same learner identity/history.
+- Implement attempted-code throttling, fraud monitoring, privacy/child-safety controls, secure pin delivery, support, refund policies, and agent reconciliation before broad release.
+- Never publish a real paid content library until server-side entitlement enforcement and content-rights review are complete.
+- The rollout must include tests for bypass attempts: no unauthenticated redemption, no user-supplied paid flag, no reusing a redeemed PIN, concurrent claims, expired-account renewal and cross-account/tenant access.
+
+### Two distinct codes
+- **MEKA CBT activation PIN:** paid or sponsored, unlocks the learner account's study/mock entitlement.
+- **School invitation code:** issued by a verified school admin, links the existing learner account to that school's student record. It is not payment or proof of CBT purchase.
+
