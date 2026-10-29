@@ -24,6 +24,10 @@ export default function LearnerPortal() {
   const [linkingSchool, setLinkingSchool] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [activation, setActivation] = useState(null);
+  const [activationReady, setActivationReady] = useState(false);
+  const [activationPin, setActivationPin] = useState("");
+  const [activating, setActivating] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -150,6 +154,56 @@ export default function LearnerPortal() {
     }
   };
 
+
+  useEffect(() => {
+    let cancelled = false;
+    const id = session?.user?.id;
+    if (!id || !profile?.auth_user_id) {
+      setActivation(null);
+      setActivationReady(true);
+      return () => { cancelled = true; };
+    }
+    setActivationReady(false);
+    (async () => {
+      const { data, error: activationError } = await supabase
+        .from("cbt_access_grants")
+        .select("auth_user_id, activated_at, expires_at")
+        .eq("auth_user_id", id)
+        .maybeSingle();
+      if (cancelled) return;
+      if (activationError) setError("Could not check CBT activation status: " + activationError.message);
+      else setActivation(data);
+      setActivationReady(true);
+    })();
+    return () => { cancelled = true; };
+  }, [session?.user?.id, profile?.auth_user_id]);
+
+  const redeemActivationPin = async (event) => {
+    event.preventDefault();
+    setError("");
+    setMessage("");
+    setActivating(true);
+    try {
+      const code = activationPin.trim().toUpperCase();
+      if (!code) throw new Error("Enter your activation PIN.");
+      const { data, error: redeemError } = await supabase.rpc("redeem_cbt_activation_pin", {
+        p_pin: code,
+      });
+      if (redeemError) throw redeemError;
+      setActivation(data);
+      setActivationPin("");
+      setMessage("CBT access activated on your account. The question bank and mock tests are still under development.");
+    } catch (redeemError) {
+      setError(redeemError.message || "Unable to activate this PIN.");
+    } finally {
+      setActivating(false);
+    }
+  };
+
+  const activationActive = Boolean(activation && (
+    !activation.expires_at || new Date(activation.expires_at).getTime() > Date.now()
+  ));
+
   const signOut = async () => {
     setError("");
     const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
@@ -202,7 +256,7 @@ export default function LearnerPortal() {
             <p className="meka-learn-muted">{session.user.email}</p>
             <form className="meka-learn-form" onSubmit={finishRegistration}>
               <label>Full name<input type="text" maxLength={120} required value={name} onChange={(e) => setName(e.target.value)} placeholder="Your full name" /></label>
-              <button type="submit" className="meka-learn-primary" disabled={busy}>{busy ? "Verifying..." : "Activate learner access"}</button>
+              <button type="submit" className="meka-learn-primary" disabled={busy}>{busy ? "Creating profile..." : "Create free learner profile"}</button>
             </form>
             <p className="meka-learn-muted">All learners use the same public account. School linking is optional and can be completed after registration.</p>
           </section>
@@ -230,6 +284,41 @@ export default function LearnerPortal() {
                 <button className="meka-learn-primary" type="submit" disabled={linkingSchool}>{linkingSchool ? "Linking..." : "Link my school"}</button>
               </form>
             )}
+            <section className="meka-learn-activation" aria-label="CBT access activation">
+              <h3>{activationActive ? "Full CBT access activated" : "Unlock full CBT practice"}</h3>
+              {!activationReady ? (
+                <p className="meka-learn-muted">Checking activation status...</p>
+              ) : activationActive ? (
+                <p className="meka-learn-muted">
+                  Your account has an active PIN. {activation.expires_at
+                    ? `Access valid until ${new Date(activation.expires_at).toLocaleDateString("en-NG")}`
+                    : "This activation has no set expiry date."}
+                  {" "}You can sign in on another device with this same account. Mock content is not yet live.
+                </p>
+              ) : (
+                <>
+                  <p className="meka-learn-muted">
+                    Your learner account is free. Full WAEC/JAMB mock tests and revision content will require
+                    a one-time activation PIN when the CBT library launches.
+                    {activation?.expires_at ? " Your previous activation has expired." : ""}
+                  </p>
+                  <form className="meka-learn-activation-form" onSubmit={redeemActivationPin}>
+                    <label>Activation PIN
+                      <input type="text" maxLength={48} required value={activationPin}
+                        onChange={(event) => setActivationPin(event.target.value.toUpperCase())}
+                        autoComplete="off" placeholder="MEKA-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" />
+                    </label>
+                    <button className="meka-learn-primary" type="submit" disabled={activating}>
+                      {activating ? "Activating..." : "Activate my CBT account"}
+                    </button>
+                  </form>
+                  <p className="meka-learn-muted">
+                    PIN sales and sample tests are not available yet. Never send money without a verified MEKA payment instruction.
+                    Each code works once and activates one learner account.
+                  </p>
+                </>
+              )}
+            </section>
             <div className="meka-learn-features">
               {learnerFeatures.map((feature) => (
                 <article key={feature.title}><h3>{feature.title}</h3><p>{feature.description}</p><span>Coming soon</span></article>
