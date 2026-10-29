@@ -40,3 +40,11 @@
  .meka-learn-card { padding: 18px; }
  .meka-learn-switch button { padding: 10px 6px; font-size: 12px; }
 }
+
+/* Optional school affiliation keeps public CBT registration open to everyone. */
+.meka-learn-link-school { display: grid; gap: 12px; padding: 18px; margin: 18px 0 24px; border: 1px solid #bfdbfe; background: #f8fbff; border-radius: 12px; }
+.meka-learn-link-school h3 { margin: 0; font-size: 16px; }
+.meka-learn-link-school p { margin: 0; }
+.meka-learn-link-school label { display: grid; gap: 7px; font-size: 13px; font-weight: 700; }
+.meka-learn-link-school input { min-width: 0; width: 100%; box-sizing: border-box; padding: 12px; font: inherit; border: 1px solid #cbd5e1; border-radius: 9px; }
+.meka-learn-link-school .meka-learn-primary { justify-self: start; }
