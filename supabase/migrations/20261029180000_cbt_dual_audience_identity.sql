@@ -130,6 +130,7 @@ revoke all on function public.issue_cbt_school_invite(uuid) from public, anon;
 grant execute on function public.issue_cbt_school_invite(uuid) to authenticated;
 
 -- School membership can only be established with a live, unredeemed invitation.
+-- An independent learner can upgrade to their verified school-linked identity.
 create function public.redeem_cbt_school_invite(p_code text)
 returns public.cbt_learners
 language plpgsql
@@ -146,11 +147,15 @@ begin
   if p_code is null or char_length(p_code) > 90 then
     raise exception 'Invitation invalid or expired';
   end if;
+  -- A public learner may later join their registered school with the
+  -- same Auth account. Their future mock attempt history stays attached
+  -- to auth_user_id, and school membership remains invite-only.
   if exists (
     select 1 from public.cbt_learners l
     where l.auth_user_id = (select auth.uid())
+      and l.learner_type = 'school'
   ) then
-    raise exception 'This account already has a learner profile';
+    raise exception 'This learner is already linked to a school';
   end if;
 
   select i.* into v_invite
@@ -174,7 +179,19 @@ begin
          concat_ws(' ', st.first_name, nullif(st.middle_name, ''), st.last_name)
     from public.students st
    where st.id = v_invite.student_id
+  on conflict (auth_user_id) do update
+    set learner_type = 'school',
+        school_id = excluded.school_id,
+        student_id = excluded.student_id,
+        display_name = excluded.display_name
+    where cbt_learners.learner_type = 'external'
+      and cbt_learners.school_id is null
+      and cbt_learners.student_id is null
   returning * into v_learner;
+
+  if v_learner.auth_user_id is null then
+    raise exception 'This learner cannot be linked to another school';
+  end if;
 
   update public.cbt_school_invites
      set redeemed_at = now(), redeemed_by = (select auth.uid())
