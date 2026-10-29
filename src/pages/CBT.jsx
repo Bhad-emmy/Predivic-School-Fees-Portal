@@ -1,6 +1,7 @@
 import ModuleWorkspace from "../components/ModuleWorkspace";
 import CBTStudentInvites from "../components/CBTStudentInvites";
 import CBTOpayPinDesk from "../components/CBTOpayPinDesk";
+import CBTQuestionBankAdmin from "../components/CBTQuestionBankAdmin";
 
 const tabs = [
   {
@@ -78,6 +79,7 @@ export default function CBT() {
         tabs={tabs} />
       <CBTStudentInvites />
       <CBTOpayPinDesk />
+      <CBTQuestionBankAdmin />
     </div>
   );
 }
