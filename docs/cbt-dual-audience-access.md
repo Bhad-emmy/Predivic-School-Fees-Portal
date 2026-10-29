@@ -102,10 +102,37 @@ Question bank, study materials, WAEC/JAMB question content, mock attempt submiss
 - **Renewal rule:** Early renewal extends the current expiration by exactly 30 days; late renewal starts from the new redemption timestamp.
 - **Access continuity:** expiry disables premium content until renewed; the learner profile and practice history remain saved.
 - **Verification:** before selling PINs, enforce the authoritative server-side plan price, payment currency, payment confirmation, and one-fulfillment-per-order rules. Client-side constants are display-only.
-- **Sales status:** proposed only. No live checkout, purchase button, verified webhook fulfillment or paid-content gate has been deployed. The `sales_enabled` column is explicitly false.
+- **Sales status:** proposed only. The public `/learn` page has a manual OPay/WhatsApp contact link gated by `sales_enabled`; it stays hidden while sales are disabled. No automated checkout or paid-content gate is deployed. The `sales_enabled` column is explicitly false.
 - **Open items:** payment gateway configuration, PIN purchase receipt/delivery, returns/refunds, affiliate/agent commissions, and paid-content entitlement enforcement.
 
 ## Examples of 30-day renewal math
 - Activate today: access expires 30 × 24 hours later.
 - Renew 5 days before expiry: access expires 35 days after renewal (the remaining 5 days plus new 30).
 - Renew 5 days after expiry: access expires 30 days after the new redemption (expired days are not credited).
+
+## Manual OPay + WhatsApp approval (confirmed product decision)
+- **Retail:** ₦1,500 for each 30-day prepaid PIN.
+- **Method:** Manual OPay bank transfer, verified by the MEKA operator. No Paystack or OPay API checkout in this phase.
+- **Customer journey:** Sign up free at `/learn` → tap official WhatsApp contact when manual sales open → request verified OPay account details → transfer ₦1,500 → send transaction reference → operator checks actual received funds inside OPay → operator generates one-time PIN → sends PIN privately on WhatsApp → learner redeems at `/learn`.
+- **WhatsApp:** The app defaults to the existing MEKA support number 0906 463 6239; override with `VITE_CBT_WHATSAPP_NUMBER` if needed. Never include auth tokens or sensitive financial records in a WhatsApp URL.
+- **OPay receiving details:** No OPay recipient account number or account name has been verified for MEKA CBT. None is hardcoded. Only share verified details through the official WhatsApp channel.
+- **No screenshot-only approval:** An image can help locate a payment, not confirm receipt. Operator must check the incoming transaction reference, amount and received status independently in OPay.
+- **Manual operator desk:** The school-admin CBT screen displays this only to explicitly allowlisted CBT platform operators. A regular school admin cannot issue paid PINs.
+- **Operator provisioning:** A trusted database administrator must verify the owner's Supabase Auth UUID and active staff-admin status, then add that UUID to `private.cbt_platform_operators`. Public signup cannot add operators.
+- **Duplicate prevention:** A normalized OPay transaction reference can issue at most one manual PIN, with operator ID, timestamp and confirmed amount recorded for audit.
+- **PIN delivery:** The raw PIN appears only once in the protected operator UI; the operator sends it via WhatsApp. The database stores only the one-way hash.
+- **Renewals:** Each new transfer needs its own verified reference and unused PIN. Renewing early keeps the remaining access days.
+- **Sales launch gate:** Do not enable the subscription plan's `sales_enabled` flag until OPay details, operator access, all tests and user support are confirmed.
+- **Separate codes:** School invitation codes link a student's school identity; CBT activation PINs unlock paid practice. Neither affects school fees or official results.
+
+## Operator verification checklist
+1. Unlisted school admins, teachers and independent learners cannot issue activation PINs.
+2. An allowlisted active operator can issue only when manual sales are enabled.
+3. Each code is 30 days with an authoritative ₦1,500 plan; neither price nor duration comes from the customer browser.
+4. Duplicate/replayed transaction references fail even under concurrent issuance.
+5. PINs cannot be retrieved once issued; no client can list stored hashes.
+6. Used PINs cannot be redeemed twice; early renewals extend the expiry.
+7. OPay credit is verified in the real OPay app, not solely by screenshots.
+8. Public WhatsApp contact does not expose unverified OPay receiving details and is hidden until sales launch.
+9. Expired learner access does not delete scores, profiles or history; premium question APIs require server-side entitlement checks.
+10. Predivic school financial data, attendance and student records stay unchanged.
