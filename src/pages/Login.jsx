@@ -116,6 +116,15 @@ export default function Login() {
             </div>
           </>
         )}
+        <div style={{ marginTop: 24, borderTop: "1px solid #e2e8f0", paddingTop: 20, textAlign: "center" }}>
+          <p style={{ margin: "0 0 10px", fontWeight: 700 }}>Preparing for WAEC or JAMB?</p>
+          <p style={{ margin: "0 0 12px", color: "#64748b", fontSize: 13 }}>
+            MEKA CBT is open to everyone. You don't need a school account to register.
+          </p>
+          <a href="/learn" className="secondary-btn" style={{ display: "inline-block", textDecoration: "none" }}>
+            Open MEKA CBT
+          </a>
+        </div>
       </section>
     </main>
   );
