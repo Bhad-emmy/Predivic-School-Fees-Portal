@@ -202,3 +202,156 @@ end;
 $$;
 revoke all on function public.redeem_cbt_school_invite(text) from public, anon;
 grant execute on function public.redeem_cbt_school_invite(text) to authenticated;
+
+
+-- A learner can register for free and redeem a paid activation PIN later.
+-- PIN issuance requires a trusted service or manually verified administrator.
+-- The web client receives no INSERT/UPDATE/SELECT access to raw PIN hashes.
+create table public.cbt_activation_pins (
+  id uuid primary key default gen_random_uuid(),
+  code_hash bytea not null unique,
+  access_days integer check (access_days between 1 and 1825),
+  issued_via text not null default 'manual'
+    check (issued_via in ('manual','verified_payment','agent','school')),
+  order_reference text,
+  created_at timestamptz not null default now(),
+  redeemed_at timestamptz,
+  redeemed_by uuid references auth.users(id),
+  revoked_at timestamptz
+);
+create index cbt_activation_pins_order_reference_idx
+  on public.cbt_activation_pins (order_reference)
+  where order_reference is not null;
+alter table public.cbt_activation_pins enable row level security;
+revoke all on table public.cbt_activation_pins from public, anon, authenticated;
+
+-- Access is per learner account, not per device. Null expires_at = lifetime.
+create table public.cbt_access_grants (
+  auth_user_id uuid primary key references public.cbt_learners(auth_user_id) on delete cascade,
+  activation_pin_id uuid not null unique references public.cbt_activation_pins(id),
+  activated_at timestamptz not null default now(),
+  expires_at timestamptz,
+  constraint cbt_access_grant_expiry check (expires_at is null or expires_at > activated_at)
+);
+alter table public.cbt_access_grants enable row level security;
+create policy "learners can read own CBT activation"
+on public.cbt_access_grants for select to authenticated
+using (auth_user_id = (select auth.uid()));
+revoke all on public.cbt_access_grants from public, anon, authenticated;
+grant select on public.cbt_access_grants to authenticated;
+
+-- This issuer is strictly for trusted backend / admin workflows.
+-- NEVER send the service_role key or issue_cbt_activation_pin to a browser.
+-- A null duration creates lifetime access; other durations expire in days.
+create function private.issue_cbt_activation_pin(
+  p_access_days integer default null,
+  p_issued_via text default 'manual',
+  p_order_reference text default null
+)
+returns text
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_pin text;
+begin
+  if p_access_days is not null and
+    (p_access_days < 1 or p_access_days > 1825) then
+    raise exception 'Invalid PIN duration';
+  end if;
+  if p_issued_via not in ('manual','verified_payment','agent','school') then
+    raise exception 'Invalid PIN source';
+  end if;
+
+  -- Cryptographically strong 128-bit token, displayed only to issuer.
+  v_pin := 'MEKA-' || upper(replace(gen_random_uuid()::text, '-', ''));
+
+  insert into public.cbt_activation_pins
+    (code_hash, access_days, issued_via, order_reference)
+  values
+    (sha256(convert_to(v_pin, 'UTF8')), p_access_days,
+     p_issued_via, nullif(btrim(p_order_reference), ''));
+
+  return v_pin;
+end;
+$$;
+revoke all on function private.issue_cbt_activation_pin(integer,text,text)
+  from public, anon, authenticated;
+grant execute on function private.issue_cbt_activation_pin(integer,text,text)
+  to service_role;
+
+-- Atomically redeem exactly one available PIN to a verified learner account.
+-- Strong random PINs mitigate guessing; add API rate limits before mass launch.
+create function public.redeem_cbt_activation_pin(p_pin text)
+returns public.cbt_access_grants
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user uuid;
+  v_pin public.cbt_activation_pins%rowtype;
+  v_grant public.cbt_access_grants%rowtype;
+begin
+  v_user := (select auth.uid());
+  if v_user is null then
+    raise exception 'Sign in before activating your CBT access' using errcode = '42501';
+  end if;
+  if p_pin is null or length(btrim(p_pin)) > 48 then
+    raise exception 'Invalid or used activation code';
+  end if;
+
+  -- Serialize activations for one learner to prevent simultaneous redemption.
+  perform 1 from public.cbt_learners l
+    where l.auth_user_id = v_user
+    for update;
+  if not found then
+    raise exception 'Complete learner registration first' using errcode = '42501';
+  end if;
+
+  if exists (
+    select 1 from public.cbt_access_grants g
+    where g.auth_user_id = v_user
+      and (g.expires_at is null or g.expires_at > now())
+  ) then
+    raise exception 'This learner account already has active access';
+  end if;
+
+  select p.* into v_pin
+  from public.cbt_activation_pins p
+  where p.code_hash = sha256(convert_to(upper(btrim(p_pin)), 'UTF8'))
+    and p.redeemed_at is null
+    and p.revoked_at is null
+  for update of p;
+
+  if not found then
+    raise exception 'Invalid or used activation code';
+  end if;
+
+  update public.cbt_activation_pins
+    set redeemed_at = now(), redeemed_by = v_user
+    where id = v_pin.id;
+
+  insert into public.cbt_access_grants
+    (auth_user_id, activation_pin_id, activated_at, expires_at)
+  values (
+    v_user, v_pin.id, now(),
+    case
+      when v_pin.access_days is null then null
+      else now() + make_interval(days => v_pin.access_days)
+    end
+  )
+  on conflict (auth_user_id) do update
+    set activation_pin_id = excluded.activation_pin_id,
+        activated_at = excluded.activated_at,
+        expires_at = excluded.expires_at
+  returning * into v_grant;
+
+  return v_grant;
+end;
+$$;
+revoke all on function public.redeem_cbt_activation_pin(text)
+  from public, anon;
+grant execute on function public.redeem_cbt_activation_pin(text)
+  to authenticated;
