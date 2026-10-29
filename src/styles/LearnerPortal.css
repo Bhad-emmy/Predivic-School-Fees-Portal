@@ -60,3 +60,7 @@
 
 .meka-learn-plan-price { margin: 0; font-size: 27px; font-weight: 850; color: #0f2a43; }
 .meka-learn-plan-price span { font-size: 15px; font-weight: 600; color: #64748b; }
+
+.meka-learn-contact-link { display: inline-flex; align-items: center; justify-content: center; text-align: center; text-decoration: none; border-radius: 9px; padding: 13px 18px; background: #166534; color: #fff; font-size: 14px; font-weight: 800; }
+.meka-learn-contact-link:hover { background: #14532d; }
+.meka-learn-contact-link:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
