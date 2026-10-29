@@ -15,6 +15,7 @@ import BankTransfers from "./pages/BankTransfers";
 import ParentAccounts from "./pages/ParentAccounts";
 import Cashless from "./pages/Cashless";
 import CBT from "./pages/CBT";
+import LearnerPortal from "./pages/LearnerPortal";
 import ResultChecker from "./pages/ResultChecker";
 import Login from "./pages/Login";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -22,6 +23,10 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import "./styles/App.css";
 
 function App() {
+  if (window.location.pathname === "/learn") {
+    return <LearnerPortal />;
+  }
+
   if (window.location.pathname === "/pay") {
     return <ParentPayment />;
   }
