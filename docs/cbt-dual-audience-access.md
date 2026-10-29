@@ -1,20 +1,20 @@
-# CBT learner access: school + independent audiences
+# Public MEKA CBT: open access + optional school affiliation
 
-This implementation adds the identity and enrollment layer for two CBT audiences from the first release.
+This foundation is public-first: **any learner can sign up for MEKA CBT**, whether or not their school uses MEKA School. School affiliation is optional and verified through a one-time invitation. The initial purpose is WAEC/JAMB mock preparation only.
 
 ## Entry point
-- Public `/learn` supports email/password signup and login using the existing Supabase Auth project.
-- Independent learners create their own CBT profile after authentication.
-- School students create an Auth account, then redeem a single-use 48-hour code issued by a school admin in **CBT & Learning Centre**.
+- Public `/learn` supports email/password signup and login. Learners do not need a school admission number, a school subscription or an invitation.
+- Every new learner initially creates an independent CBT profile after authentication.
+- Learners enrolled in a MEKA School can **optionally link the same existing account** to their registered school using a single-use 48-hour invitation from that school admin. They do not need to register twice, and their mock attempt history remains associated with the same auth_user_id.
 - A school student account is linked server-side to an existing `students.id` and `schools.id` record; never trust a submitted admission number as authorization.
-- No registration or conversion route adds a user to a school without a code. CBT registration does not create a school student record.
+- No registration or conversion route attaches a learner to a school without a code. CBT public registration does not create any school student record.
 
 ## Access boundaries
-- `cbt_learners` distinguishes `external` from `school`; external profiles have no school or student ID.
+- `cbt_learners` distinguishes `external` from `school` affiliations; public profiles start with no school or student ID. The protected redemption function upgrades an existing public profile rather than creating a second identity.
 - Self-service RLS inserts only allow external profiles belonging to the authenticated user.
 - Admin invitation issuance verifies the current authenticated account is an **active admin of the student's active school**.
 - Invitation tokens are random, hashed in Postgres, single-use, and expire after 48 hours; issuing another revokes prior unused codes.
-- Redeeming checks the invited student and school are still active. The transaction locks the invite to prevent double use.
+- Redeeming checks the invited student and school are still active. The transaction locks the invite to prevent double use and upgrades the profile through a security-definer function. There is no direct client-side UPDATE permission.
 - Only the current learner and the relevant school's active admin can select a learner profile; all other data must have its own RLS policies.
 - No question, mark, or academic report data is exposed by this migration.
 
@@ -51,9 +51,23 @@ This implementation adds the identity and enrollment layer for two CBT audiences
 - Active school admin can issue a code for their own active student only; teachers and outside learners cannot issue codes.
 - A code can be redeemed only once, only before expiration, and only for an active school/student.
 - Previously issued unused code is revoked by issuing a new code.
-- A learner account cannot claim a second school student identity, and a student cannot be linked to multiple auth accounts.
+- A learner can remain independent or link once to their verified school; they cannot claim a second school student identity, and a student cannot be linked to multiple auth accounts.
+- Public-first identity must keep mock attempt history under auth_user_id so future school linking does not reset performance.
 - Student login and independent login do not grant teacher, fee, attendance, or parent portal permissions.
 - Existing school student, teacher, fee and attendance workflows stay unchanged.
 
 ## Not implemented yet
 Question bank, study materials, WAEC/JAMB question content, mock attempt submission, grading, performance analytics, payments, and the separate school result checker. The learner dashboard labels mock features clearly as coming soon.
+
+## Public launch and scale requirements
+- This foundation is **not a production-ready, nationally scaled CBT**. It only introduces the learner sign-up and optional school-link flows, not the question engine or content licensing.
+- Before broad registration, check the blast radius of using the existing school-finance Supabase project for public sign-ups. A dedicated CBT backend/auth project and secure school-account linking is recommended for high-scale public traffic, isolation and independent rate limits.
+- Add verified contact details, account recovery, abuse prevention, bot protection, request throttling and an age-appropriate privacy/parental consent design before mass public access.
+- Define operating costs, question-library rights, storage/bandwidth, database indexing, CDN caching, load testing and disaster recovery before opening to large traffic.
+- The public landing can use `/learn` during the pilot; a standalone public CBT domain can be added later without requiring a school subscription.
+
+## Additional public-first verification
+- Any person can create an independent learner profile without a code, and that registration does not create a student, staff, fee, parent or result record.
+- An independent learner can redeem a valid same-school invitation later and retain the same auth_user_id; verify prior mock attempt records stay intact once mock attempts exist.
+- Replay of a used invitation, forging school_id, claiming someone else's student_id and linking to a second school all fail.
+- Public learner sessions cannot read school finance, attendance, private exam notes, another learner's practice activity, private school materials, or staff-only data.
