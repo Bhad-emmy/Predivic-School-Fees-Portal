@@ -202,7 +202,7 @@ function ProtectedApp() {
             {isAdmin || isSecretary ? <button className={page === "cashless" ? "active" : ""} onClick={() => navigateTo("cashless")}>School Cashless</button> : null}
             <button className={page === "receipts" ? "active" : ""} onClick={() => navigateTo("receipts")}>Receipts</button>
             <button className={page === "reports" ? "active" : ""} onClick={() => navigateTo("reports")}>Reports</button>
-            {isAdmin && <button className={page === "cbt" ? "active" : ""} onClick={() => navigateTo("cbt")}>CBT & Learning Centre</button>}
+            {isAdmin && <button className={page === "cbt" ? "active" : ""} onClick={() => navigateTo("cbt")}>WAEC/JAMB Mock Centre</button>}
             {isAdmin && <button className={page === "result-checker" ? "active" : ""} onClick={() => navigateTo("result-checker")}>Result Management</button>}
             {isAdmin && (
               <button className={page === "settings" ? "active" : ""} onClick={() => navigateTo("settings")}>Settings</button>
