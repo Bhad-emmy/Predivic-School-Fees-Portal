@@ -1,0 +1,25 @@
+.meka-module { display: grid; gap: 22px; color: var(--text-primary, #172033); }
+.meka-module-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; }
+.meka-module-eyebrow { margin: 0 0 6px; color: #2563eb; text-transform: uppercase; font-size: 12px; letter-spacing: .09em; font-weight: 800; }
+.meka-module-header h1 { margin: 0; font-size: clamp(24px, 3vw, 32px); }
+.meka-module-subtitle { margin: 9px 0 0; max-width: 780px; color: var(--text-secondary, #64748b); line-height: 1.65; }
+.meka-module-status { display: inline-flex; align-items: center; gap: 8px; border: 1px solid #f5d38b; background: #fff8e7; color: #855b08; padding: 8px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+.meka-module-notice { padding: 16px 18px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 14px; color: #1e40af; line-height: 1.6; }
+.meka-module-tabs { display: flex; gap: 8px; flex-wrap: wrap; padding-bottom: 12px; border-bottom: 1px solid var(--border-color, #e2e8f0); }
+.meka-module-tab { background: var(--card-background, #fff); border: 1px solid var(--border-color, #e2e8f0); color: var(--text-primary, #172033); border-radius: 10px; padding: 10px 14px; font-weight: 700; font-size: 13px; cursor: pointer; }
+.meka-module-tab.is-active { background: #eff6ff; border-color: #2563eb; color: #1d4ed8; }
+.meka-module-panel { background: var(--card-background, #fff); border: 1px solid var(--border-color, #e2e8f0); border-radius: 14px; padding: 22px; }
+.meka-module-panel-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.meka-module-panel h2 { font-size: 20px; margin: 0 0 8px; }
+.meka-module-panel-heading p { margin: 0; color: var(--text-secondary, #64748b); line-height: 1.6; max-width: 680px; }
+.meka-module-pending { color: #92400e; background: #fffbeb; padding: 6px 10px; border-radius: 999px; border: 1px solid #fde68a; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.meka-module-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-top: 22px; }
+.meka-module-feature { border: 1px solid var(--border-color, #e2e8f0); border-radius: 12px; padding: 18px; }
+.meka-module-feature h3 { font-size: 15px; margin: 0 0 8px; }
+.meka-module-feature p { font-size: 13px; color: var(--text-secondary, #64748b); line-height: 1.6; margin: 0; }
+.meka-module-note { font-size: 13px; line-height: 1.6; margin: 20px 0 0; background: #f8fafc; border-radius: 10px; padding: 14px; color: #334155; }
+@media (max-width: 640px) {
+  .meka-module-panel { padding: 16px; }
+  .meka-module-grid { grid-template-columns: 1fr; }
+  .meka-module-tab { flex-grow: 1; }
+}
