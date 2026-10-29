@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { CBT_MONTHLY_PLAN, formatCbtPrice } from "../lib/cbtPlan";
 import "../styles/LearnerPortal.css";
 
 const learnerFeatures = [
@@ -285,36 +286,42 @@ export default function LearnerPortal() {
               </form>
             )}
             <section className="meka-learn-activation" aria-label="CBT access activation">
-              <h3>{activationActive ? "Full CBT access activated" : "Unlock full CBT practice"}</h3>
+              <h3>{activationActive ? "Your 30-day CBT access is active" : "Activate your CBT access"}</h3>
+              <p className="meka-learn-plan-price">
+                {formatCbtPrice()} <span>/ {CBT_MONTHLY_PLAN.durationDays} days</span>
+              </p>
+              <p className="meka-learn-muted">
+                Proposed monthly price. Online PIN purchases are not open yet, and no payment is taken here.
+              </p>
               {!activationReady ? (
                 <p className="meka-learn-muted">Checking activation status...</p>
-              ) : activationActive ? (
-                <p className="meka-learn-muted">
-                  Your account has an active PIN. {activation.expires_at
-                    ? `Access valid until ${new Date(activation.expires_at).toLocaleDateString("en-NG")}`
-                    : "This activation has no set expiry date."}
-                  {" "}You can sign in on another device with this same account. Mock content is not yet live.
-                </p>
               ) : (
                 <>
-                  <p className="meka-learn-muted">
-                    Your learner account is free. Full WAEC/JAMB mock tests and revision content will require
-                    a one-time activation PIN when the CBT library launches.
-                    {activation?.expires_at ? " Your previous activation has expired." : ""}
-                  </p>
+                  {activationActive ? (
+                    <p className="meka-learn-muted">
+                      Your current access expires on {new Date(activation.expires_at).toLocaleDateString("en-NG")}.
+                      You may redeem another unused PIN early; it adds 30 days to that expiry without losing remaining days.
+                    </p>
+                  ) : (
+                    <p className="meka-learn-muted">
+                      {activation?.expires_at ? "Your previous access has expired. " : "Your learner account is free. "}
+                      Redeeming one valid PIN will unlock 30 days of full CBT access once the mock content launches.
+                    </p>
+                  )}
                   <form className="meka-learn-activation-form" onSubmit={redeemActivationPin}>
-                    <label>Activation PIN
+                    <label>One-time activation PIN
                       <input type="text" maxLength={48} required value={activationPin}
                         onChange={(event) => setActivationPin(event.target.value.toUpperCase())}
                         autoComplete="off" placeholder="MEKA-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" />
                     </label>
                     <button className="meka-learn-primary" type="submit" disabled={activating}>
-                      {activating ? "Activating..." : "Activate my CBT account"}
+                      {activating ? "Validating..." : activationActive ? "Renew with another PIN" : "Activate for 30 days"}
                     </button>
                   </form>
                   <p className="meka-learn-muted">
-                    PIN sales and sample tests are not available yet. Never send money without a verified MEKA payment instruction.
-                    Each code works once and activates one learner account.
+                    PIN issuance and payment checkout are still under development. Only redeem a PIN provided
+                    through a verified MEKA channel after activation sales are officially enabled.
+                    A code works once, on one account, and never resets your practice history.
                   </p>
                 </>
               )}
