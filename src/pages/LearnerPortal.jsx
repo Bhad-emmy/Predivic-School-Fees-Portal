@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { CBT_MONTHLY_PLAN, formatCbtPrice } from "../lib/cbtPlan";
+import CBTTopicPractice from "../components/CBTTopicPractice";
 import "../styles/LearnerPortal.css";
 
 const learnerFeatures = [
   { title: "Study Materials", description: "Read WAEC and JAMB revision notes, explanations and worked examples." },
   { title: "WAEC Mock Tests", description: "Practise with authorized past questions and original WAEC-style questions." },
   { title: "JAMB Mock Tests", description: "Take UTME-style timed mocks with your chosen subject combination." },
-  { title: "My Progress", description: "Review scores and revision areas once practice is enabled." },
+  { title: "My Progress", description: "View practice scores and revision areas as tracking features are expanded." },
 ];
 
 export default function LearnerPortal() {
@@ -283,7 +284,7 @@ export default function LearnerPortal() {
               <span>{profile.learner_type === "school" ? "School linked" : "Public learner"}</span>
             </div>
             <div className="meka-learn-message" role="status">
-              Your learner account is ready. The mock question bank, study library and practice engine have not been enabled yet.
+              Your learner profile is active. Approved sample topic questions will appear below when the content team publishes them. Full timed mock examinations and study materials are still being developed.
               Your practice scores will not affect school term results or count as official WAEC/JAMB results.
             </div>
             {profile.learner_type === "external" && (
@@ -349,6 +350,7 @@ export default function LearnerPortal() {
                 </>
               )}
             </section>
+            <CBTTopicPractice activationActive={activationActive} />
             <div className="meka-learn-features">
               {learnerFeatures.map((feature) => (
                 <article key={feature.title}><h3>{feature.title}</h3><p>{feature.description}</p><span>Coming soon</span></article>
