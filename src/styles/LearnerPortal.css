@@ -64,3 +64,21 @@
 .meka-learn-contact-link { display: inline-flex; align-items: center; justify-content: center; text-align: center; text-decoration: none; border-radius: 9px; padding: 13px 18px; background: #166534; color: #fff; font-size: 14px; font-weight: 800; }
 .meka-learn-contact-link:hover { background: #14532d; }
 .meka-learn-contact-link:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
+
+
+.meka-learn-practice { border: 1px solid #e2e8f0; border-radius: 13px; padding: 20px; margin: 20px 0 25px; display: grid; gap: 16px; }
+.meka-learn-practice h3 { font-size: 20px; margin: 8px 0 6px; }
+.meka-learn-practice-filters { display: flex; flex-wrap: wrap; gap: 12px; }
+.meka-learn-practice-filters label { display: grid; gap: 7px; flex: 1 1 180px; font-size: 13px; font-weight: 700; }
+.meka-learn-practice-layout { display: grid; grid-template-columns: minmax(190px, 240px) minmax(0, 1fr); gap: 14px; }
+.meka-learn-practice-layout nav { display: grid; align-content: start; gap: 8px; max-height: 450px; overflow: auto; }
+.meka-learn-practice-layout nav button { font: inherit; font-size: 12px; border: 1px solid #cbd5e1; background: #f8fafc; text-align: left; border-radius: 8px; padding: 11px; cursor: pointer; }
+.meka-learn-practice-layout nav button.selected { border-color: #2563eb; color: #1d4ed8; background: #eff6ff; font-weight: 700; }
+.meka-learn-practice-question { border: 1px solid #e2e8f0; border-radius: 11px; padding: 17px; display: grid; gap: 12px; align-content: start; }
+.meka-learn-practice-question h4 { margin: 0; font-size: 16px; line-height: 1.6; white-space: pre-wrap; }
+.meka-learn-practice-question .meka-learn-primary { justify-self: start; }
+.meka-learn-practice-option { display: flex; gap: 10px; align-items: start; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; line-height: 1.6; cursor: pointer; }
+.meka-learn-practice-option input { margin-top: 5px; flex: 0 0 auto; }
+.meka-learn-practice-result { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 15px; line-height: 1.6; }
+.meka-learn-practice-result p { margin: 8px 0 14px; white-space: pre-wrap; }
+@media(max-width: 650px) { .meka-learn-practice { padding: 14px; } .meka-learn-practice-layout { grid-template-columns: 1fr; } .meka-learn-practice-layout nav { max-height: 150px; } }
