@@ -375,3 +375,135 @@ revoke all on function public.redeem_cbt_activation_pin(text)
   from public, anon;
 grant execute on function public.redeem_cbt_activation_pin(text)
   to authenticated;
+
+
+-- OPay V1: manual transfer confirmation and private operator-only PIN issuance.
+-- Never treat a screenshot, client-side checkbox or message as evidence of payment.
+-- The operator must independently verify the received transfer in OPay.
+-- Sales stay disabled in cbt_subscription_plans until the operator has been
+-- provisioned, receiving details verified and staging tests passed.
+
+create table private.cbt_platform_operators (
+  auth_user_id uuid primary key references auth.users(id) on delete cascade,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+alter table private.cbt_platform_operators enable row level security;
+revoke all on table private.cbt_platform_operators from public, anon, authenticated;
+
+alter table public.cbt_activation_pins
+  add column confirmed_by uuid references auth.users(id),
+  add column confirmed_at timestamptz,
+  add column confirmed_amount_kobo integer
+    check (confirmed_amount_kobo is null or confirmed_amount_kobo > 0);
+
+-- One independently confirmed OPay transaction can fund one PIN only.
+-- Normalizing case and whitespace prevents minor formatting duplicates.
+create unique index cbt_manual_opay_transfer_reference_unique
+on public.cbt_activation_pins ((lower(btrim(order_reference))))
+where issued_via = 'manual' and order_reference is not null;
+
+create function public.is_cbt_platform_operator()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select (select auth.uid()) is not null and exists (
+    select 1
+    from private.cbt_platform_operators o
+    join public.teachers t on t.auth_user_id = o.auth_user_id
+    join public.schools s on s.id = t.school_id
+    where o.auth_user_id = (select auth.uid())
+      and o.is_active = true
+      and lower(t.role) = 'admin'
+      and lower(t.status) = 'active'
+      and lower(s.status) = 'active'
+  );
+$$;
+revoke all on function public.is_cbt_platform_operator()
+  from public, anon;
+grant execute on function public.is_cbt_platform_operator()
+  to authenticated;
+
+create function public.cbt_opay_sales_enabled()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select (select auth.uid()) is not null
+    and coalesce((
+      select p.sales_enabled
+      from public.cbt_subscription_plans p
+      where p.code = 'monthly_30'
+    ), false);
+$$;
+revoke all on function public.cbt_opay_sales_enabled()
+  from public, anon;
+grant execute on function public.cbt_opay_sales_enabled()
+  to authenticated;
+
+-- Trusted operator workflow. The checkbox in the UI is an attestation only;
+-- the actual transfer must be checked in OPay before calling this function.
+create function public.issue_verified_opay_cbt_pin(p_transaction_reference text)
+returns text
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_reference text;
+  v_pin text;
+  v_price_kobo integer;
+begin
+  if not public.is_cbt_platform_operator() then
+    raise exception 'Not authorized to issue CBT activation PINs'
+      using errcode = '42501';
+  end if;
+
+  v_reference := btrim(coalesce(p_transaction_reference, ''));
+  if char_length(v_reference) < 6 or char_length(v_reference) > 120 then
+    raise exception 'Enter the verified OPay transaction reference';
+  end if;
+  if v_reference ~ '[[:cntrl:]]' then
+    raise exception 'Invalid transaction reference';
+  end if;
+
+  select p.price_kobo into v_price_kobo
+  from public.cbt_subscription_plans p
+  where p.code = 'monthly_30' and p.sales_enabled;
+
+  if v_price_kobo is null then
+    raise exception 'Manual OPay PIN issuance is not enabled yet';
+  end if;
+
+  -- The database controls the price and duration. This function cannot
+  -- be called by an ordinary learner, school admin, or unknown staff.
+  v_pin := private.issue_cbt_activation_pin(
+    30, 'manual', v_reference
+  );
+
+  update public.cbt_activation_pins
+    set confirmed_by = (select auth.uid()),
+        confirmed_at = now(),
+        confirmed_amount_kobo = v_price_kobo
+    where code_hash = sha256(convert_to(v_pin, 'UTF8'));
+
+  return v_pin;
+exception
+  when unique_violation then
+    raise exception 'An activation PIN was already issued for this OPay transaction reference';
+end;
+$$;
+revoke all on function public.issue_verified_opay_cbt_pin(text)
+  from public, anon;
+grant execute on function public.issue_verified_opay_cbt_pin(text)
+  to authenticated;
+
+-- No payment account number is stored here. Configure receiving details only
+-- after the operator has supplied and verified the correct OPay recipient.
+-- Provision operators by trusted admin SQL after validating auth_user_id.
+-- NEVER allow a public signup to add rows to private.cbt_platform_operators.
