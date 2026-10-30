@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 
-// These are MEKA launch-readiness targets for five fresh full-length practice
-// attempts per selected subject. They are NOT WAEC or JAMB official quotas.
+// MEKA's initial THREE-rotation content targets for full-length practice.
+// JAMB: 3 x 60 English and 3 x 40 per other subject (2026 UTME structure).
+// WAEC: 150 is a provisional planning target, not a fixed board format.
+// These are MEKA targets, not official exam-board quotas.
 const INITIAL_SUBJECTS = [
-  ["JAMB", "Use of English", 300],
+  ["JAMB", "Use of English", 180],
   ...["Mathematics", "Physics", "Chemistry", "Biology", "Government",
     "Economics", "Agricultural Science", "Geography", "Literature in English",
-    "Christian Religious Studies", "Commerce"].map((subject) => ["JAMB", subject, 200]),
+    "Christian Religious Studies", "Commerce"].map((subject) => ["JAMB", subject, 120]),
   ...["Mathematics", "English Language", "Biology", "Chemistry", "Physics",
     "Agricultural Science", "Government", "Economics", "Geography",
     "Literature in English", "Commerce", "Financial Accounting",
-    "Civic Education"].map((subject) => ["WAEC", subject, 250]),
+    "Civic Education"].map((subject) => ["WAEC", subject, 150]),
 ];
 
 const sample = JSON.stringify([{
@@ -111,7 +113,7 @@ export default function CBTBatchImport() {
       const previous = map.get(key);
       map.set(key, {
         exam: item.exam_type, subject: item.subject,
-        target: previous?.target || (item.exam_type === "JAMB" ? 200 : 250),
+        target: previous?.target || (item.exam_type === "JAMB" ? 120 : 150),
         published_premium: item.published_premium,
         published_free: item.published_free,
         drafts: item.drafts,
@@ -125,6 +127,16 @@ export default function CBTBatchImport() {
     target: t.target + r.target,
     drafts: t.drafts + r.drafts,
   }), { published: 0, target: 0, drafts: 0 }), [rows]);
+
+  const miniMockReadiness = useMemo(() => ["WAEC", "JAMB"].map((exam) => {
+    const premiumCount = coverage.filter((item) => item.exam_type === exam)
+      .reduce((total, item) => total + item.published_premium, 0);
+    return {
+      exam,
+      premiumCount,
+      nonRepeatingRounds: Math.min(3, Math.floor(premiumCount / 10)),
+    };
+  }), [coverage]);
 
   const upload = async (file) => {
     setError("");
@@ -171,12 +183,26 @@ export default function CBTBatchImport() {
         <p style={{ margin: "0 0 6px", textTransform: "uppercase", color: "#2563eb", fontSize: 12, fontWeight: 800, letterSpacing: ".08em" }}>Approved MEKA CBT content operators only</p>
         <h2 style={{ margin: "0 0 7px" }}>Question-bank coverage and bulk import</h2>
         <p style={{ margin: 0, lineHeight: 1.6, color: "#64748b" }}>
-          New questions are chosen before repeated ones. To support five different full-length
+          New questions are chosen before repeated ones. To support three different full-length
           practice sittings, we need hundreds of verified, syllabus-aligned questions per subject.
           These are planning targets, not counts required by the exam boards.
         </p>
       </header>
       {loadError && <p role="alert" style={{ color: "#991b1b" }}>{loadError}</p>}
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        {miniMockReadiness.map((item) => (
+          <span key={item.exam} style={{ border: "1px solid #e2e8f0", borderRadius: 8, background: "#f8fafc", padding: 10, fontWeight: 700 }}>
+            {item.exam}: {item.nonRepeatingRounds}/3 fresh ten-question mini-mocks
+            <small style={{ display: "block", color: "#64748b" }}>
+              {item.premiumCount} of 30 minimum premium questions
+            </small>
+          </span>
+        ))}
+      </div>
+      <p style={{ color: "#64748b", margin: 0, fontSize: 13 }}>
+        The mini-mock counts are shared across subjects. Full JAMB and WAEC simulations need separate subject-specific pools;
+        the targets below are for future full-length exams, not the current 10-question mini-mocks.
+      </p>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
         <strong>Published premium: {totals.published.toLocaleString("en-NG")}</strong>
         <span>Drafts awaiting review: {totals.drafts.toLocaleString("en-NG")}</span>
