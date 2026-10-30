@@ -28,7 +28,7 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - run: deno check supabase/functions/paystack-links/index.ts
-      - run: deno check supabase/functions/paystack-payment-link/index.ts
-      - run: deno check supabase/functions/paystack-initialize/index.ts
-      - run: deno check supabase/functions/paystack-webhook/index.ts
+      - run: deno check --node-modules-dir=auto supabase/functions/paystack-links/index.ts
+      - run: deno check --node-modules-dir=auto supabase/functions/paystack-payment-link/index.ts
+      - run: deno check --node-modules-dir=auto supabase/functions/paystack-initialize/index.ts
+      - run: deno check --node-modules-dir=auto supabase/functions/paystack-webhook/index.ts
