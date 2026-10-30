@@ -6,19 +6,18 @@ const tabs = [
     description: "Prepare, review, approve, and publish school results safely.",
     items: [
       { title: "Score Entry", description: "Enter continuous assessment and examination scores per student and subject." },
-      { title: "CBT Integration", description: "Transfer verified school CBT exam scores without treating mock practice as official marks." },
       { title: "Grades & Remarks", description: "Use school-configurable grading bands, subject comments, and report remarks." },
       { title: "Approval", description: "Keep unpublished results private until an authorized administrator approves them." },
       { title: "Result Checker", description: "Publish secure, term-specific student or parent result access with printable report cards." },
     ],
-    note: "Results are not being calculated or published yet. All existing student and fee data remain unchanged.",
+    note: "Result Checker is separate from CBT. WAEC/JAMB mock scores never become official school results. No school results are calculated or published yet."
   },
   {
     id: "entry", label: "Score Entry", title: "Score Entry",
     description: "Academic staff will record assessment marks for the right class, subject, term, and session.",
     items: [
       { title: "Continuous Assessment", description: "Capture CA components using each school's configured weightings." },
-      { title: "Examination Marks", description: "Enter approved exam marks or import verified school CBT scores." },
+      { title: "Examination Marks", description: "Enter official school examination marks separately from WAEC/JAMB mock practice." },
       { title: "Validation", description: "Check score ranges and prevent duplicate records." },
     ],
   },

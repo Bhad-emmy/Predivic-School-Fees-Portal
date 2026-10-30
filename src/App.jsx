@@ -15,6 +15,7 @@ import BankTransfers from "./pages/BankTransfers";
 import ParentAccounts from "./pages/ParentAccounts";
 import Cashless from "./pages/Cashless";
 import CBT from "./pages/CBT";
+import LearnerPortal from "./pages/LearnerPortal";
 import ResultChecker from "./pages/ResultChecker";
 import Login from "./pages/Login";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -22,6 +23,10 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import "./styles/App.css";
 
 function App() {
+  if (window.location.pathname === "/learn") {
+    return <LearnerPortal />;
+  }
+
   if (window.location.pathname === "/pay") {
     return <ParentPayment />;
   }
@@ -197,7 +202,7 @@ function ProtectedApp() {
             {isAdmin || isSecretary ? <button className={page === "cashless" ? "active" : ""} onClick={() => navigateTo("cashless")}>School Cashless</button> : null}
             <button className={page === "receipts" ? "active" : ""} onClick={() => navigateTo("receipts")}>Receipts</button>
             <button className={page === "reports" ? "active" : ""} onClick={() => navigateTo("reports")}>Reports</button>
-            {isAdmin && <button className={page === "cbt" ? "active" : ""} onClick={() => navigateTo("cbt")}>CBT & Learning Centre</button>}
+            {isAdmin && <button className={page === "cbt" ? "active" : ""} onClick={() => navigateTo("cbt")}>WAEC/JAMB Mock Centre</button>}
             {isAdmin && <button className={page === "result-checker" ? "active" : ""} onClick={() => navigateTo("result-checker")}>Result Management</button>}
             {isAdmin && (
               <button className={page === "settings" ? "active" : ""} onClick={() => navigateTo("settings")}>Settings</button>
