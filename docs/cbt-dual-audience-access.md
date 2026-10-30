@@ -38,7 +38,7 @@ This foundation is public-first: **any learner can sign up for MEKA CBT**, wheth
 6. Keep the separate Result Management & Checker workflow independent.
 
 ## Deployment prerequisites
-1. Review and apply `supabase/migrations/20261029180000_cbt_dual_audience_identity.sql` in a safe test environment and verify all policies and functions.
+1. **Applied 2026-10-30** to the existing live Supabase project as `20261030200456_cbt_dual_audience_identity`, after additive migration preflight. The database objects exist; RLS/function behavior still requires end-to-end user-session tests before releasing the UI.
 2. Only after the schema has been applied should the `/learn` UI and school invitation UI be deployed.
 3. Verify Supabase Auth email/password signup is permitted, email confirmations and redirects point users back to the app, and password reset works.
 4. Validate each role path (school admin, teacher, school-linked student, independent learner, parent, stranger) against other schools' data.
@@ -118,7 +118,7 @@ Question bank, study materials, WAEC/JAMB question content, mock attempt submiss
 - **OPay receiving details:** The owner has supplied their intended OPay receiving account details privately. Do not commit account information in this repository or publish it on the CBT website. The operator shares the receiving instructions directly on the official WhatsApp channel. Before the first sale, confirm that the details match the OPay account and verify receipt using a controlled transfer.
 - **No screenshot-only approval:** An image can help locate a payment, not confirm receipt. Operator must check the incoming transaction reference, amount and received status independently in OPay.
 - **Manual operator desk:** The school-admin CBT screen displays this only to explicitly allowlisted CBT platform operators. A regular school admin cannot issue paid PINs.
-- **Operator provisioning:** A trusted database administrator must verify the owner's Supabase Auth UUID and active staff-admin status, then add that UUID to `private.cbt_platform_operators`. Public signup cannot add operators.
+- **Operator provisioning:** Completed for one uniquely matched active school-admin Auth account on 2026-10-30. Provisioned only after verifying the matching email and active admin/school status. This authorizes the operator role but cannot issue paid PINs while `sales_enabled = false`. Public signup cannot add operators.
 - **Duplicate prevention:** A normalized OPay transaction reference can issue at most one manual PIN, with operator ID, timestamp and confirmed amount recorded for audit.
 - **PIN delivery:** The raw PIN appears only once in the protected operator UI; the operator sends it via WhatsApp. The database stores only the one-way hash.
 - **Renewals:** Each new transfer needs its own verified reference and unused PIN. Renewing early keeps the remaining access days.
@@ -136,3 +136,12 @@ Question bank, study materials, WAEC/JAMB question content, mock attempt submiss
 8. Public WhatsApp contact does not expose unverified OPay receiving details and is hidden until sales launch.
 9. Expired learner access does not delete scores, profiles or history; premium question APIs require server-side entitlement checks.
 10. Predivic school financial data, attendance and student records stay unchanged.
+
+## Deployment reality — 2026-10-30
+- CBT backend migration has been **applied to the existing production Supabase project**; no separate database or paid Supabase branch was created.
+- Nine CBT tables are present, each with RLS enabled. Backend plan: NGN 150000 kobo for 30 days, sales disabled. One verified admin account has been allowlisted as a CBT operator.
+- PostgreSQL permission checks confirm ordinary authenticated users cannot read answer-key tables, read hashed PIN tables, or execute the private PIN issuer. Public redemption and topic-answer RPCs still require live authorized-session testing before opening to learners.
+- Supabase security advisors flag multiple authenticated-callable SECURITY DEFINER RPCs. These are intentionally exposed with in-function checks, but this must be validated using real authenticated roles and abuse tests before launch. Five closed internal tables intentionally have RLS without read policies.
+- The GitHub draft branch is **not merged** or deployed to production frontend. App screens, question UI and activation CTA may be in a Vercel preview only. Do not advertise as a live CBT service yet.
+- Actual WAEC/JAMB past questions, timed mocks, study material corpus, payment collection and PIN sales remain unavailable.
+- Next gate: browser/session tests of learner self-registration, school linking, operator-only issuance attempts, PIN redemption, free/premium question access and original mock answer scoring. Keep sales disabled throughout.
