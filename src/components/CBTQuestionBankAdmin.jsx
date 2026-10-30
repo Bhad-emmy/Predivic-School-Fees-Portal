@@ -206,10 +206,9 @@ export default function CBTQuestionBankAdmin() {
                   {question.is_published ? "Published" : "Draft"} · {question.is_free_preview ? "Free preview" : "PIN required"} · {question.content_origin}
                 </small>
               </div>
-              <button disabled={workingId === question.id} type="button" onClick={() => togglePublished(question)}
-                style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: "10px 13px", cursor: "pointer", background: "#fff", fontWeight: 700 }}>
-                {workingId === question.id ? "Saving..." : question.is_published ? "Unpublish" : "Publish"}
-              </button>
+              <span style={{ padding: "9px 12px", color: "#475569", fontSize: 12 }}>
+                Use the review queue below to check the full answer and publish
+              </span>
             </div>
           ))}
         </div>
