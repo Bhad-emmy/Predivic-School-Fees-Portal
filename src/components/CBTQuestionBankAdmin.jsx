@@ -29,7 +29,6 @@ export default function CBTQuestionBankAdmin() {
   const [form, setForm] = useState(blankQuestion);
   const [rows, setRows] = useState([]);
   const [saving, setSaving] = useState(false);
-  const [workingId, setWorkingId] = useState(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -103,25 +102,6 @@ export default function CBTQuestionBankAdmin() {
       setError(saveError.message || "Could not save this question.");
     } finally {
       setSaving(false);
-    }
-  };
-
-  const togglePublished = async (question) => {
-    setError("");
-    setNotice("");
-    setWorkingId(question.id);
-    try {
-      const { error: publishError } = await supabase.rpc("set_cbt_question_published", {
-        p_question_id: question.id,
-        p_published: !question.is_published,
-      });
-      if (publishError) throw publishError;
-      setNotice(question.is_published ? "Question unpublished." : "Question published for eligible learners.");
-      await loadQuestions();
-    } catch (publishError) {
-      setError(publishError.message || "Publication change failed.");
-    } finally {
-      setWorkingId(null);
     }
   };
 
