@@ -75,3 +75,10 @@ Reference: https://supabase.com/docs/guides/database/database-linter and https:/
 - Separate transactional SQL smoke test (rolled back) simulated an ordinary signed-in school staff account acting as an independent CBT learner: it was denied CBT operator status, saw zero questions before learner registration, could create an external learner profile and view ten public previews, and could submit the correct answer to an original sample question for server-calculated scoring with a private answer key. The rollback left no CBT learner or attempt records.
 - Confirmed current persistent counts after tests: 10 approved free sample questions, 0 CBT learner registrations, 0 CBT attempts, 0 issued PINs, `sales_enabled = false`.
 - **Testing limitations:** SQL role/JWT claim simulation is not a real browser sign-in, and the tests are not comprehensive security certification. Browser-based signup/email verification, RLS with multiple tenant identities, free-vs-paid restrictions, PIN redemption/renewal and edge-case/concurrent access still require end-to-end testing.
+
+## Premium access isolation test — 2026-10-30
+- Created and published a **temporary premium-only original question** using the authorized operator account within a single SQL transaction.
+- Simulated a signed-in learner without a PIN and verified the premium question remained hidden by RLS.
+- Confirmed that server-side answer submission for the premium question failed with an access error; an unprivileged user also could not issue an OPay activation PIN.
+- Rolled back the test transaction. Post-test persisted counts: 10 approved free demos, no premium test question, zero learner profiles, zero attempts, zero PINs; monthly OPay sales remain disabled.
+- These are transactional SQL role simulations, **not** real browser/JWT/PostgREST end-to-end tests.
