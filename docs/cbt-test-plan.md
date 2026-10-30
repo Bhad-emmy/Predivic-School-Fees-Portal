@@ -4,10 +4,10 @@
 
 ## Prerequisites
 1. Get approval for the optional Supabase test-branch compute cost. The live project currently has **no** development branch.
-2. Apply the still-unmerged additive CBT identity/payment/question-bank migration to the **test branch only**.
+2. **Current status (2026-10-30):** The additive CBT migration was already applied to the existing production Supabase project at version `20261030200456`; this file is now a read-only verification matrix, not permission to reapply a second copy. The user declined a separate paid branch. Do not rerun the migration in production.
 3. Create separate test Auth accounts for: MEKA operator (allowlisted), school admin (not allowlisted), ordinary staff, free independent learner, activated independent learner, school-linked learner and unrelated school-linked learner.
 4. Add only original or explicitly rights-cleared practice questions as test fixtures. Keep bank transfers, parent accounts and finance information out of the test dataset.
-5. Provision the CBT operator in `private.cbt_platform_operators` only after independently checking its Auth UID and admin role; never hardcode names or user identifiers into migrations.
+5. One verified active school-admin account was provisioned in `private.cbt_platform_operators` after an exact unique Auth/email and active-role match. Never hardcode names or user identifiers in migrations. Do not activate sales until role tests complete.
 
 ## Authorization tests
 | Action | Anonymous | Free learner | Activated learner | School admin (unlisted) | Allowlisted platform operator |
@@ -53,9 +53,17 @@
 - Public support/WhatsApp routing, payment reconciliation/refunds and minor-specific privacy handling require launch review.
 - Do not assume a frontend lint/build pass verifies the database migration or security-definer RPCs.
 
-## Existing project security notes (baseline, before CBT migration)
+## Existing project security notes and post-migration advisors
 Supabase's current security advisor reported:
 - `override_student_attendance` is a callable security-definer RPC. Assess its internal authorization separately before changing school attendance functionality.
 - Leaked-password protection is disabled. Enable it when configuring broad public CBT signup, subject to Supabase plan availability.
 
 Reference: https://supabase.com/docs/guides/database/database-linter and https://supabase.com/docs/guides/auth/password-security
+
+## Verification already completed (2026-10-30)
+- Applied one additive CBT migration to current project. Migration history version is `20261030200456`; source file was renamed to match it to avoid later duplicate migration execution.
+- Nine CBT tables present, RLS enabled throughout; no direct access to private answer keys or activation-PIN hashes for authenticated role; private PIN issuer not executable by authenticated role.
+- Proposed retail plan `monthly_30` = ₦1,500 / 30 days with `sales_enabled = false`.
+- One operator account allowlisted; confirmed database still has the previously recorded 429 students, 5 teachers and one school.
+- New privileged RPC warnings observed from the Supabase security advisor. Before enabling sales, validate all exposed RPC authorization paths with independent signed-in user sessions and test that unauthorized users cannot issue PINs or get unpublished/private answers.
+- **Not complete:** browser authentication tests, direct PostgREST role e2e tests, verified OPay transfer, manual PIN issuance/redemption, attempt scoring tests, full timed mock engine, production frontend deployment.
