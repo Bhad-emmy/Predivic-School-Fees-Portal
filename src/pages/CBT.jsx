@@ -3,6 +3,7 @@ import CBTStudentInvites from "../components/CBTStudentInvites";
 import CBTOpayPinDesk from "../components/CBTOpayPinDesk";
 import CBTQuestionBankAdmin from "../components/CBTQuestionBankAdmin";
 import CBTBatchImport from "../components/CBTBatchImport";
+import CBTReviewQueue from "../components/CBTReviewQueue";
 
 const tabs = [
   {
@@ -82,6 +83,7 @@ export default function CBT() {
       <CBTOpayPinDesk />
       <CBTQuestionBankAdmin />
       <CBTBatchImport />
+      <CBTReviewQueue />
     </div>
   );
 }
