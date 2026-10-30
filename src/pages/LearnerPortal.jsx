@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { CBT_MONTHLY_PLAN, formatCbtPrice } from "../lib/cbtPlan";
 import CBTTopicPractice from "../components/CBTTopicPractice";
+import CBTTimedMiniMock from "../components/CBTTimedMiniMock";
 import "../styles/LearnerPortal.css";
 
 const learnerFeatures = [
@@ -195,7 +196,7 @@ export default function LearnerPortal() {
       if (redeemError) throw redeemError;
       setActivation(data);
       setActivationPin("");
-      setMessage("CBT access activated on your account. The question bank and mock tests are still under development.");
+      setMessage("Your 30-day CBT access is activated. Premium topic questions and timed mini mocks are now available. Full-length exams remain in development.");
     } catch (redeemError) {
       setError(redeemError.message || "Unable to activate this PIN.");
     } finally {
@@ -284,7 +285,7 @@ export default function LearnerPortal() {
               <span>{profile.learner_type === "school" ? "School linked" : "Public learner"}</span>
             </div>
             <div className="meka-learn-message" role="status">
-              Your learner profile is active. Approved sample topic questions will appear below when the content team publishes them. Full timed mock examinations and study materials are still being developed.
+              Your learner profile is active. Free sample questions are available below. A valid activation PIN also unlocks a starter premium question bank and timed 10-question mini mocks. Full-length examination simulations and study materials are still under development.
               Your practice scores will not affect school term results or count as official WAEC/JAMB results.
             </div>
             {profile.learner_type === "external" && (
@@ -329,7 +330,7 @@ export default function LearnerPortal() {
                   ) : (
                     <p className="meka-learn-muted">
                       {activation?.expires_at ? "Your previous access has expired. " : "Your learner account is free. "}
-                      Redeeming one valid PIN will unlock 30 days of full CBT access once the mock content launches.
+                      Redeeming one valid PIN will unlock 30 days of premium topic practice and timed mini mocks when sales open.
                     </p>
                   )}
                   <form className="meka-learn-activation-form" onSubmit={redeemActivationPin}>
@@ -351,6 +352,7 @@ export default function LearnerPortal() {
               )}
             </section>
             <CBTTopicPractice activationActive={activationActive} />
+            <CBTTimedMiniMock activationActive={activationActive} />
             <div className="meka-learn-features">
               {learnerFeatures.map((feature) => (
                 <article key={feature.title}><h3>{feature.title}</h3><p>{feature.description}</p><span>Coming soon</span></article>
