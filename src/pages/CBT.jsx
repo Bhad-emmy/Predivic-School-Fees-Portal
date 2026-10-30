@@ -1,89 +1,135 @@
-import ModuleWorkspace from "../components/ModuleWorkspace";
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabase";
 import CBTStudentInvites from "../components/CBTStudentInvites";
 import CBTOpayPinDesk from "../components/CBTOpayPinDesk";
 import CBTQuestionBankAdmin from "../components/CBTQuestionBankAdmin";
 import CBTBatchImport from "../components/CBTBatchImport";
 import CBTReviewQueue from "../components/CBTReviewQueue";
 
-const tabs = [
-  {
-    id: "overview", label: "Overview", title: "WAEC & JAMB Mock Preparation",
-    description: "A revision and practice centre for both school students and independent learners. This is not for official school examinations.",
-    items: [
-      { title: "WAEC Mock Tests", description: "Practise by subject or topic, or sit a timed exam-style mock using authorized past questions and original practice questions." },
-      { title: "JAMB Mock Tests", description: "Choose a UTME subject combination and practise with timed, automatically scored mock tests." },
-      { title: "Study Materials", description: "Read revision notes, worked examples and authorized PDFs linked to the questions learners are studying." },
-      { title: "Question Bank", description: "Organize questions by WAEC/JAMB, subject, topic, year, content source and difficulty." },
-      { title: "Practice Progress", description: "Track each learner's attempts, scores, incorrect answers and weak topics." },
-    ],
-    note: "All CBT scores are practice scores only. They must not populate official term results. The Result Checker is a separate module.",
-  },
-  {
-    id: "questions", label: "Question Bank", title: "Shared Mock Question Bank",
-    description: "Maintain one MEKA practice library that registered school students and outside learners can use.",
-    items: [
-      { title: "Question Types", description: "Begin with multiple-choice questions, answer keys and explanations. Additional formats can be added after objective mocks are reliable." },
-      { title: "Exam Classification", description: "Label content by exam (WAEC or JAMB), subject, syllabus topic, source type and applicable year." },
-      { title: "Content Quality", description: "Review imported questions and explanations before learners can access them." },
-      { title: "Rights & Licensing", description: "Use authentic past questions only when MEKA has redistribution rights; otherwise supply original exam-style questions." },
-    ],
-    note: "The actual question database, import flow, publisher permissions and answer-protection rules will be implemented next. No past-question collection has been imported.",
-  },
-  {
-    id: "materials", label: "Study Materials", title: "Exam Revision Materials",
-    description: "Provide the learning resources students need before and after practice tests.",
-    items: [
-      { title: "Subject Notes", description: "Organize explanations and topic summaries by examination syllabus." },
-      { title: "Worked Solutions", description: "Link questions to step-by-step corrections and recommended revision content." },
-      { title: "PDF Resources", description: "Upload MEKA-owned or appropriately licensed revision files." },
-      { title: "Audience Access", description: "Share platform materials with both learner types; keep a school's private resources restricted to that school." },
-    ],
-  },
-  {
-    id: "waec", label: "WAEC Mocks", title: "WAEC Mock Practice",
-    description: "Prepare students using authorized WAEC past questions and original questions designed around relevant syllabus topics.",
-    items: [
-      { title: "Topic Practice", description: "Select a subject and topic to practise without a high-pressure timer." },
-      { title: "Full Mock", description: "Attempt a timed, exam-style objective mock with shuffled questions." },
-      { title: "Corrections", description: "See results and explanations after submission." },
-      { title: "Past-question Metadata", description: "Record year and source where question rights are verified, without presenting original questions as official leaked future papers." },
-    ],
-    note: "No official or future WAEC examination paper is available through this module.",
-  },
-  {
-    id: "jamb", label: "JAMB Mocks", title: "JAMB / UTME Mock Practice",
-    description: "Prepare with a configurable UTME-style subject combination and timed objective mocks.",
-    items: [
-      { title: "Subject Combination", description: "Allow learners to choose Use of English and three other eligible practice subjects." },
-      { title: "Timed Mock", description: "Present a mock exam with saved answers, navigation, and automatic submission when time expires." },
-      { title: "Score Breakdown", description: "Display performance by subject and topic with explanations after submission." },
-      { title: "Question Sources", description: "Use properly licensed past questions or original JAMB-style practice content, with clear attribution." },
-    ],
-    note: "Mock scores indicate practice performance, not official JAMB scores or predictions of upcoming examination questions.",
-  },
-  {
-    id: "performance", label: "Performance", title: "Practice Performance",
-    description: "Help every learner identify the subjects and topics they need to revise.",
-    items: [
-      { title: "My Attempts", description: "Show completed mock sessions, scores, timing and questions reviewed." },
-      { title: "Weak Areas", description: "Identify subjects and topics with repeated incorrect answers." },
-      { title: "School Cohorts", description: "Let authorized school staff review progress for students securely linked to their school only." },
-      { title: "No Official Result Link", description: "Keep WAEC and JAMB mock results separate from term grades and the school Result Checker." },
-    ],
-  },
-];
+const headerStyle = {
+  display: "grid", gap: 14, padding: "clamp(20px, 5vw, 32px)",
+  borderRadius: 16, border: "1px solid #bed5eb",
+  background: "linear-gradient(125deg, #eaf4ff, #f8fbff)",
+};
+const actionStyle = {
+  border: "1px solid #b5c7d9", background: "#fff", color: "#143c5b",
+  borderRadius: 10, padding: "12px 16px", fontWeight: 700, fontSize: 14,
+  cursor: "pointer", textDecoration: "none", display: "inline-flex",
+  alignItems: "center", justifyContent: "center", minHeight: 44,
+};
+const infoStyle = {
+  border: "1px solid #dae4ef", background: "#fff", borderRadius: 12,
+  padding: "14px 17px", lineHeight: 1.6, color: "#334155",
+};
+const subsectionStyle = { display: "grid", gap: 15, scrollMarginTop: 16 };
 
 export default function CBT() {
+  const [coverage, setCoverage] = useState(null);
+  const [isOperator, setIsOperator] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data: operator, error: operatorError } = await supabase.rpc("is_cbt_platform_operator");
+      if (!active || operatorError || !operator) return;
+      setIsOperator(true);
+      const { data, error } = await supabase.rpc("cbt_question_bank_coverage");
+      if (active && !error && Array.isArray(data)) setCoverage(data);
+    })();
+    return () => { active = false; };
+  }, []);
+
+  const scrollToSection = (id) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const freeQuestions = coverage?.reduce((sum, item) => sum + Number(item.published_free || 0), 0);
+  const premiumQuestions = coverage?.reduce((sum, item) => sum + Number(item.published_premium || 0), 0);
+  const draftQuestions = coverage?.reduce((sum, item) => sum + Number(item.drafts || 0), 0);
+
   return (
-    <div style={{ display: "grid", gap: 24 }}>
-      <ModuleWorkspace eyebrow="MEKA School • Exam preparation" title="WAEC & JAMB Mock Centre"
-        subtitle="Past-question revision, timed practice tests and study materials for school students and independent learners. No official school exams."
-        tabs={tabs} />
-      <CBTStudentInvites />
-      <CBTOpayPinDesk />
-      <CBTQuestionBankAdmin />
-      <CBTBatchImport />
-      <CBTReviewQueue />
+    <div style={{ display: "grid", gap: 22 }}>
+      <header style={headerStyle}>
+        <p style={{ margin: 0, color: "#2362a6", textTransform: "uppercase", fontSize: 12, letterSpacing: "0.08em", fontWeight: 800 }}>
+          MEKA School · CBT administration
+        </p>
+        <h1 style={{ margin: 0, fontSize: "clamp(26px, 4vw, 37px)", color: "#162840", lineHeight: 1.22 }}>
+          WAEC & JAMB Mock Centre
+        </h1>
+        <p style={{ margin: 0, color: "#475569", lineHeight: 1.7, maxWidth: 780 }}>
+          The CBT beta is installed. Manage original exam-style practice questions, school-student invitations,
+          and the learner experience below. Learners use the separate public CBT portal.
+        </p>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+          <span style={{ borderRadius: 24, padding: "9px 13px", background: "#e0f2e9", color: "#17603c", fontWeight: 700, fontSize: 13 }}>
+            ● CBT beta available
+          </span>
+          <span style={{ borderRadius: 24, padding: "9px 13px", background: "#fff5dd", color: "#795414", fontWeight: 700, fontSize: 13 }}>
+            OPay PIN sales closed
+          </span>
+        </div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <a href="/learn" target="_blank" rel="noopener noreferrer"
+            style={{ ...actionStyle, background: "#0d3552", color: "#fff", borderColor: "#0d3552" }}>
+            Open public CBT learner portal
+          </a>
+          <button type="button" style={actionStyle} onClick={() => scrollToSection("cbt-question-bank")}>
+            Manage question bank
+          </button>
+          <button type="button" style={actionStyle} onClick={() => scrollToSection("cbt-student-invites")}>
+            Link school students
+          </button>
+        </div>
+      </header>
+
+      <section style={infoStyle} aria-label="CBT beta features">
+        <strong style={{ color: "#143c5b" }}>Available now:</strong> learner profiles, free topic practice, premium
+        questions with PIN-controlled access, 10-question timed mini-mocks, scoring, question rotation,
+        content import and editorial review.
+        <p style={{ margin: "8px 0 0" }}>
+          <strong>Not released yet:</strong> full-length WAEC/JAMB simulations, study-material library, and OPay PIN sales.
+          Practice scores are separate from school term results.
+        </p>
+      </section>
+
+      {isOperator && (
+        <section style={{ display: "flex", gap: 10, flexWrap: "wrap" }} aria-label="Question bank totals">
+          {coverage ? (
+            <>
+              <div style={infoStyle}><strong>{freeQuestions}</strong> published free questions</div>
+              <div style={infoStyle}><strong>{premiumQuestions}</strong> published premium questions</div>
+              <div style={infoStyle}><strong>{draftQuestions}</strong> awaiting publication</div>
+            </>
+          ) : <p style={{ margin: 0, color: "#64748b" }}>Loading question-bank totals…</p>}
+        </section>
+      )}
+
+      <section id="cbt-question-bank" style={subsectionStyle}>
+        <div>
+          <h2 style={{ margin: "0 0 5px", color: "#172f4a" }}>Question bank and publishing</h2>
+          <p style={{ margin: 0, color: "#64748b", lineHeight: 1.6 }}>
+            Approved CBT operators can create questions, import batches, review private answer keys and publish approved content.
+            Other school administrators cannot publish platform-wide questions.
+          </p>
+        </div>
+        <CBTQuestionBankAdmin />
+        <CBTBatchImport />
+        <CBTReviewQueue />
+      </section>
+
+      <section id="cbt-student-invites" style={subsectionStyle}>
+        <h2 style={{ margin: "0 0 5px", color: "#172f4a" }}>School student invitations</h2>
+        <CBTStudentInvites />
+      </section>
+
+      <section id="cbt-activation" style={subsectionStyle}>
+        <h2 style={{ margin: "0 0 5px", color: "#172f4a" }}>OPay activation management</h2>
+        <p style={{ margin: 0, color: "#64748b", lineHeight: 1.6 }}>
+          Activation is restricted to approved CBT operators. No payments should be requested or PINs issued
+          until sales are enabled after the remaining launch checks.
+        </p>
+        <CBTOpayPinDesk />
+      </section>
     </div>
   );
 }
