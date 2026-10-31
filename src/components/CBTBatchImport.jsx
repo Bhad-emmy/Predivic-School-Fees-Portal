@@ -1,19 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { CBT_SUBJECT_CATALOG } from "../lib/cbtSubjects";
 
 // MEKA's initial THREE-rotation content targets for full-length practice.
 // JAMB: 3 x 60 English and 3 x 40 per other subject (2026 UTME structure).
 // WAEC: 150 is a provisional planning target, not a fixed board format.
 // These are MEKA targets, not official exam-board quotas.
 const INITIAL_SUBJECTS = [
-  ["JAMB", "Use of English", 180],
-  ...["Mathematics", "Physics", "Chemistry", "Biology", "Government",
-    "Economics", "Agricultural Science", "Geography", "Literature in English",
-    "Christian Religious Studies", "Commerce"].map((subject) => ["JAMB", subject, 120]),
-  ...["Mathematics", "English Language", "Biology", "Chemistry", "Physics",
-    "Agricultural Science", "Government", "Economics", "Geography",
-    "Literature in English", "Commerce", "Financial Accounting",
-    "Civic Education"].map((subject) => ["WAEC", subject, 150]),
+  ...CBT_SUBJECT_CATALOG.JAMB.map((subject) => [
+    "JAMB", subject.name, subject.name === "Use of English" ? 180 : 120,
+  ]),
+  ...CBT_SUBJECT_CATALOG.WAEC.map((subject) => ["WAEC", subject.name, 150]),
 ];
 
 const sample = JSON.stringify([{

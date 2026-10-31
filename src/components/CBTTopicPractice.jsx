@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { listCBTSubjects } from "../lib/cbtSubjects";
 
 const answers = ["A", "B", "C", "D"];
 const control = { padding: 11, border: "1px solid #cbd5e1", borderRadius: 8, font: "inherit", background: "#fff", maxWidth: "100%" };
@@ -15,6 +16,7 @@ export default function CBTTopicPractice({ activationActive }) {
   const [result, setResult] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [attemptCount, setAttemptCount] = useState(null);
+  const [subjectCounts, setSubjectCounts] = useState({});
 
   useEffect(() => {
     let active = true;
@@ -33,17 +35,37 @@ export default function CBTTopicPractice({ activationActive }) {
       if (!activationActive) {
         query = query.eq("is_free_preview", true);
       }
+      if (subject !== "all") query = query.eq("subject", subject);
       const { data, error: questionError } = await query
         .order("created_at", { ascending: false })
         .limit(100);
       if (!active) return;
       if (questionError) setError(questionError.message);
       else setQuestions(data || []);
-      setSubject("all");
       setSelectedId(null);
       setChosen("");
       setResult(null);
       setLoading(false);
+    })();
+    return () => { active = false; };
+  }, [exam, subject, activationActive]);
+
+  // Check learner-visible availability; CBT editorial permissions must not
+  // make premium questions appear to unactivated learner accounts.
+  useEffect(() => {
+    let active = true;
+    setSubjectCounts({});
+    (async () => {
+      let query = supabase.from("cbt_questions")
+        .select("subject")
+        .eq("exam_type", exam)
+        .eq("is_published", true);
+      if (!activationActive) query = query.eq("is_free_preview", true);
+      const { data, error: coverageError } = await query.limit(1000);
+      if (!active || coverageError) return;
+      const counts = {};
+      (data || []).forEach((q) => { counts[q.subject] = (counts[q.subject] || 0) + 1; });
+      setSubjectCounts(counts);
     })();
     return () => { active = false; };
   }, [exam, activationActive]);
@@ -59,14 +81,13 @@ export default function CBTTopicPractice({ activationActive }) {
     return () => { active = false; };
   }, [result?.attempt_id]);
 
-  const subjects = useMemo(
-    () => [...new Set(questions.map((q) => q.subject))].sort(),
-    [questions]
+  // List all exam subjects, even when no original questions have been reviewed.
+  const subjectCatalog = useMemo(() => listCBTSubjects(exam), [exam]);
+  const subjectGroups = useMemo(
+    () => [...new Set(subjectCatalog.map((item) => item.category))],
+    [subjectCatalog]
   );
-  const visibleQuestions = useMemo(
-    () => questions.filter((q) => subject === "all" || q.subject === subject),
-    [questions, subject]
-  );
+  const visibleQuestions = questions;
   const currentQuestion = visibleQuestions.find((q) => q.id === selectedId) || visibleQuestions[0] || null;
 
   const submit = async (event) => {
@@ -107,11 +128,16 @@ export default function CBTTopicPractice({ activationActive }) {
             : " Free sample questions are available without a PIN. Premium questions require activation."}
           {" "}Full-length exam simulations are still under development.
         </p>
+        <p className="meka-learn-muted">
+          Browse {subjectCatalog.length} {exam === "JAMB" ? "JAMB-approved" : "WAEC catalogue"} subjects.
+          Questions available means you can practise now; pending content means there are
+          no accessible reviewed questions yet. WAEC offerings can vary by exam series.
+        </p>
         {attemptCount !== null && <p className="meka-learn-muted">Practice answers submitted on this account: {attemptCount}</p>}
       </div>
       <div className="meka-learn-practice-filters">
         <label>Exam
-          <select value={exam} style={control} onChange={(event) => setExam(event.target.value)}>
+          <select value={exam} style={control} onChange={(event) => { setExam(event.target.value); setSubject("all"); }}>
             <option value="WAEC">WAEC</option>
             <option value="JAMB">JAMB / UTME</option>
           </select>
@@ -119,15 +145,25 @@ export default function CBTTopicPractice({ activationActive }) {
         <label>Subject
           <select value={subject} style={control} onChange={(event) => { setSubject(event.target.value); setSelectedId(null); setResult(null); setChosen(""); }}>
             <option value="all">All subjects</option>
-            {subjects.map((item) => <option key={item} value={item}>{item}</option>)}
+            {subjectGroups.map((category) => (
+              <optgroup key={category} label={category}>
+                {subjectCatalog.filter((item) => item.category === category).map((item) => (
+                  <option key={item.name} value={item.name}>
+                    {item.label}{subjectCounts[item.name] ? " · Questions available" : " · Pending content"}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
           </select>
         </label>
       </div>
       {loading ? <p className="meka-learn-muted">Loading questions...</p> :
         visibleQuestions.length === 0 ? (
           <p className="meka-learn-muted">
-            No approved questions are available for this selection yet.
-            {activationActive ? " The content team can publish questions from the operator dashboard." : " Additional premium content will unlock when your activation PIN is active."}
+            No accessible questions are available for this subject yet.
+            {activationActive
+              ? " We are preparing and reviewing more questions."
+              : " Free samples are being added; some subjects may have premium questions that require activation."}
           </p>
         ) : (
           <div className="meka-learn-practice-layout">
