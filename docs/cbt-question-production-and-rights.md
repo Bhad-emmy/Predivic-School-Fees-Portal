@@ -60,7 +60,7 @@ Each content batch is deliberately small (10–20 items initially), with:
 
 ## 4. Security: public repository is not a content vault
 
-The MEKA School app GitHub repository is currently **public**. Public Git commits can reveal any answer key placed in JSON or SQL, even if the file is later deleted. The earlier `content/cbt/three_rotation_mini_mock_starter_originals.json` on `main` contains answer keys for 21 original practice items, including premium items; those keys should be treated as **exposed**. Other historical seed questions/migrations should be audited too.
+The MEKA School app GitHub repository is currently **public**. Public Git commits can reveal any answer key placed in JSON or SQL, even if the file is later deleted. The earlier `content/cbt/three_rotation_mini_mock_starter_originals.json` on `main` contains answer keys for 21 original practice items, including premium items; those keys should be treated as **exposed**. Other historical seed questions/migrations should be audited too. During this research, 18 experimental JAMB-English prototypes were briefly committed to a public development branch before the mistake was detected; the file was subsequently removed from the branch tip, but Git history still retains the commit. **Do not publish these 18 prototypes as paid content.** The separate 14-question batch imported privately into Supabase is the pending editorial batch.
 
 **Rules:**
 - Keep paid answer keys and unpublished drafts in the protected Supabase database or a genuinely **private** content repository with tightly controlled access.
