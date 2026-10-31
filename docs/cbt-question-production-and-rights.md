@@ -18,6 +18,8 @@
 - Private Supabase backend: `uojxficqrfuzmknetlmb`.
 - As at 2026-10-31: 14 newly authored *original* JAMB Use of English items imported through the operator-only batch RPC and **kept unpublished**. Their answer keys are in `private.cbt_question_keys`. The app does not expose these drafts to ordinary learners.
 - These are provisional editorial drafts, not independently educator-verified items.
+- **2026-10-31 first-pass editorial check:** inspected each of the 14 private stems, answer options and explanations. Three items lacked explicit synonym/antonym directions; corrected those three question stems directly in unpublished Supabase drafts. Verified 14 unpublished drafts, all 14 protected keys present, and no changes to seven existing published English questions. This is **not** an independent teacher approval.
+- **Remaining editorial gate:** second reviewer must independently confirm phonetic distinctions, word stress, context and distractor ambiguity, and sign off the full batch before any item is published.
 - Syllabus section B: synonyms (2), antonyms (2), sentence interpretation (1), idioms (1), concord (1), conditional sentences (1), sequence of tenses (1), prepositions (1), question tags (1).
 - Syllabus section C: consonant distinction (1), word stress (1), homophones (1).
 - This batch deliberately omits passage and cloze questions until grouped-passage storage, linked items and answer review are implemented.
