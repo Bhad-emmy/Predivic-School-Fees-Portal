@@ -21,13 +21,21 @@ export default function CBTTopicPractice({ activationActive }) {
     setLoading(true);
     setError("");
     (async () => {
-      const { data, error: questionError } = await supabase
+      // Operators may read every question for editorial review through RLS.
+      // Learner practice must still respect the learner's own PIN entitlement.
+      // Apply the free/paid filter in the database query BEFORE the result
+      // limit; otherwise the newest premium items could hide every free item.
+      let query = supabase
         .from("cbt_questions")
         .select("id,exam_type,subject,topic,question_text,option_a,option_b,option_c,option_d,is_free_preview")
         .eq("exam_type", exam)
-        .eq("is_published", true)
+        .eq("is_published", true);
+      if (!activationActive) {
+        query = query.eq("is_free_preview", true);
+      }
+      const { data, error: questionError } = await query
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(100);
       if (!active) return;
       if (questionError) setError(questionError.message);
       else setQuestions(data || []);
@@ -93,8 +101,11 @@ export default function CBTTopicPractice({ activationActive }) {
         <p className="meka-learn-overline">Available practice · New</p>
         <h3>WAEC & JAMB topic practice</h3>
         <p className="meka-learn-muted">
-          Choose an exam and topic, attempt an original or rights-cleared question, then see the correction
-          after submitting. Full timed mocks are still under development.
+          Choose an exam and topic, then submit your answer to see the correction.
+          {activationActive
+            ? " Your active PIN also unlocks premium topic practice."
+            : " Free sample questions are available without a PIN. Premium questions require activation."}
+          {" "}Full-length exam simulations are still under development.
         </p>
         {attemptCount !== null && <p className="meka-learn-muted">Practice answers submitted on this account: {attemptCount}</p>}
       </div>
