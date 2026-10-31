@@ -70,6 +70,12 @@ New server-only Supabase Edge Function, **not** a browser-side API call:
 9. Provide safe retries/timeouts on vendor failure, question reporting, audit logs without raw content and no access when subscription/vendor licence expires.
 10. Staging tests: free vs activated account, external public learners vs linked school learners, 25/39 catalogue availability matrix, 4-subject 180-question UTME, 3-repeat policy, score correctness, cancellation, provider outage, no answer-key leakage.
 
+## Representative official WAEC archive observations (paraphrased, not copied)
+
+- WAEC 2023 school-candidate English Paper 2 includes a formal school-event report-writing task. The examiner observes that some candidates confused an inter-school sports event with inter-house sports and wrote letters instead of reports; the learning objective is **genre accuracy, relevant details, structure and expression**, not a four-option answer: https://waeconline.org.ng/e-learning/English/Engl240mq1.html
+- WAEC 2019 school-candidate General Mathematics Paper 2 contains numbered worked examination tasks and examiner observations, sometimes image-based. The CBT engine will need **maths rendering, figures and non-MCQ marking/review** before calling WAEC practice "complete": https://waeconline.org.ng/e-learning/Mathematics/maths228mq1.html
+- Both archives are official historical references; **no exam question stem or solution is re-hosted or imported** under this research.
+
 ## JAMB English format — official IBASS paper blueprint
 
 1 reading passage × 5 questions, 1 cloze passage × 10 questions, 1 approved reading text × 10 questions, sentence interpretation 5, antonyms 5, synonyms 5, sentence completion 10, Oral Forms 10: total 60. The 2026 officials' manual confirms 180 objective questions and 120 minutes for full UTME.
